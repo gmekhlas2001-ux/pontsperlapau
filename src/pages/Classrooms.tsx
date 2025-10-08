@@ -15,7 +15,9 @@ import {
   User,
   Clock,
   UserPlus,
-  CheckCircle
+  CheckCircle,
+  Edit,
+  UserMinus
 } from 'lucide-react';
 
 interface Classroom {
@@ -58,6 +60,7 @@ export function Classrooms() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showAddClassroom, setShowAddClassroom] = useState(false);
+  const [isEditingClassroom, setIsEditingClassroom] = useState(false);
   const [showClassroomDetails, setShowClassroomDetails] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);
@@ -208,35 +211,57 @@ export function Classrooms() {
     e.preventDefault();
 
     try {
-      const { data, error } = await supabase.from('classrooms').insert({
-        name: classroomForm.name,
-        code: classroomForm.code,
-        description: classroomForm.description || null,
-        subject: classroomForm.subject || null,
-        teacher_id: classroomForm.teacher_id || null,
-        branch_id: classroomForm.branch_id || null,
-        schedule: classroomForm.schedule || null,
-        room_number: classroomForm.room_number || null,
-        capacity: classroomForm.capacity ? parseInt(classroomForm.capacity) : null,
-        start_date: classroomForm.start_date || null,
-        end_date: classroomForm.end_date || null,
-        status: 'active',
-      }).select().single();
+      if (isEditingClassroom && selectedClassroom) {
+        const { error } = await supabase.from('classrooms').update({
+          name: classroomForm.name,
+          code: classroomForm.code,
+          description: classroomForm.description || null,
+          subject: classroomForm.subject || null,
+          teacher_id: classroomForm.teacher_id || null,
+          branch_id: classroomForm.branch_id || null,
+          schedule: classroomForm.schedule || null,
+          room_number: classroomForm.room_number || null,
+          capacity: classroomForm.capacity ? parseInt(classroomForm.capacity) : null,
+          start_date: classroomForm.start_date || null,
+          end_date: classroomForm.end_date || null,
+        }).eq('id', selectedClassroom.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      if (data && selectedStudents.length > 0) {
-        const enrollments = selectedStudents.map(studentId => ({
-          classroom_id: data.id,
-          student_id: studentId,
+        setToast({ message: 'Classroom updated successfully!', type: 'success' });
+      } else {
+        const { data, error } = await supabase.from('classrooms').insert({
+          name: classroomForm.name,
+          code: classroomForm.code,
+          description: classroomForm.description || null,
+          subject: classroomForm.subject || null,
+          teacher_id: classroomForm.teacher_id || null,
+          branch_id: classroomForm.branch_id || null,
+          schedule: classroomForm.schedule || null,
+          room_number: classroomForm.room_number || null,
+          capacity: classroomForm.capacity ? parseInt(classroomForm.capacity) : null,
+          start_date: classroomForm.start_date || null,
+          end_date: classroomForm.end_date || null,
           status: 'active',
-        }));
+        }).select().single();
 
-        await supabase.from('classroom_enrollments').insert(enrollments);
+        if (error) throw error;
+
+        if (data && selectedStudents.length > 0) {
+          const enrollments = selectedStudents.map(studentId => ({
+            classroom_id: data.id,
+            student_id: studentId,
+            status: 'active',
+          }));
+
+          await supabase.from('classroom_enrollments').insert(enrollments);
+        }
+
+        setToast({ message: 'Classroom created successfully!', type: 'success' });
       }
 
-      setToast({ message: 'Classroom created successfully!', type: 'success' });
       setShowAddClassroom(false);
+      setIsEditingClassroom(false);
       setClassroomForm({
         name: '',
         code: '',
@@ -253,7 +278,7 @@ export function Classrooms() {
       setSelectedStudents([]);
       loadClassrooms();
     } catch (error: any) {
-      setToast({ message: 'Error creating classroom: ' + error.message, type: 'error' });
+      setToast({ message: `Error ${isEditingClassroom ? 'updating' : 'creating'} classroom: ` + error.message, type: 'error' });
     }
   }
 
@@ -390,6 +415,46 @@ export function Classrooms() {
     setShowEnrollModal(true);
   }
 
+  function openEditClassroom(classroom: Classroom) {
+    setSelectedClassroom(classroom);
+    setIsEditingClassroom(true);
+    setClassroomForm({
+      name: classroom.name,
+      code: classroom.code,
+      description: classroom.description || '',
+      subject: classroom.subject || '',
+      teacher_id: classroom.teacher_id || '',
+      branch_id: classroom.branch_id || '',
+      schedule: classroom.schedule || '',
+      room_number: classroom.room_number || '',
+      capacity: classroom.capacity?.toString() || '',
+      start_date: classroom.start_date || '',
+      end_date: classroom.end_date || '',
+    });
+    setShowAddClassroom(true);
+  }
+
+  async function handleUnenrollStudent(enrollmentId: string) {
+    if (!confirm('Are you sure you want to unenroll this student? This will permanently remove them from the classroom.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('classroom_enrollments')
+        .delete()
+        .eq('id', enrollmentId);
+
+      if (error) throw error;
+
+      setToast({ message: 'Student unenrolled successfully', type: 'success' });
+      if (selectedClassroom) {
+        loadEnrollments(selectedClassroom.id);
+      }
+      loadClassrooms();
+    } catch (error: any) {
+      setToast({ message: 'Error unenrolling student: ' + error.message, type: 'error' });
+    }
+  }
+
   const filteredClassrooms = classrooms.filter(classroom =>
     classroom.name.toLowerCase().includes(search.toLowerCase()) ||
     classroom.subject?.toLowerCase().includes(search.toLowerCase()) ||
@@ -519,6 +584,13 @@ export function Classrooms() {
               {isAdmin && (
                 <>
                   <button
+                    onClick={() => openEditClassroom(classroom)}
+                    className="px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                    title="Edit Classroom"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => openEnrollModal(classroom)}
                     className="px-3 py-2 bg-cyan-100 text-cyan-600 rounded-lg hover:bg-cyan-200 transition-colors"
                     title="Add Students"
@@ -543,8 +615,8 @@ export function Classrooms() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">Add Classroom</h2>
-              <button onClick={() => setShowAddClassroom(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+              <h2 className="text-2xl font-bold text-slate-900">{isEditingClassroom ? 'Edit Classroom' : 'Add Classroom'}</h2>
+              <button onClick={() => { setShowAddClassroom(false); setIsEditingClassroom(false); }} className="p-2 hover:bg-slate-100 rounded-lg">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -709,11 +781,11 @@ export function Classrooms() {
                   type="submit"
                   className="flex-1 px-6 py-3 bg-cyan-600 text-white rounded-xl font-medium hover:bg-cyan-700"
                 >
-                  Create Classroom
+                  {isEditingClassroom ? 'Update Classroom' : 'Create Classroom'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddClassroom(false)}
+                  onClick={() => { setShowAddClassroom(false); setIsEditingClassroom(false); }}
                   className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-medium hover:bg-slate-300"
                 >
                   Cancel
@@ -832,12 +904,25 @@ export function Classrooms() {
                         </div>
                       </div>
                       {(isAdmin || (isTeacher && selectedClassroom.teacher_id === userProfileId)) && (
-                        <button
-                          onClick={() => handleDropEnrollment(enrollment.id)}
-                          className="px-3 py-1 text-sm bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
-                        >
-                          Drop
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleDropEnrollment(enrollment.id)}
+                            className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200"
+                            title="Mark as dropped (student can re-enroll)"
+                          >
+                            Drop
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleUnenrollStudent(enrollment.id)}
+                              className="px-3 py-1 text-sm bg-red-100 text-red-600 rounded-lg hover:bg-red-200 flex items-center gap-1"
+                              title="Permanently remove student"
+                            >
+                              <UserMinus className="w-3 h-3" />
+                              Unenroll
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   ))}
