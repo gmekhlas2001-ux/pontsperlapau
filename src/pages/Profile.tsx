@@ -29,6 +29,10 @@ interface StaffDetails {
   short_bio: string | null;
   profile_photo_url: string | null;
   cv_url: string | null;
+  nid_photo_url: string | null;
+  passport_photo_url: string | null;
+  education_docs_url: string | null;
+  family_parents_tazkira_url: string | null;
   other_documents_urls: string[] | null;
   created_at: string | null;
 }
@@ -131,6 +135,12 @@ export function Profile() {
             email: data.email || profile.email,
             job_description: data.job_description || '',
             short_bio: data.short_bio || '',
+            profile_photo_url: data.profile_photo_url || '',
+            cv_url: data.cv_url || '',
+            nid_photo_url: data.nid_photo_url || '',
+            passport_photo_url: data.passport_photo_url || '',
+            education_docs_url: data.education_docs_url || '',
+            family_parents_tazkira_url: data.family_parents_tazkira_url || '',
           });
         } else {
           setFormData({
@@ -150,6 +160,8 @@ export function Profile() {
             email: profile.email,
             job_description: '',
             short_bio: '',
+            profile_photo_url: '',
+            cv_url: '',
           });
         }
       } else if (profile.role_id === 'student') {
@@ -178,6 +190,7 @@ export function Profile() {
             email: data.email || profile.email,
             job_description: data.job_description || '',
             short_bio: data.short_bio || '',
+            profile_photo_url: data.profile_photo_url || '',
           });
         } else {
           setFormData({
@@ -197,6 +210,7 @@ export function Profile() {
             email: profile.email,
             job_description: '',
             short_bio: '',
+            profile_photo_url: '',
           });
         }
       }
