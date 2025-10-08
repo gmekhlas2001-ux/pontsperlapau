@@ -1,17 +1,37 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Users, Search, Plus, CreditCard as Edit, Eye, Trash2, X, Mail, Phone, MapPin, Calendar, User as UserIcon } from 'lucide-react';
+import { Users, Search, Plus, CreditCard as Edit, Eye, Trash2, X, Mail, Phone, MapPin, Calendar, User as UserIcon, Building2, Briefcase, FileText } from 'lucide-react';
+import { EditStudentModal } from '../components/EditStudentModal';
 
 interface Student {
   id: string;
+  profile_id: string;
   auth_user_id: string;
   full_name: string;
   email: string;
-  phone: string | null;
-  address: string | null;
   role_id: string;
   status: string;
   created_at: string;
+  first_name: string | null;
+  last_name: string | null;
+  father_name: string | null;
+  dob: string | null;
+  age: number | null;
+  gender: string | null;
+  national_id: string | null;
+  passport_number: string | null;
+  address: string | null;
+  phone: string | null;
+  parent_phone: string | null;
+  education_level: string | null;
+  date_joined: string | null;
+  date_left: string | null;
+  short_bio: string | null;
+  branch_id: string | null;
+  branch_name: string | null;
+  notes: string | null;
+  profile_photo_url: string | null;
+  other_documents_urls: string[] | null;
 }
 
 export function Students() {
@@ -22,11 +42,7 @@ export function Students() {
   const [showDetails, setShowDetails] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
-  const [editForm, setEditForm] = useState({
-    full_name: '',
-    phone: '',
-    address: '',
-  });
+  const [editForm, setEditForm] = useState<any>({});
   const [addForm, setAddForm] = useState({
     first_name: '',
     last_name: '',
@@ -60,15 +76,59 @@ export function Students() {
 
   async function loadStudents() {
     try {
-      const { data, error } = await supabase
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .eq('role_id', 'student')
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setStudents(data || []);
+      if (profilesError) throw profilesError;
+
+      if (profilesData) {
+        const studentsWithDetails = await Promise.all(
+          profilesData.map(async (profile) => {
+            const { data: studentData } = await supabase
+              .from('students')
+              .select('*, branches(name)')
+              .eq('profile_id', profile.id)
+              .maybeSingle();
+
+            return {
+              id: profile.id,
+              profile_id: profile.id,
+              auth_user_id: profile.auth_user_id,
+              full_name: profile.full_name,
+              email: profile.email,
+              role_id: profile.role_id,
+              status: profile.status,
+              created_at: profile.created_at,
+              first_name: studentData?.first_name || null,
+              last_name: studentData?.last_name || null,
+              father_name: studentData?.father_name || null,
+              dob: studentData?.dob || null,
+              age: studentData?.age || null,
+              gender: studentData?.gender || null,
+              national_id: studentData?.national_id || null,
+              passport_number: studentData?.passport_number || null,
+              address: studentData?.address || null,
+              phone: studentData?.phone || null,
+              parent_phone: studentData?.parent_phone || null,
+              education_level: studentData?.education_level || null,
+              date_joined: studentData?.date_joined || null,
+              date_left: studentData?.date_left || null,
+              short_bio: studentData?.short_bio || null,
+              branch_id: studentData?.branch_id || null,
+              branch_name: studentData?.branches?.name || null,
+              notes: studentData?.notes || null,
+              profile_photo_url: studentData?.profile_photo_url || null,
+              other_documents_urls: studentData?.other_documents_urls || null,
+            };
+          })
+        );
+
+        setStudents(studentsWithDetails);
+      }
     } catch (error) {
       console.error('Error loading students:', error);
     } finally {
@@ -115,8 +175,27 @@ export function Students() {
     setSelectedStudent(student);
     setEditForm({
       full_name: student.full_name || '',
-      phone: student.phone || '',
+      email: student.email || '',
+      role_id: student.role_id || 'student',
+      status: student.status || 'approved',
+      first_name: student.first_name || '',
+      last_name: student.last_name || '',
+      father_name: student.father_name || '',
+      dob: student.dob || '',
+      age: student.age?.toString() || '',
+      gender: student.gender || '',
+      national_id: student.national_id || '',
+      passport_number: student.passport_number || '',
       address: student.address || '',
+      phone: student.phone || '',
+      parent_phone: student.parent_phone || '',
+      education_level: student.education_level || '',
+      date_joined: student.date_joined || '',
+      date_left: student.date_left || '',
+      short_bio: student.short_bio || '',
+      branch_id: student.branch_id || '',
+      notes: student.notes || '',
+      profile_photo_url: student.profile_photo_url || '',
     });
     setShowEdit(true);
   }
@@ -130,21 +209,69 @@ export function Students() {
     e.preventDefault();
     if (!selectedStudent) return;
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: editForm.full_name,
-        phone: editForm.phone,
-        address: editForm.address,
-      })
-      .eq('id', selectedStudent.id);
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editForm.full_name,
+          email: editForm.email,
+          role_id: editForm.role_id,
+          status: editForm.status,
+        })
+        .eq('id', selectedStudent.id);
 
-    if (error) {
-      alert('Error updating student: ' + error.message);
-    } else {
+      if (profileError) throw profileError;
+
+      const { data: existingStudent } = await supabase
+        .from('students')
+        .select('id')
+        .eq('profile_id', selectedStudent.profile_id)
+        .maybeSingle();
+
+      const studentData = {
+        profile_id: selectedStudent.profile_id,
+        first_name: editForm.first_name || null,
+        last_name: editForm.last_name || null,
+        father_name: editForm.father_name || null,
+        dob: editForm.dob || null,
+        age: editForm.age ? parseInt(editForm.age) : null,
+        gender: editForm.gender || null,
+        national_id: editForm.national_id || null,
+        passport_number: editForm.passport_number || null,
+        address: editForm.address || null,
+        phone: editForm.phone || null,
+        parent_phone: editForm.parent_phone || null,
+        education_level: editForm.education_level || null,
+        date_joined: editForm.date_joined || null,
+        date_left: editForm.date_left || null,
+        short_bio: editForm.short_bio || null,
+        branch_id: editForm.branch_id || null,
+        notes: editForm.notes || null,
+        status: editForm.status || 'active',
+        profile_photo_url: editForm.profile_photo_url || null,
+        email: editForm.email || null,
+      };
+
+      if (existingStudent) {
+        const { error: studentError } = await supabase
+          .from('students')
+          .update(studentData)
+          .eq('profile_id', selectedStudent.profile_id);
+
+        if (studentError) throw studentError;
+      } else {
+        const { error: studentError } = await supabase
+          .from('students')
+          .insert(studentData);
+
+        if (studentError) throw studentError;
+      }
+
       alert('Student updated successfully!');
       setShowEdit(false);
       loadStudents();
+    } catch (error: any) {
+      alert('Error updating student: ' + error.message);
     }
   }
 
@@ -355,125 +482,65 @@ export function Students() {
                 <div>
                   <h3 className="text-2xl font-bold text-slate-900">{selectedStudent.full_name}</h3>
                   <p className="text-slate-600">Student</p>
+                  {selectedStudent.branch_name && (
+                    <p className="text-sm text-slate-500 mt-1">{selectedStudent.branch_name}</p>
+                  )}
                 </div>
               </div>
 
-              <div className="grid gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Mail className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Email</p>
-                    <p className="text-slate-900 font-medium">{selectedStudent.email}</p>
-                  </div>
-                </div>
-
-                {selectedStudent.phone && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Phone</p>
-                      <p className="text-slate-900 font-medium">{selectedStudent.phone}</p>
-                    </div>
-                  </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <DetailItem icon={UserIcon} label="First Name" value={selectedStudent.first_name} />
+                <DetailItem icon={UserIcon} label="Last Name" value={selectedStudent.last_name} />
+                <DetailItem icon={UserIcon} label="Father Name" value={selectedStudent.father_name} />
+                <DetailItem icon={Mail} label="Email" value={selectedStudent.email} />
+                <DetailItem icon={Phone} label="Phone" value={selectedStudent.phone} />
+                <DetailItem icon={Phone} label="Parent Phone" value={selectedStudent.parent_phone} />
+                <DetailItem icon={FileText} label="National ID" value={selectedStudent.national_id} />
+                <DetailItem icon={FileText} label="Passport" value={selectedStudent.passport_number} />
+                <DetailItem icon={Calendar} label="Date of Birth" value={selectedStudent.dob ? new Date(selectedStudent.dob).toLocaleDateString() : null} />
+                <DetailItem icon={UserIcon} label="Age" value={selectedStudent.age?.toString()} />
+                <DetailItem icon={UserIcon} label="Gender" value={selectedStudent.gender} />
+                <DetailItem icon={Briefcase} label="Education Level" value={selectedStudent.education_level} />
+                <DetailItem icon={Building2} label="Branch" value={selectedStudent.branch_name} />
+                <DetailItem icon={Calendar} label="Date Joined" value={selectedStudent.date_joined ? new Date(selectedStudent.date_joined).toLocaleDateString() : null} />
+                {selectedStudent.date_left && (
+                  <DetailItem icon={Calendar} label="Date Left" value={new Date(selectedStudent.date_left).toLocaleDateString()} />
                 )}
-
-                {selectedStudent.address && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Address</p>
-                      <p className="text-slate-900 font-medium">{selectedStudent.address}</p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Date Joined</p>
-                    <p className="text-slate-900 font-medium">
-                      {new Date(selectedStudent.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
               </div>
+
+              {selectedStudent.address && (
+                <div>
+                  <p className="text-sm font-medium text-slate-700 mb-2">Address</p>
+                  <p className="text-slate-900 bg-slate-50 p-4 rounded-xl">{selectedStudent.address}</p>
+                </div>
+              )}
+
+              {selectedStudent.short_bio && (
+                <div>
+                  <p className="text-sm font-medium text-slate-700 mb-2">Bio</p>
+                  <p className="text-slate-900 bg-slate-50 p-4 rounded-xl">{selectedStudent.short_bio}</p>
+                </div>
+              )}
+
+              {selectedStudent.notes && (
+                <div>
+                  <p className="text-sm font-medium text-slate-700 mb-2">Notes</p>
+                  <p className="text-slate-900 bg-slate-50 p-4 rounded-xl">{selectedStudent.notes}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {showEdit && selectedStudent && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">Edit Student</h2>
-              <button
-                onClick={() => setShowEdit(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.full_name}
-                  onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
-                <input
-                  type="tel"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Address</label>
-                <textarea
-                  rows={3}
-                  value={editForm.address}
-                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Save Changes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEdit(false)}
-                  className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-medium hover:bg-slate-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <EditStudentModal
+        isOpen={showEdit}
+        onClose={() => setShowEdit(false)}
+        onSubmit={handleEditSubmit}
+        formData={editForm}
+        setFormData={setEditForm}
+        branches={branches}
+      />
 
       {showAdd && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -694,6 +761,22 @@ export function Students() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DetailItem({ icon: Icon, label, value }: { icon: any; label: string; value: string | null | undefined }) {
+  if (!value) return null;
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
+        <Icon className="w-5 h-5 text-slate-600" />
+      </div>
+      <div>
+        <p className="text-sm text-slate-500">{label}</p>
+        <p className="text-slate-900 font-medium">{value}</p>
+      </div>
     </div>
   );
 }
