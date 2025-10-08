@@ -478,10 +478,10 @@ export function Classrooms() {
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => openClassroomDetails(classroom)}
-                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                className="flex-1 min-w-[100px] px-3 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 text-sm"
               >
                 <Eye className="w-4 h-4" />
                 Details
@@ -490,13 +490,15 @@ export function Classrooms() {
                 <>
                   <button
                     onClick={() => openEnrollModal(classroom)}
-                    className="px-4 py-2 bg-cyan-100 text-cyan-600 rounded-lg hover:bg-cyan-200 transition-colors"
+                    className="px-3 py-2 bg-cyan-100 text-cyan-600 rounded-lg hover:bg-cyan-200 transition-colors"
+                    title="Add Students"
                   >
                     <UserPlus className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteClassroom(classroom)}
-                    className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                    className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                    title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
