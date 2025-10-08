@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { UserCheck, Search, Plus, Edit, Eye, ShieldCheck, Trash2, X, Mail, Phone, MapPin, Calendar, User, Building2, Briefcase, FileText, File, ExternalLink } from 'lucide-react';
 import { DocumentUpload } from '../components/DocumentUpload';
 import { AddStaffModal } from '../components/AddStaffModal';
+import { useAuth } from '../contexts/AuthContext';
 
 interface StaffMember {
   id: string;
@@ -43,6 +44,7 @@ interface StaffMember {
 }
 
 export function Staff() {
+  const { isSuperAdmin } = useAuth();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -510,22 +512,26 @@ export function Staff() {
                     <Edit className="w-4 h-4" />
                     Edit
                   </button>
-                  {(member.role_id === 'teacher' || member.role_id === 'librarian') && (
+                  {isSuperAdmin && (member.role_id === 'teacher' || member.role_id === 'librarian') && (
                     <button
                       onClick={() => handlePromoteToAdmin(member)}
                       className="flex items-center justify-center gap-1 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium"
+                      title="Promote to Admin"
                     >
                       <ShieldCheck className="w-4 h-4" />
                       Admin
                     </button>
                   )}
-                  <button
-                    onClick={() => handleDelete(member)}
-                    className="flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
+                  {(isSuperAdmin || member.role_id !== 'admin') && (
+                    <button
+                      onClick={() => handleDelete(member)}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+                      title={member.role_id === 'admin' && !isSuperAdmin ? 'Only super admin can delete admins' : ''}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

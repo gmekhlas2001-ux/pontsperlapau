@@ -14,6 +14,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, role: string, formData: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isStaff: boolean;
   isStudent: boolean;
 }
@@ -174,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp,
     signOut,
     isAdmin: profile?.role_id === 'admin',
+    isSuperAdmin: profile?.role_id === 'admin' && (profile as any)?.is_super_admin === true,
     isStaff: profile?.role_id === 'teacher' || profile?.role_id === 'librarian',
     isStudent: profile?.role_id === 'student',
   };
