@@ -145,6 +145,21 @@ export function Dashboard() {
                 </a>
               </>
             )}
+            {profile?.role_id === 'student' && (
+              <>
+                <a
+                  href="/profile"
+                  className="block p-4 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors"
+                >
+                  <p className="font-medium text-blue-900">My Profile</p>
+                  <p className="text-sm text-blue-600">View and update your information</p>
+                </a>
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                  <p className="font-medium text-slate-700">My Courses</p>
+                  <p className="text-sm text-slate-500">Coming soon</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
