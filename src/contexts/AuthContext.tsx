@@ -88,12 +88,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signUp(email: string, password: string, role: string, formData: any) {
     console.log('Starting signup process for:', email, 'role:', role);
 
+    const roleMapping: Record<string, string> = {
+      'student': 'student',
+      'staff': 'teacher',
+    };
+
+    const actualRole = roleMapping[role] || role;
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          role,
+          role: actualRole,
           ...formData,
         },
       },
@@ -113,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         auth_user_id: data.user.id,
         email,
         full_name: formData.full_name || `${formData.first_name || ''} ${formData.last_name || ''}`.trim(),
-        role_id: role,
+        role_id: actualRole,
         status: 'pending',
       };
 
@@ -134,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const approvalInsert = {
         requester_profile_id: profileData.id,
-        target_role: role,
+        target_role: actualRole,
         status: 'pending',
         submitted_payload: formData,
       };
@@ -167,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp,
     signOut,
     isAdmin: profile?.role_id === 'admin',
-    isStaff: profile?.role_id === 'staff',
+    isStaff: profile?.role_id === 'teacher' || profile?.role_id === 'librarian',
     isStudent: profile?.role_id === 'student',
   };
 
