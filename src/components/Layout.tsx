@@ -19,15 +19,15 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'staff', 'student'] },
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'teacher', 'librarian', 'student'] },
     { path: '/approvals', label: 'Approvals', icon: CheckCircle, roles: ['admin'] },
     { path: '/staff', label: 'Staff', icon: UserCheck, roles: ['admin'] },
     { path: '/students', label: 'Students', icon: Users, roles: ['admin'] },
     { path: '/branches', label: 'Branches', icon: Building2, roles: ['admin'] },
-    { path: '/classrooms', label: 'Classrooms', icon: GraduationCap, roles: ['admin', 'staff', 'student'] },
-    { path: '/libraries/books', label: 'Library', icon: Library, roles: ['admin', 'staff', 'student'] },
+    { path: '/classrooms', label: 'Classrooms', icon: GraduationCap, roles: ['admin', 'teacher', 'librarian', 'student'] },
+    { path: '/libraries/books', label: 'Library', icon: Library, roles: ['admin', 'teacher', 'librarian', 'student'] },
     { path: '/reports', label: 'Reports', icon: FileText, roles: ['admin'] },
-    { path: '/profile', label: 'Profile', icon: UserCircle, roles: ['admin', 'staff', 'student'] },
+    { path: '/profile', label: 'Profile', icon: UserCircle, roles: ['admin', 'teacher', 'librarian', 'student'] },
   ];
 
   const visibleNavItems = navItems.filter((item) =>

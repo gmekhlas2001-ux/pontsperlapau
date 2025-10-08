@@ -127,14 +127,14 @@ export function Dashboard() {
                 <p className="text-sm text-rose-600">{stats.pendingApprovals} waiting for review</p>
               </a>
             )}
-            {['admin', 'staff'].includes(profile?.role_id || '') && (
+            {['admin', 'teacher', 'librarian'].includes(profile?.role_id || '') && (
               <>
                 <a
-                  href="/students"
+                  href="/classrooms"
                   className="block p-4 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors"
                 >
-                  <p className="font-medium text-blue-900">Manage Students</p>
-                  <p className="text-sm text-blue-600">View and update student records</p>
+                  <p className="font-medium text-blue-900">My Classrooms</p>
+                  <p className="text-sm text-blue-600">View and manage your classes</p>
                 </a>
                 <a
                   href="/libraries/books"
