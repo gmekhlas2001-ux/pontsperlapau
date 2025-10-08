@@ -106,7 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     console.log('Auth user created:', data.user?.id);
 
-    if (data.user) {
+    if (data.user && data.session) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const profileInsert = {
         auth_user_id: data.user.id,
         email,
