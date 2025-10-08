@@ -1,44 +1,76 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { User, Mail, Phone, Calendar, MapPin, Save, FileText, Briefcase, CreditCard, Users } from 'lucide-react';
+import { User, Mail, Phone, Calendar, MapPin, Save, FileText, Briefcase, CreditCard, Building2, Upload, FileUp } from 'lucide-react';
+
+interface Branch {
+  id: string;
+  name: string;
+  province: string | null;
+}
 
 interface StaffDetails {
   first_name: string | null;
   last_name: string | null;
-  father_name: string | null;
-  dob: string | null;
-  gender: string | null;
   national_id: string | null;
-  passport_number: string | null;
-  home_address: string | null;
-  phone: string | null;
-  email: string | null;
-  emergency_contact: string | null;
+  age: number | null;
+  gender: string | null;
   position: string | null;
-  job_description: string | null;
+  dob: string | null;
+  branch_id: string | null;
   date_joined: string | null;
   date_left: string | null;
-  history_activities: string | null;
+  address: string | null;
+  passport_number: string | null;
+  phone: string | null;
+  email: string | null;
+  job_description: string | null;
   short_bio: string | null;
-  notes: string | null;
+  profile_photo_url: string | null;
+  cv_url: string | null;
+  other_documents_urls: string[] | null;
+  created_at: string | null;
 }
 
 interface StudentDetails {
   first_name: string | null;
   last_name: string | null;
-  father_name: string | null;
+  national_id: string | null;
   age: number | null;
   gender: string | null;
-  national_id: string | null;
-  address: string | null;
-  phone: string | null;
-  parent_phone: string | null;
   education_level: string | null;
+  dob: string | null;
+  branch_id: string | null;
   date_joined: string | null;
   date_left: string | null;
-  notes: string | null;
+  address: string | null;
+  passport_number: string | null;
+  phone: string | null;
+  email: string | null;
+  job_description: string | null;
+  short_bio: string | null;
+  profile_photo_url: string | null;
+  other_documents_urls: string[] | null;
+  created_at: string | null;
 }
+
+const STAFF_POSITIONS = [
+  'Teacher',
+  'Librarian',
+  'Administrator',
+  'Coordinator',
+  'Assistant',
+  'Other'
+];
+
+const EDUCATION_LEVELS = [
+  'Elementary School',
+  'Middle School',
+  'High School',
+  'University',
+  'Graduate',
+  'Other'
+];
 
 export function Profile() {
   const { profile, user } = useAuth();
@@ -48,11 +80,24 @@ export function Profile() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [staffDetails, setStaffDetails] = useState<StaffDetails | null>(null);
   const [studentDetails, setStudentDetails] = useState<StudentDetails | null>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [formData, setFormData] = useState<any>({});
 
   useEffect(() => {
+    loadBranches();
     loadExtendedProfile();
   }, [profile]);
+
+  async function loadBranches() {
+    const { data, error } = await supabase
+      .from('branches')
+      .select('id, name, province')
+      .order('name');
+
+    if (!error && data) {
+      setBranches(data);
+    }
+  }
 
   async function loadExtendedProfile() {
     if (!profile) return;
@@ -69,24 +114,41 @@ export function Profile() {
         if (!error && data) {
           setStaffDetails(data);
           setFormData({
-            full_name: profile.full_name || '',
             first_name: data.first_name || '',
             last_name: data.last_name || '',
-            father_name: data.father_name || '',
-            dob: data.dob || '',
-            gender: data.gender || '',
             national_id: data.national_id || '',
+            age: data.age || '',
+            gender: data.gender || '',
+            position: data.position || '',
+            dob: data.dob || '',
+            branch_id: data.branch_id || '',
+            date_joined: data.date_joined || '',
+            date_left: data.date_left || '',
+            address: data.address || '',
             passport_number: data.passport_number || '',
-            home_address: data.home_address || '',
             phone: data.phone || '',
             email: data.email || profile.email,
-            emergency_contact: data.emergency_contact || '',
-            position: data.position || '',
             job_description: data.job_description || '',
-            date_joined: data.date_joined || '',
-            history_activities: data.history_activities || '',
             short_bio: data.short_bio || '',
-            notes: data.notes || '',
+          });
+        } else {
+          setFormData({
+            first_name: '',
+            last_name: '',
+            national_id: '',
+            age: '',
+            gender: '',
+            position: '',
+            dob: '',
+            branch_id: '',
+            date_joined: '',
+            date_left: '',
+            address: '',
+            passport_number: '',
+            phone: '',
+            email: profile.email,
+            job_description: '',
+            short_bio: '',
           });
         }
       } else if (profile.role_id === 'student') {
@@ -99,27 +161,43 @@ export function Profile() {
         if (!error && data) {
           setStudentDetails(data);
           setFormData({
-            full_name: profile.full_name || '',
             first_name: data.first_name || '',
             last_name: data.last_name || '',
-            father_name: data.father_name || '',
+            national_id: data.national_id || '',
             age: data.age || '',
             gender: data.gender || '',
-            national_id: data.national_id || '',
-            address: data.address || '',
-            phone: data.phone || '',
-            parent_phone: data.parent_phone || '',
             education_level: data.education_level || '',
+            dob: data.dob || '',
+            branch_id: data.branch_id || '',
             date_joined: data.date_joined || '',
-            notes: data.notes || '',
+            date_left: data.date_left || '',
+            address: data.address || '',
+            passport_number: data.passport_number || '',
+            phone: data.phone || '',
+            email: data.email || profile.email,
+            job_description: data.job_description || '',
+            short_bio: data.short_bio || '',
+          });
+        } else {
+          setFormData({
+            first_name: '',
+            last_name: '',
+            national_id: '',
+            age: '',
+            gender: '',
+            education_level: '',
+            dob: '',
+            branch_id: '',
+            date_joined: '',
+            date_left: '',
+            address: '',
+            passport_number: '',
+            phone: '',
+            email: profile.email,
+            job_description: '',
+            short_bio: '',
           });
         }
-      } else {
-        setFormData({
-          full_name: profile.full_name || '',
-          phone: profile.phone || '',
-          address: profile.address || '',
-        });
       }
     } catch (error) {
       console.error('Error loading extended profile:', error);
@@ -128,8 +206,14 @@ export function Profile() {
     }
   }
 
-  function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  }
+
+  function handleDateLeftChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value;
+    setFormData({ ...formData, date_left: value === 'present' ? null : value });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -138,98 +222,75 @@ export function Profile() {
     setMessage(null);
 
     try {
+      const fullName = `${formData.first_name} ${formData.last_name}`.trim();
       await supabase
         .from('profiles')
         .update({
-          full_name: formData.full_name,
+          full_name: fullName,
         })
         .eq('auth_user_id', user?.id);
 
       if (profile?.role_id === 'teacher' || profile?.role_id === 'librarian') {
+        const staffData = {
+          profile_id: profile.id,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          national_id: formData.national_id,
+          age: formData.age ? parseInt(formData.age) : null,
+          gender: formData.gender,
+          position: formData.position,
+          dob: formData.dob || null,
+          branch_id: formData.branch_id || null,
+          date_joined: formData.date_joined || null,
+          date_left: formData.date_left || null,
+          address: formData.address,
+          passport_number: formData.passport_number,
+          phone: formData.phone,
+          email: formData.email,
+          job_description: formData.job_description,
+          short_bio: formData.short_bio,
+        };
+
         if (staffDetails) {
           await supabase
             .from('staff')
-            .update({
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-              father_name: formData.father_name,
-              dob: formData.dob || null,
-              gender: formData.gender,
-              national_id: formData.national_id,
-              passport_number: formData.passport_number,
-              home_address: formData.home_address,
-              phone: formData.phone,
-              email: formData.email,
-              emergency_contact: formData.emergency_contact,
-              position: formData.position,
-              job_description: formData.job_description,
-              date_joined: formData.date_joined || null,
-              history_activities: formData.history_activities,
-              short_bio: formData.short_bio,
-              notes: formData.notes,
-            })
+            .update(staffData)
             .eq('profile_id', profile.id);
         } else {
           await supabase
             .from('staff')
-            .insert({
-              profile_id: profile.id,
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-              father_name: formData.father_name,
-              dob: formData.dob || null,
-              gender: formData.gender,
-              national_id: formData.national_id,
-              passport_number: formData.passport_number,
-              home_address: formData.home_address,
-              phone: formData.phone,
-              email: formData.email,
-              emergency_contact: formData.emergency_contact,
-              position: formData.position,
-              job_description: formData.job_description,
-              date_joined: formData.date_joined || null,
-              history_activities: formData.history_activities,
-              short_bio: formData.short_bio,
-              notes: formData.notes,
-            });
+            .insert(staffData);
         }
       } else if (profile?.role_id === 'student') {
+        const studentData = {
+          profile_id: profile.id,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          national_id: formData.national_id,
+          age: formData.age ? parseInt(formData.age) : null,
+          gender: formData.gender,
+          education_level: formData.education_level,
+          dob: formData.dob || null,
+          branch_id: formData.branch_id || null,
+          date_joined: formData.date_joined || null,
+          date_left: formData.date_left || null,
+          address: formData.address,
+          passport_number: formData.passport_number,
+          phone: formData.phone,
+          email: formData.email,
+          job_description: formData.job_description,
+          short_bio: formData.short_bio,
+        };
+
         if (studentDetails) {
           await supabase
             .from('students')
-            .update({
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-              father_name: formData.father_name,
-              age: formData.age || null,
-              gender: formData.gender,
-              national_id: formData.national_id,
-              address: formData.address,
-              phone: formData.phone,
-              parent_phone: formData.parent_phone,
-              education_level: formData.education_level,
-              date_joined: formData.date_joined || null,
-              notes: formData.notes,
-            })
+            .update(studentData)
             .eq('profile_id', profile.id);
         } else {
           await supabase
             .from('students')
-            .insert({
-              profile_id: profile.id,
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-              father_name: formData.father_name,
-              age: formData.age || null,
-              gender: formData.gender,
-              national_id: formData.national_id,
-              address: formData.address,
-              phone: formData.phone,
-              parent_phone: formData.parent_phone,
-              education_level: formData.education_level,
-              date_joined: formData.date_joined || null,
-              notes: formData.notes,
-            });
+            .insert(studentData);
         }
       }
 
@@ -243,6 +304,12 @@ export function Profile() {
     }
   }
 
+  function getBranchName(branchId: string | null) {
+    if (!branchId) return 'Not set';
+    const branch = branches.find(b => b.id === branchId);
+    return branch ? `${branch.name}${branch.province ? ` - ${branch.province}` : ''}` : 'Not set';
+  }
+
   if (loadingDetails) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -250,6 +317,10 @@ export function Profile() {
       </div>
     );
   }
+
+  const isStaff = profile?.role_id === 'teacher' || profile?.role_id === 'librarian';
+  const isStudent = profile?.role_id === 'student';
+  const detailsData = isStaff ? staffDetails : studentDetails;
 
   return (
     <div className="space-y-6">
@@ -266,7 +337,7 @@ export function Profile() {
         <div className="px-8 pb-8">
           <div className="flex items-end justify-between -mt-16 mb-6">
             <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl">
-              {profile?.full_name?.charAt(0) || 'U'}
+              {formData.first_name?.charAt(0) || profile?.full_name?.charAt(0) || 'U'}
             </div>
 
             {!editing && (
@@ -296,25 +367,12 @@ export function Profile() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    name="full_name"
-                    required
-                    value={formData.full_name}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    First Name
+                    First Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="first_name"
+                    required
                     value={formData.first_name}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -323,11 +381,12 @@ export function Profile() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Last Name
+                    Last Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="last_name"
+                    required
                     value={formData.last_name}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -336,122 +395,41 @@ export function Profile() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Father's Name
+                    National ID <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    name="father_name"
-                    value={formData.father_name}
+                    name="national_id"
+                    required
+                    value={formData.national_id}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                 </div>
 
-                {(profile?.role_id === 'teacher' || profile?.role_id === 'librarian') && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Date of Birth
-                      </label>
-                      <input
-                        type="date"
-                        name="dob"
-                        value={formData.dob}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Position
-                      </label>
-                      <input
-                        type="text"
-                        name="position"
-                        value={formData.position}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Date Joined
-                      </label>
-                      <input
-                        type="date"
-                        name="date_joined"
-                        value={formData.date_joined}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {profile?.role_id === 'student' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Age
-                      </label>
-                      <input
-                        type="number"
-                        name="age"
-                        value={formData.age}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Education Level
-                      </label>
-                      <input
-                        type="text"
-                        name="education_level"
-                        value={formData.education_level}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Date Joined
-                      </label>
-                      <input
-                        type="date"
-                        name="date_joined"
-                        value={formData.date_joined}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Parent Phone
-                      </label>
-                      <input
-                        type="tel"
-                        name="parent_phone"
-                        value={formData.parent_phone}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                  </>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Age <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="age"
+                    required
+                    min="1"
+                    max="120"
+                    value={formData.age}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Gender
+                    Gender <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="gender"
+                    required
                     value={formData.gender}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -463,145 +441,222 @@ export function Profile() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    National ID
-                  </label>
-                  <input
-                    type="text"
-                    name="national_id"
-                    value={formData.national_id}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
-
-                {(profile?.role_id === 'teacher' || profile?.role_id === 'librarian') && (
+                {isStaff && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Passport Number
+                      Position <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      name="passport_number"
-                      value={formData.passport_number}
+                    <select
+                      name="position"
+                      required
+                      value={formData.position}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    />
+                    >
+                      <option value="">Select Position</option>
+                      {STAFF_POSITIONS.map(pos => (
+                        <option key={pos} value={pos}>{pos}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {isStudent && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Level of Education <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="education_level"
+                      required
+                      value={formData.education_level}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    >
+                      <option value="">Select Education Level</option>
+                      {EDUCATION_LEVELS.map(level => (
+                        <option key={level} value={level}>{level}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Phone
+                    Date of Birth <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="dob"
+                    required
+                    value={formData.dob}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Branch <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="branch_id"
+                    required
+                    value={formData.branch_id}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Select Branch</option>
+                    {branches.map(branch => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}{branch.province && ` - ${branch.province}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Date Joined <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="date_joined"
+                    required
+                    value={formData.date_joined}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Date Left (Leave blank if present)
+                  </label>
+                  <input
+                    type="date"
+                    name="date_left"
+                    value={formData.date_left || ''}
+                    onChange={handleDateLeftChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Passport Number
+                  </label>
+                  <input
+                    type="text"
+                    name="passport_number"
+                    value={formData.passport_number}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Phone <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
                     name="phone"
+                    required
                     value={formData.phone}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                 </div>
 
-                {(profile?.role_id === 'teacher' || profile?.role_id === 'librarian') && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Emergency Contact
-                      </label>
-                      <input
-                        type="tel"
-                        name="emergency_contact"
-                        value={formData.emergency_contact}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                  </>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  {profile?.role_id === 'teacher' || profile?.role_id === 'librarian' ? 'Home Address' : 'Address'}
+                  Address <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  name={profile?.role_id === 'teacher' || profile?.role_id === 'librarian' ? 'home_address' : 'address'}
+                  name="address"
+                  required
                   rows={3}
-                  value={profile?.role_id === 'teacher' || profile?.role_id === 'librarian' ? formData.home_address : formData.address}
+                  value={formData.address}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
                 />
               </div>
 
-              {(profile?.role_id === 'teacher' || profile?.role_id === 'librarian') && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Job Description
-                    </label>
-                    <textarea
-                      name="job_description"
-                      rows={3}
-                      value={formData.job_description}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Short Bio
-                    </label>
-                    <textarea
-                      name="short_bio"
-                      rows={3}
-                      value={formData.short_bio}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      History & Activities
-                    </label>
-                    <textarea
-                      name="history_activities"
-                      rows={3}
-                      value={formData.history_activities}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                    />
-                  </div>
-                </>
-              )}
-
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Notes
+                  Job Description
                 </label>
                 <textarea
-                  name="notes"
+                  name="job_description"
                   rows={3}
-                  value={formData.notes}
+                  value={formData.job_description}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Short Bio
+                </label>
+                <textarea
+                  name="short_bio"
+                  rows={3}
+                  value={formData.short_bio}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                />
+              </div>
+
+              <div className="border-t border-slate-200 pt-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">File Uploads</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Note: File upload functionality will be available soon. Please contact an administrator to upload documents.
+                </p>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-4 border-2 border-dashed border-slate-300 rounded-xl">
+                    <Upload className="w-5 h-5 text-slate-400" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">Profile Photo</p>
+                      <p className="text-xs text-slate-500">Upload your photo</p>
+                    </div>
+                  </div>
+
+                  {isStaff && (
+                    <div className="flex items-center gap-3 p-4 border-2 border-dashed border-slate-300 rounded-xl">
+                      <FileUp className="w-5 h-5 text-slate-400" />
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">CV (PDF)</p>
+                        <p className="text-xs text-slate-500">Upload your CV</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 p-4 border-2 border-dashed border-slate-300 rounded-xl">
+                    <FileUp className="w-5 h-5 text-slate-400" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">Other Documents (PDF)</p>
+                      <p className="text-xs text-slate-500">Upload additional documents</p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3">
@@ -635,149 +690,113 @@ export function Profile() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-500">Full Name</p>
-                    <p className="text-slate-900 font-medium">{profile?.full_name || 'Not set'}</p>
+                    <p className="text-slate-900 font-medium">
+                      {formData.first_name && formData.last_name
+                        ? `${formData.first_name} ${formData.last_name}`
+                        : 'Not set'}
+                    </p>
                   </div>
                 </div>
 
-                {formData.first_name && (
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-cyan-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <CreditCard className="w-5 h-5 text-cyan-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">National ID</p>
+                    <p className="text-slate-900 font-medium">{formData.national_id || 'Not set'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-lime-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-lime-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Age</p>
+                    <p className="text-slate-900 font-medium">{formData.age || 'Not set'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-pink-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Gender</p>
+                    <p className="text-slate-900 font-medium capitalize">{formData.gender || 'Not set'}</p>
+                  </div>
+                </div>
+
+                {isStaff && formData.position && (
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-cyan-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-cyan-600" />
+                    <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Briefcase className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">First Name</p>
-                      <p className="text-slate-900 font-medium">{formData.first_name}</p>
+                      <p className="text-sm text-slate-500">Position</p>
+                      <p className="text-slate-900 font-medium">{formData.position}</p>
                     </div>
                   </div>
                 )}
 
-                {formData.last_name && (
+                {isStudent && formData.education_level && (
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-teal-600" />
+                    <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-5 h-5 text-yellow-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Last Name</p>
-                      <p className="text-slate-900 font-medium">{formData.last_name}</p>
-                    </div>
-                  </div>
-                )}
-
-                {formData.father_name && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Users className="w-5 h-5 text-sky-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Father's Name</p>
-                      <p className="text-slate-900 font-medium">{formData.father_name}</p>
+                      <p className="text-sm text-slate-500">Education Level</p>
+                      <p className="text-slate-900 font-medium">{formData.education_level}</p>
                     </div>
                   </div>
                 )}
 
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Mail className="w-5 h-5 text-emerald-600" />
+                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500">Email</p>
-                    <p className="text-slate-900 font-medium">{profile?.email || 'Not set'}</p>
+                    <p className="text-sm text-slate-500">Date of Birth</p>
+                    <p className="text-slate-900 font-medium">
+                      {formData.dob ? new Date(formData.dob).toLocaleDateString() : 'Not set'}
+                    </p>
                   </div>
                 </div>
-
-                {formData.phone && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Phone</p>
-                      <p className="text-slate-900 font-medium">{formData.phone}</p>
-                    </div>
-                  </div>
-                )}
-
-                {formData.parent_phone && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-fuchsia-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-5 h-5 text-fuchsia-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Parent Phone</p>
-                      <p className="text-slate-900 font-medium">{formData.parent_phone}</p>
-                    </div>
-                  </div>
-                )}
-
-                {formData.emergency_contact && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Emergency Contact</p>
-                      <p className="text-slate-900 font-medium">{formData.emergency_contact}</p>
-                    </div>
-                  </div>
-                )}
 
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-5 h-5 text-amber-600" />
+                  <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Building2 className="w-5 h-5 text-teal-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500">Role</p>
-                    <p className="text-slate-900 font-medium capitalize">{profile?.role_id || 'Not set'}</p>
+                    <p className="text-sm text-slate-500">Branch</p>
+                    <p className="text-slate-900 font-medium">{getBranchName(formData.branch_id)}</p>
                   </div>
                 </div>
 
-                {formData.gender && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-pink-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Gender</p>
-                      <p className="text-slate-900 font-medium capitalize">{formData.gender}</p>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-slate-600" />
                   </div>
-                )}
+                  <div>
+                    <p className="text-sm text-slate-500">Date Joined</p>
+                    <p className="text-slate-900 font-medium">
+                      {formData.date_joined ? new Date(formData.date_joined).toLocaleDateString() : 'Not set'}
+                    </p>
+                  </div>
+                </div>
 
-                {formData.dob && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Date of Birth</p>
-                      <p className="text-slate-900 font-medium">{new Date(formData.dob).toLocaleDateString()}</p>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-gray-600" />
                   </div>
-                )}
-
-                {formData.age && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-lime-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-5 h-5 text-lime-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Age</p>
-                      <p className="text-slate-900 font-medium">{formData.age}</p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Date Left</p>
+                    <p className="text-slate-900 font-medium">
+                      {formData.date_left ? new Date(formData.date_left).toLocaleDateString() : 'Present'}
+                    </p>
                   </div>
-                )}
-
-                {formData.national_id && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <CreditCard className="w-5 h-5 text-indigo-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">National ID</p>
-                      <p className="text-slate-900 font-medium">{formData.national_id}</p>
-                    </div>
-                  </div>
-                )}
+                </div>
 
                 {formData.passport_number && (
                   <div className="flex items-start gap-3">
@@ -791,51 +810,49 @@ export function Profile() {
                   </div>
                 )}
 
-                {formData.position && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Briefcase className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Position</p>
-                      <p className="text-slate-900 font-medium">{formData.position}</p>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-5 h-5 text-purple-600" />
                   </div>
-                )}
-
-                {formData.education_level && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-5 h-5 text-yellow-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">Education Level</p>
-                      <p className="text-slate-900 font-medium">{formData.education_level}</p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Phone</p>
+                    <p className="text-slate-900 font-medium">{formData.phone || 'Not set'}</p>
                   </div>
-                )}
+                </div>
 
-                {formData.date_joined && (
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Email</p>
+                    <p className="text-slate-900 font-medium">{formData.email || 'Not set'}</p>
+                  </div>
+                </div>
+
+                {detailsData?.created_at && (
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-5 h-5 text-slate-600" />
+                    <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-5 h-5 text-indigo-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Date Joined</p>
-                      <p className="text-slate-900 font-medium">{new Date(formData.date_joined).toLocaleDateString()}</p>
+                      <p className="text-sm text-slate-500">Profile Created</p>
+                      <p className="text-slate-900 font-medium">
+                        {new Date(detailsData.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                 )}
               </div>
 
-              {(formData.home_address || formData.address) && (
+              {formData.address && (
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <MapPin className="w-5 h-5 text-rose-600" />
                   </div>
                   <div>
                     <p className="text-sm text-slate-500">Address</p>
-                    <p className="text-slate-900 font-medium">{formData.home_address || formData.address}</p>
+                    <p className="text-slate-900 font-medium">{formData.address}</p>
                   </div>
                 </div>
               )}
@@ -860,30 +877,6 @@ export function Profile() {
                   <div>
                     <p className="text-sm text-slate-500">Short Bio</p>
                     <p className="text-slate-900 font-medium">{formData.short_bio}</p>
-                  </div>
-                </div>
-              )}
-
-              {formData.history_activities && (
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-5 h-5 text-teal-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">History & Activities</p>
-                    <p className="text-slate-900 font-medium">{formData.history_activities}</p>
-                  </div>
-                </div>
-              )}
-
-              {formData.notes && (
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-5 h-5 text-gray-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Notes</p>
-                    <p className="text-slate-900 font-medium">{formData.notes}</p>
                   </div>
                 </div>
               )}
