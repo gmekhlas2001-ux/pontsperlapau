@@ -109,8 +109,8 @@ export function Classrooms() {
   async function loadTeachers() {
     const { data } = await supabase
       .from('profiles')
-      .select('id, full_name')
-      .eq('role_id', 'teacher')
+      .select('id, full_name, role_id')
+      .in('role_id', ['admin', 'teacher', 'librarian'])
       .in('status', ['approved', 'active'])
       .order('full_name');
 
