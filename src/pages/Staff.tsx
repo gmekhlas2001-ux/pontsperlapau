@@ -44,7 +44,7 @@ export function Staff() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .in('role_id', ['admin', 'staff'])
+        .in('role_id', ['admin', 'teacher', 'librarian'])
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
@@ -148,7 +148,7 @@ export function Staff() {
           full_name: addForm.full_name,
           phone: addForm.phone,
           address: addForm.address,
-          role_id: 'staff',
+          role_id: 'teacher',
           status: 'active',
         });
 
@@ -270,7 +270,7 @@ export function Staff() {
                     <Edit className="w-4 h-4" />
                     Edit
                   </button>
-                  {member.role_id === 'staff' && (
+                  {(member.role_id === 'teacher' || member.role_id === 'librarian') && (
                     <button
                       onClick={() => handlePromoteToAdmin(member)}
                       className="flex items-center justify-center gap-1 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium"
