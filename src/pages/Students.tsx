@@ -28,16 +28,35 @@ export function Students() {
     address: '',
   });
   const [addForm, setAddForm] = useState({
-    full_name: '',
+    first_name: '',
+    last_name: '',
+    father_name: '',
     email: '',
     password: '',
     phone: '',
+    parent_phone: '',
     address: '',
+    national_id: '',
+    passport_number: '',
+    age: '',
+    gender: '',
+    dob: '',
+    education_level: '',
+    branch_id: '',
+    date_joined: '',
+    short_bio: '',
   });
+  const [branches, setBranches] = useState<any[]>([]);
 
   useEffect(() => {
     loadStudents();
+    loadBranches();
   }, []);
+
+  async function loadBranches() {
+    const { data } = await supabase.from('branches').select('id, name').order('name');
+    setBranches(data || []);
+  }
 
   async function loadStudents() {
     try {
@@ -132,43 +151,74 @@ export function Students() {
   async function handleAddSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: addForm.email,
-      password: addForm.password,
-    });
+    try {
+      const full_name = `${addForm.first_name} ${addForm.last_name}`.trim();
 
-    if (authError) {
-      alert('Error creating account: ' + authError.message);
-      return;
-    }
-
-    if (authData.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          auth_user_id: authData.user.id,
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email: addForm.email,
-          full_name: addForm.full_name,
-          phone: addForm.phone,
-          address: addForm.address,
+          password: addForm.password,
+          full_name,
           role_id: 'student',
-          status: 'active',
-        });
+          user_data: {
+            first_name: addForm.first_name,
+            last_name: addForm.last_name,
+            father_name: addForm.father_name,
+            email: addForm.email,
+            phone: addForm.phone,
+            parent_phone: addForm.parent_phone,
+            address: addForm.address,
+            national_id: addForm.national_id,
+            passport_number: addForm.passport_number,
+            age: addForm.age ? parseInt(addForm.age) : null,
+            gender: addForm.gender,
+            dob: addForm.dob || null,
+            education_level: addForm.education_level,
+            branch_id: addForm.branch_id || null,
+            date_joined: addForm.date_joined || null,
+            short_bio: addForm.short_bio,
+            status: 'active',
+          },
+        }),
+      });
 
-      if (profileError) {
-        alert('Error creating student profile: ' + profileError.message);
-      } else {
-        alert('Student added successfully!');
-        setShowAdd(false);
-        setAddForm({
-          full_name: '',
-          email: '',
-          password: '',
-          phone: '',
-          address: '',
-        });
-        loadStudents();
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert('Error creating student: ' + (result.error || 'Unknown error'));
+        return;
       }
+
+      alert('Student added successfully!');
+      setShowAdd(false);
+      setAddForm({
+        first_name: '',
+        last_name: '',
+        father_name: '',
+        email: '',
+        password: '',
+        phone: '',
+        parent_phone: '',
+        address: '',
+        national_id: '',
+        passport_number: '',
+        age: '',
+        gender: '',
+        dob: '',
+        education_level: '',
+        branch_id: '',
+        date_joined: '',
+        short_bio: '',
+      });
+      loadStudents();
+    } catch (error: any) {
+      alert('Error creating student: ' + error.message);
     }
   }
 
@@ -439,56 +489,188 @@ export function Students() {
             </div>
 
             <form onSubmit={handleAddSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={addForm.full_name}
-                  onChange={(e) => setAddForm({ ...addForm, full_name: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">First Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={addForm.first_name}
+                    onChange={(e) => setAddForm({ ...addForm, first_name: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={addForm.email}
-                  onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Last Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={addForm.last_name}
+                    onChange={(e) => setAddForm({ ...addForm, last_name: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Password</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={addForm.password}
-                  onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Father Name</label>
+                  <input
+                    type="text"
+                    value={addForm.father_name}
+                    onChange={(e) => setAddForm({ ...addForm, father_name: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
-                <input
-                  type="tel"
-                  value={addForm.phone}
-                  onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">National ID</label>
+                  <input
+                    type="text"
+                    value={addForm.national_id}
+                    onChange={(e) => setAddForm({ ...addForm, national_id: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Passport Number</label>
+                  <input
+                    type="text"
+                    value={addForm.passport_number}
+                    onChange={(e) => setAddForm({ ...addForm, passport_number: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Email <span className="text-red-500">*</span></label>
+                  <input
+                    type="email"
+                    required
+                    value={addForm.email}
+                    onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Password <span className="text-red-500">*</span></label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={addForm.password}
+                    onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={addForm.phone}
+                    onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Parent Phone</label>
+                  <input
+                    type="tel"
+                    value={addForm.parent_phone}
+                    onChange={(e) => setAddForm({ ...addForm, parent_phone: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Age</label>
+                  <input
+                    type="number"
+                    value={addForm.age}
+                    onChange={(e) => setAddForm({ ...addForm, age: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Gender</label>
+                  <select
+                    value={addForm.gender}
+                    onChange={(e) => setAddForm({ ...addForm, gender: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Date of Birth</label>
+                  <input
+                    type="date"
+                    value={addForm.dob}
+                    onChange={(e) => setAddForm({ ...addForm, dob: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Education Level</label>
+                  <input
+                    type="text"
+                    value={addForm.education_level}
+                    onChange={(e) => setAddForm({ ...addForm, education_level: e.target.value })}
+                    placeholder="e.g., Grade 10, High School"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Branch</label>
+                  <select
+                    value={addForm.branch_id}
+                    onChange={(e) => setAddForm({ ...addForm, branch_id: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Select Branch</option>
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>{branch.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Date Joined</label>
+                  <input
+                    type="date"
+                    value={addForm.date_joined}
+                    onChange={(e) => setAddForm({ ...addForm, date_joined: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Address</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={addForm.address}
                   onChange={(e) => setAddForm({ ...addForm, address: e.target.value })}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Short Bio</label>
+                <textarea
+                  rows={2}
+                  value={addForm.short_bio}
+                  onChange={(e) => setAddForm({ ...addForm, short_bio: e.target.value })}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
                 />
               </div>

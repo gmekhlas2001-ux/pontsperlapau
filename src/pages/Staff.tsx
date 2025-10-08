@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { UserCheck, Search, Plus, Edit, Eye, ShieldCheck, Trash2, X, Mail, Phone, MapPin, Calendar, User, Building2, Briefcase, FileText, File, ExternalLink } from 'lucide-react';
 import { DocumentUpload } from '../components/DocumentUpload';
+import { AddStaffModal } from '../components/AddStaffModal';
 
 interface StaffMember {
   id: string;
@@ -49,7 +50,28 @@ export function Staff() {
   const [selectedMember, setSelectedMember] = useState<StaffMember | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
+  const [addForm, setAddForm] = useState<any>({
+    first_name: '',
+    last_name: '',
+    father_name: '',
+    email: '',
+    password: '',
+    phone: '',
+    address: '',
+    national_id: '',
+    passport_number: '',
+    age: '',
+    gender: '',
+    dob: '',
+    position: '',
+    role_id: 'teacher',
+    branch_id: '',
+    date_joined: '',
+    job_description: '',
+    short_bio: '',
+  });
 
   useEffect(() => {
     loadStaff();
@@ -297,6 +319,80 @@ export function Staff() {
     }
   }
 
+  async function handleAddSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    try {
+      const full_name = `${addForm.first_name} ${addForm.last_name}`.trim();
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: addForm.email,
+          password: addForm.password,
+          full_name,
+          role_id: addForm.role_id,
+          user_data: {
+            first_name: addForm.first_name,
+            last_name: addForm.last_name,
+            father_name: addForm.father_name,
+            email: addForm.email,
+            phone: addForm.phone,
+            address: addForm.address,
+            national_id: addForm.national_id,
+            passport_number: addForm.passport_number,
+            age: addForm.age ? parseInt(addForm.age) : null,
+            gender: addForm.gender,
+            dob: addForm.dob || null,
+            position: addForm.position,
+            branch_id: addForm.branch_id || null,
+            date_joined: addForm.date_joined || null,
+            job_description: addForm.job_description,
+            short_bio: addForm.short_bio,
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert('Error creating staff member: ' + (result.error || 'Unknown error'));
+        return;
+      }
+
+      alert('Staff member added successfully!');
+      setShowAdd(false);
+      setAddForm({
+        first_name: '',
+        last_name: '',
+        father_name: '',
+        email: '',
+        password: '',
+        phone: '',
+        address: '',
+        national_id: '',
+        passport_number: '',
+        age: '',
+        gender: '',
+        dob: '',
+        position: '',
+        role_id: 'teacher',
+        branch_id: '',
+        date_joined: '',
+        job_description: '',
+        short_bio: '',
+      });
+      loadStaff();
+    } catch (error: any) {
+      alert('Error creating staff member: ' + error.message);
+    }
+  }
+
   const filteredStaff = staff.filter((member) => {
     const searchLower = search.toLowerCase();
     return (
@@ -314,6 +410,13 @@ export function Staff() {
           <h1 className="text-3xl font-bold text-slate-900">Staff</h1>
           <p className="text-slate-600 mt-1">Manage staff members and their information</p>
         </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm"
+        >
+          <Plus className="w-5 h-5" />
+          Add Staff
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4">
@@ -936,6 +1039,15 @@ export function Staff() {
           </div>
         </div>
       )}
+
+      <AddStaffModal
+        isOpen={showAdd}
+        onClose={() => setShowAdd(false)}
+        onSubmit={handleAddSubmit}
+        formData={addForm}
+        setFormData={setAddForm}
+        branches={branches}
+      />
     </div>
   );
 }
