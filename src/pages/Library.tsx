@@ -307,6 +307,22 @@ export function Library() {
     }
   }
 
+  async function handleRequestReturn(loanId: string) {
+    try {
+      const { error } = await supabase
+        .from('book_loans')
+        .update({ status: 'return_requested' })
+        .eq('id', loanId);
+
+      if (error) throw error;
+
+      setToast({ message: 'Return request submitted! Awaiting admin confirmation.', type: 'success' });
+      loadLoans();
+    } catch (error: any) {
+      setToast({ message: 'Error requesting return: ' + error.message, type: 'error' });
+    }
+  }
+
   async function handleReturnBook(loanId: string) {
     try {
       const loan = loans.find(l => l.id === loanId);
@@ -332,11 +348,11 @@ export function Library() {
         if (bookError) throw bookError;
       }
 
-      setToast({ message: 'Book returned successfully!', type: 'success' });
+      setToast({ message: 'Book return confirmed successfully!', type: 'success' });
       loadLoans();
       loadBooks();
     } catch (error: any) {
-      setToast({ message: 'Error returning book: ' + error.message, type: 'error' });
+      setToast({ message: 'Error confirming return: ' + error.message, type: 'error' });
     }
   }
 
@@ -405,6 +421,7 @@ export function Library() {
   const myLoans = loans.filter(loan => loan.borrower_id === userProfileId);
   const pendingLoans = loans.filter(loan => loan.status === 'pending');
   const activeLoans = loans.filter(loan => loan.status === 'active');
+  const returnRequestedLoans = loans.filter(loan => loan.status === 'return_requested');
   const isAdmin = userRole === 'admin' || userRole === 'librarian';
 
   if (loading) {
@@ -516,7 +533,7 @@ export function Library() {
                     <Eye className="w-4 h-4" />
                     Details
                   </button>
-                  {book.available_copies > 0 && !isAdmin && (
+                  {book.available_copies > 0 && (
                     <button
                       onClick={() => openBorrowModal(book)}
                       className="flex-1 min-w-[100px] px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
@@ -524,6 +541,34 @@ export function Library() {
                       Borrow
                     </button>
                   )}
+                  {(() => {
+                    const userActiveLoan = loans.find(
+                      l => l.book_id === book.id &&
+                      l.borrower_id === userProfileId &&
+                      (l.status === 'active' || l.status === 'return_requested')
+                    );
+                    if (userActiveLoan && userActiveLoan.status === 'active') {
+                      return (
+                        <button
+                          onClick={() => handleRequestReturn(userActiveLoan.id)}
+                          className="flex-1 min-w-[100px] px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                        >
+                          Return
+                        </button>
+                      );
+                    }
+                    if (userActiveLoan && userActiveLoan.status === 'return_requested') {
+                      return (
+                        <button
+                          disabled
+                          className="flex-1 min-w-[100px] px-3 py-2 bg-slate-300 text-slate-500 rounded-lg cursor-not-allowed text-sm"
+                        >
+                          Pending Return
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
                   {isAdmin && (
                     <>
                       <button
@@ -556,6 +601,24 @@ export function Library() {
               <h3 className="font-bold text-lg mb-4">Pending Approvals ({pendingLoans.length})</h3>
               <div className="space-y-3">
                 {pendingLoans.map((loan) => (
+                  <LoanCard
+                    key={loan.id}
+                    loan={loan}
+                    onApprove={handleApproveLoan}
+                    onReject={handleRejectLoan}
+                    onReturn={handleReturnBook}
+                    isAdmin={isAdmin}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {returnRequestedLoans.length > 0 && (
+            <div>
+              <h3 className="font-bold text-lg mb-4">Return Requests ({returnRequestedLoans.length})</h3>
+              <div className="space-y-3">
+                {returnRequestedLoans.map((loan) => (
                   <LoanCard
                     key={loan.id}
                     loan={loan}
@@ -1019,6 +1082,7 @@ function LoanCard({
     pending: 'bg-yellow-100 text-yellow-700',
     approved: 'bg-blue-100 text-blue-700',
     active: 'bg-green-100 text-green-700',
+    return_requested: 'bg-orange-100 text-orange-700',
     returned: 'bg-slate-100 text-slate-700',
     overdue: 'bg-red-100 text-red-700',
     rejected: 'bg-red-100 text-red-700',
@@ -1028,6 +1092,7 @@ function LoanCard({
     pending: Clock,
     approved: Check,
     active: CheckCircle,
+    return_requested: Clock,
     returned: CheckCircle,
     overdue: XCircle,
     rejected: XCircle,
@@ -1092,13 +1157,13 @@ function LoanCard({
         </div>
       )}
 
-      {isAdmin && loan.status === 'active' && (
+      {isAdmin && loan.status === 'return_requested' && (
         <button
           onClick={() => onReturn(loan.id)}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
         >
           <CheckCircle className="w-4 h-4" />
-          Mark as Returned
+          Confirm Return
         </button>
       )}
     </div>
