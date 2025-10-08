@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { User, Mail, Phone, Calendar, MapPin, Save, FileText, Briefcase, CreditCard, Building2, Upload, FileUp } from 'lucide-react';
+import { DocumentUpload } from '../components/DocumentUpload';
 
 interface Branch {
   id: string;
@@ -249,6 +250,12 @@ export function Profile() {
           email: formData.email,
           job_description: formData.job_description,
           short_bio: formData.short_bio,
+          profile_photo_url: formData.profile_photo_url || null,
+          cv_url: formData.cv_url || null,
+          nid_photo_url: (formData as any).nid_photo_url || null,
+          passport_photo_url: (formData as any).passport_photo_url || null,
+          education_docs_url: (formData as any).education_docs_url || null,
+          family_parents_tazkira_url: (formData as any).family_parents_tazkira_url || null,
         };
 
         if (staffDetails) {
@@ -280,6 +287,7 @@ export function Profile() {
           email: formData.email,
           job_description: formData.job_description,
           short_bio: formData.short_bio,
+          profile_photo_url: formData.profile_photo_url || null,
         };
 
         if (studentDetails) {
@@ -639,23 +647,59 @@ export function Profile() {
                     </div>
                   </div>
 
-                  {isStaff && (
-                    <div className="flex items-center gap-3 p-4 border-2 border-dashed border-slate-300 rounded-xl">
-                      <FileUp className="w-5 h-5 text-slate-400" />
-                      <div>
-                        <p className="text-sm font-medium text-slate-700">CV (PDF)</p>
-                        <p className="text-xs text-slate-500">Upload your CV</p>
-                      </div>
-                    </div>
-                  )}
+                  <DocumentUpload
+                    userId={user?.id || ''}
+                    documentType="profile_photo"
+                    currentUrl={formData.profile_photo_url}
+                    onUploadComplete={(url) => setFormData({ ...formData, profile_photo_url: url })}
+                    label="Profile Photo"
+                    accept="image/*"
+                  />
 
-                  <div className="flex items-center gap-3 p-4 border-2 border-dashed border-slate-300 rounded-xl">
-                    <FileUp className="w-5 h-5 text-slate-400" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">Other Documents (PDF)</p>
-                      <p className="text-xs text-slate-500">Upload additional documents</p>
-                    </div>
-                  </div>
+                  {isStaff && (
+                    <>
+                      <DocumentUpload
+                        userId={user?.id || ''}
+                        documentType="cv"
+                        currentUrl={formData.cv_url}
+                        onUploadComplete={(url) => setFormData({ ...formData, cv_url: url })}
+                        label="CV/Resume"
+                        accept=".pdf,.doc,.docx"
+                      />
+                      <DocumentUpload
+                        userId={user?.id || ''}
+                        documentType="nid_photo"
+                        currentUrl={(formData as any).nid_photo_url}
+                        onUploadComplete={(url) => setFormData({ ...formData, nid_photo_url: url } as any)}
+                        label="National ID Photo"
+                        accept="image/*,.pdf"
+                      />
+                      <DocumentUpload
+                        userId={user?.id || ''}
+                        documentType="passport_photo"
+                        currentUrl={(formData as any).passport_photo_url}
+                        onUploadComplete={(url) => setFormData({ ...formData, passport_photo_url: url } as any)}
+                        label="Passport Photo"
+                        accept="image/*,.pdf"
+                      />
+                      <DocumentUpload
+                        userId={user?.id || ''}
+                        documentType="education_docs"
+                        currentUrl={(formData as any).education_docs_url}
+                        onUploadComplete={(url) => setFormData({ ...formData, education_docs_url: url } as any)}
+                        label="Education Documents"
+                        accept="image/*,.pdf,.doc,.docx"
+                      />
+                      <DocumentUpload
+                        userId={user?.id || ''}
+                        documentType="family_parents_tazkira"
+                        currentUrl={(formData as any).family_parents_tazkira_url}
+                        onUploadComplete={(url) => setFormData({ ...formData, family_parents_tazkira_url: url } as any)}
+                        label="Family/Parents Tazkira"
+                        accept="image/*,.pdf"
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 

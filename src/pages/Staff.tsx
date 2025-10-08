@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { UserCheck, Search, Plus, Edit, Eye, ShieldCheck, Trash2, X, Mail, Phone, MapPin, Calendar, User, Building2, Briefcase, FileText } from 'lucide-react';
+import { UserCheck, Search, Plus, Edit, Eye, ShieldCheck, Trash2, X, Mail, Phone, MapPin, Calendar, User, Building2, Briefcase, FileText, File, ExternalLink } from 'lucide-react';
+import { DocumentUpload } from '../components/DocumentUpload';
 
 interface StaffMember {
   id: string;
@@ -205,6 +206,12 @@ export function Staff() {
       notes: member.notes || '',
       role_id: member.role_id || '',
       status: member.status || '',
+      profile_photo_url: member.profile_photo_url || '',
+      nid_photo_url: member.nid_photo_url || '',
+      passport_photo_url: member.passport_photo_url || '',
+      cv_url: member.cv_url || '',
+      education_docs_url: member.education_docs_url || '',
+      family_parents_tazkira_url: member.family_parents_tazkira_url || '',
     });
     setShowEdit(true);
   }
@@ -259,6 +266,12 @@ export function Staff() {
         branch_id: editForm.branch_id || null,
         notes: editForm.notes || null,
         status: editForm.status || 'active',
+        profile_photo_url: editForm.profile_photo_url || null,
+        nid_photo_url: editForm.nid_photo_url || null,
+        passport_photo_url: editForm.passport_photo_url || null,
+        cv_url: editForm.cv_url || null,
+        education_docs_url: editForm.education_docs_url || null,
+        family_parents_tazkira_url: editForm.family_parents_tazkira_url || null,
       };
 
       if (existingStaff) {
@@ -483,6 +496,88 @@ export function Staff() {
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-2">Notes</h4>
                   <p className="text-slate-700 bg-slate-50 p-4 rounded-xl">{selectedMember.notes}</p>
+                </div>
+              )}
+
+              {(selectedMember.profile_photo_url || selectedMember.cv_url || selectedMember.nid_photo_url ||
+                selectedMember.passport_photo_url || selectedMember.education_docs_url ||
+                selectedMember.family_parents_tazkira_url) && (
+                <div className="border-t border-slate-200 pt-6">
+                  <h4 className="font-semibold text-slate-900 mb-4">Documents</h4>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {selectedMember.profile_photo_url && (
+                      <a
+                        href={selectedMember.profile_photo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors"
+                      >
+                        <File className="w-5 h-5 text-blue-600" />
+                        <span className="text-sm text-blue-700 font-medium">Profile Photo</span>
+                        <ExternalLink className="w-4 h-4 text-blue-600 ml-auto" />
+                      </a>
+                    )}
+                    {selectedMember.cv_url && (
+                      <a
+                        href={selectedMember.cv_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 transition-colors"
+                      >
+                        <File className="w-5 h-5 text-green-600" />
+                        <span className="text-sm text-green-700 font-medium">CV/Resume</span>
+                        <ExternalLink className="w-4 h-4 text-green-600 ml-auto" />
+                      </a>
+                    )}
+                    {selectedMember.nid_photo_url && (
+                      <a
+                        href={selectedMember.nid_photo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 bg-purple-50 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors"
+                      >
+                        <File className="w-5 h-5 text-purple-600" />
+                        <span className="text-sm text-purple-700 font-medium">National ID Photo</span>
+                        <ExternalLink className="w-4 h-4 text-purple-600 ml-auto" />
+                      </a>
+                    )}
+                    {selectedMember.passport_photo_url && (
+                      <a
+                        href={selectedMember.passport_photo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-100 transition-colors"
+                      >
+                        <File className="w-5 h-5 text-orange-600" />
+                        <span className="text-sm text-orange-700 font-medium">Passport Photo</span>
+                        <ExternalLink className="w-4 h-4 text-orange-600 ml-auto" />
+                      </a>
+                    )}
+                    {selectedMember.education_docs_url && (
+                      <a
+                        href={selectedMember.education_docs_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors"
+                      >
+                        <File className="w-5 h-5 text-indigo-600" />
+                        <span className="text-sm text-indigo-700 font-medium">Education Documents</span>
+                        <ExternalLink className="w-4 h-4 text-indigo-600 ml-auto" />
+                      </a>
+                    )}
+                    {selectedMember.family_parents_tazkira_url && (
+                      <a
+                        href={selectedMember.family_parents_tazkira_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 bg-pink-50 border border-pink-200 rounded-xl hover:bg-pink-100 transition-colors"
+                      >
+                        <File className="w-5 h-5 text-pink-600" />
+                        <span className="text-sm text-pink-700 font-medium">Family/Parents Tazkira</span>
+                        <ExternalLink className="w-4 h-4 text-pink-600 ml-auto" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -750,6 +845,60 @@ export function Staff() {
                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
                 />
+              </div>
+
+              <div className="border-t border-slate-200 pt-6 mt-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Documents</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <DocumentUpload
+                    userId={selectedMember.auth_user_id}
+                    documentType="profile_photo"
+                    currentUrl={editForm.profile_photo_url}
+                    onUploadComplete={(url) => setEditForm({ ...editForm, profile_photo_url: url })}
+                    label="Profile Photo"
+                    accept="image/*"
+                  />
+                  <DocumentUpload
+                    userId={selectedMember.auth_user_id}
+                    documentType="cv"
+                    currentUrl={editForm.cv_url}
+                    onUploadComplete={(url) => setEditForm({ ...editForm, cv_url: url })}
+                    label="CV/Resume"
+                    accept=".pdf,.doc,.docx"
+                  />
+                  <DocumentUpload
+                    userId={selectedMember.auth_user_id}
+                    documentType="nid_photo"
+                    currentUrl={editForm.nid_photo_url}
+                    onUploadComplete={(url) => setEditForm({ ...editForm, nid_photo_url: url })}
+                    label="National ID Photo"
+                    accept="image/*,.pdf"
+                  />
+                  <DocumentUpload
+                    userId={selectedMember.auth_user_id}
+                    documentType="passport_photo"
+                    currentUrl={editForm.passport_photo_url}
+                    onUploadComplete={(url) => setEditForm({ ...editForm, passport_photo_url: url })}
+                    label="Passport Photo"
+                    accept="image/*,.pdf"
+                  />
+                  <DocumentUpload
+                    userId={selectedMember.auth_user_id}
+                    documentType="education_docs"
+                    currentUrl={editForm.education_docs_url}
+                    onUploadComplete={(url) => setEditForm({ ...editForm, education_docs_url: url })}
+                    label="Education Documents"
+                    accept="image/*,.pdf,.doc,.docx"
+                  />
+                  <DocumentUpload
+                    userId={selectedMember.auth_user_id}
+                    documentType="family_parents_tazkira"
+                    currentUrl={editForm.family_parents_tazkira_url}
+                    onUploadComplete={(url) => setEditForm({ ...editForm, family_parents_tazkira_url: url })}
+                    label="Family/Parents Tazkira"
+                    accept="image/*,.pdf"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">
