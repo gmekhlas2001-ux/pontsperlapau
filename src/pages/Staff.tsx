@@ -89,6 +89,7 @@ export function Staff() {
         .from('profiles')
         .select('*')
         .in('role_id', ['admin', 'teacher', 'librarian'])
+        .in('status', ['approved', 'active'])
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
