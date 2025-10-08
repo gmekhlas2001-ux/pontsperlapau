@@ -276,7 +276,21 @@ export function Classrooms() {
     if (!selectedClassroom || selectedStudents.length === 0) return;
 
     try {
-      const enrollments = selectedStudents.map(studentId => ({
+      const { data: existingEnrollments } = await supabase
+        .from('classroom_enrollments')
+        .select('student_id')
+        .eq('classroom_id', selectedClassroom.id)
+        .in('student_id', selectedStudents);
+
+      const alreadyEnrolled = new Set(existingEnrollments?.map(e => e.student_id) || []);
+      const newStudents = selectedStudents.filter(id => !alreadyEnrolled.has(id));
+
+      if (newStudents.length === 0) {
+        setToast({ message: 'All selected students are already enrolled', type: 'error' });
+        return;
+      }
+
+      const enrollments = newStudents.map(studentId => ({
         classroom_id: selectedClassroom.id,
         student_id: studentId,
         status: 'active',
@@ -286,7 +300,11 @@ export function Classrooms() {
 
       if (error) throw error;
 
-      setToast({ message: 'Students enrolled successfully!', type: 'success' });
+      const message = alreadyEnrolled.size > 0
+        ? `${newStudents.length} student(s) enrolled. ${alreadyEnrolled.size} already enrolled.`
+        : 'Students enrolled successfully!';
+
+      setToast({ message, type: 'success' });
       setShowEnrollModal(false);
       setSelectedStudents([]);
       loadClassrooms();
@@ -309,6 +327,18 @@ export function Classrooms() {
 
       if (!classroom) {
         setToast({ message: 'Invalid classroom code', type: 'error' });
+        return;
+      }
+
+      const { data: existingEnrollment } = await supabase
+        .from('classroom_enrollments')
+        .select('id')
+        .eq('classroom_id', classroom.id)
+        .eq('student_id', userProfileId)
+        .maybeSingle();
+
+      if (existingEnrollment) {
+        setToast({ message: 'You are already enrolled in this classroom', type: 'error' });
         return;
       }
 
