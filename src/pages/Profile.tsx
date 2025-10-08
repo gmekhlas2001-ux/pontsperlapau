@@ -109,7 +109,7 @@ export function Profile() {
 
     setLoadingDetails(true);
     try {
-      if (profile.role_id === 'teacher' || profile.role_id === 'librarian') {
+      if (profile.role_id === 'teacher' || profile.role_id === 'librarian' || profile.role_id === 'admin') {
         const { data, error } = await supabase
           .from('staff')
           .select('*')
@@ -245,7 +245,7 @@ export function Profile() {
         })
         .eq('auth_user_id', user?.id);
 
-      if (profile?.role_id === 'teacher' || profile?.role_id === 'librarian') {
+      if (profile?.role_id === 'teacher' || profile?.role_id === 'librarian' || profile?.role_id === 'admin') {
         const staffData = {
           profile_id: profile.id,
           first_name: formData.first_name,
@@ -340,7 +340,7 @@ export function Profile() {
     );
   }
 
-  const isStaff = profile?.role_id === 'teacher' || profile?.role_id === 'librarian';
+  const isStaff = profile?.role_id === 'teacher' || profile?.role_id === 'librarian' || profile?.role_id === 'admin';
   const isStudent = profile?.role_id === 'student';
   const detailsData = isStaff ? staffDetails : studentDetails;
 
