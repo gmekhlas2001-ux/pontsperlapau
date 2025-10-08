@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { Toast } from '../components/Toast';
 import {
   Library as LibraryIcon,
   Search,
@@ -62,11 +63,13 @@ export function Library() {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'books' | 'loans' | 'myLoans'>('books');
   const [showAddBook, setShowAddBook] = useState(false);
+  const [showEditBook, setShowEditBook] = useState(false);
   const [showBookDetails, setShowBookDetails] = useState(false);
   const [showBorrowModal, setShowBorrowModal] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [userRole, setUserRole] = useState<string>('');
   const [userProfileId, setUserProfileId] = useState<string>('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [bookForm, setBookForm] = useState({
     title: '',
@@ -184,7 +187,7 @@ export function Library() {
 
       if (error) throw error;
 
-      alert('Book added successfully!');
+      setToast({ message: 'Book added successfully!', type: 'success' });
       setShowAddBook(false);
       setBookForm({
         title: '',
@@ -199,7 +202,7 @@ export function Library() {
       });
       loadBooks();
     } catch (error: any) {
-      alert('Error adding book: ' + error.message);
+      setToast({ message: 'Error adding book: ' + error.message, type: 'error' });
     }
   }
 
@@ -211,10 +214,10 @@ export function Library() {
 
       if (error) throw error;
 
-      alert('Book deleted successfully!');
+      setToast({ message: 'Book deleted successfully!', type: 'success' });
       loadBooks();
     } catch (error: any) {
-      alert('Error deleting book: ' + error.message);
+      setToast({ message: 'Error deleting book: ' + error.message, type: 'error' });
     }
   }
 
@@ -236,7 +239,7 @@ export function Library() {
 
       if (error) throw error;
 
-      alert('Book borrow request submitted! Awaiting approval.');
+      setToast({ message: 'Book borrow request submitted! Awaiting approval.', type: 'success' });
       setShowBorrowModal(false);
       setBorrowForm({
         loan_date: new Date().toISOString().split('T')[0],
@@ -245,7 +248,7 @@ export function Library() {
       });
       loadLoans();
     } catch (error: any) {
-      alert('Error requesting book: ' + error.message);
+      setToast({ message: 'Error requesting book: ' + error.message, type: 'error' });
     }
   }
 
@@ -256,7 +259,7 @@ export function Library() {
 
       const book = books.find(b => b.id === loan.book_id);
       if (!book || book.available_copies < 1) {
-        alert('No copies available');
+        setToast({ message: 'No copies available', type: 'error' });
         return;
       }
 
@@ -278,11 +281,11 @@ export function Library() {
 
       if (bookError) throw bookError;
 
-      alert('Loan approved!');
+      setToast({ message: 'Loan approved!', type: 'success' });
       loadLoans();
       loadBooks();
     } catch (error: any) {
-      alert('Error approving loan: ' + error.message);
+      setToast({ message: 'Error approving loan: ' + error.message, type: 'error' });
     }
   }
 
@@ -297,10 +300,10 @@ export function Library() {
 
       if (error) throw error;
 
-      alert('Loan rejected');
+      setToast({ message: 'Loan rejected', type: 'success' });
       loadLoans();
     } catch (error: any) {
-      alert('Error rejecting loan: ' + error.message);
+      setToast({ message: 'Error rejecting loan: ' + error.message, type: 'error' });
     }
   }
 
@@ -329,11 +332,57 @@ export function Library() {
         if (bookError) throw bookError;
       }
 
-      alert('Book returned successfully!');
+      setToast({ message: 'Book returned successfully!', type: 'success' });
       loadLoans();
       loadBooks();
     } catch (error: any) {
-      alert('Error returning book: ' + error.message);
+      setToast({ message: 'Error returning book: ' + error.message, type: 'error' });
+    }
+  }
+
+  function openEditBook(book: Book) {
+    setSelectedBook(book);
+    setBookForm({
+      title: book.title,
+      author: book.author || '',
+      isbn: book.isbn || '',
+      publisher: book.publisher || '',
+      publication_year: book.publication_year?.toString() || '',
+      category: book.category || '',
+      description: book.description || '',
+      total_copies: book.total_copies.toString(),
+      branch_id: book.branch_id || '',
+    });
+    setShowEditBook(true);
+  }
+
+  async function handleEditBook(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedBook) return;
+
+    try {
+      const { error } = await supabase
+        .from('books')
+        .update({
+          title: bookForm.title,
+          author: bookForm.author || null,
+          isbn: bookForm.isbn || null,
+          publisher: bookForm.publisher || null,
+          publication_year: bookForm.publication_year ? parseInt(bookForm.publication_year) : null,
+          category: bookForm.category || null,
+          description: bookForm.description || null,
+          total_copies: parseInt(bookForm.total_copies),
+          branch_id: bookForm.branch_id || null,
+        })
+        .eq('id', selectedBook.id);
+
+      if (error) throw error;
+
+      setToast({ message: 'Book updated successfully!', type: 'success' });
+      setShowEditBook(false);
+      loadBooks();
+    } catch (error: any) {
+      setToast({ message: 'Error updating book: ' + error.message, type: 'error' });
     }
   }
 
@@ -476,12 +525,20 @@ export function Library() {
                     </button>
                   )}
                   {isAdmin && (
-                    <button
-                      onClick={() => handleDeleteBook(book)}
-                      className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <>
+                      <button
+                        onClick={() => openEditBook(book)}
+                        className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBook(book)}
+                        className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -799,6 +856,145 @@ export function Library() {
             </div>
           </div>
         </div>
+      )}
+
+      {showEditBook && selectedBook && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-slate-900">Edit Book</h2>
+              <button onClick={() => setShowEditBook(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditBook} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={bookForm.title}
+                  onChange={(e) => setBookForm({ ...bookForm, title: e.target.value })}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Author</label>
+                  <input
+                    type="text"
+                    value={bookForm.author}
+                    onChange={(e) => setBookForm({ ...bookForm, author: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">ISBN</label>
+                  <input
+                    type="text"
+                    value={bookForm.isbn}
+                    onChange={(e) => setBookForm({ ...bookForm, isbn: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Publisher</label>
+                  <input
+                    type="text"
+                    value={bookForm.publisher}
+                    onChange={(e) => setBookForm({ ...bookForm, publisher: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Publication Year</label>
+                  <input
+                    type="number"
+                    value={bookForm.publication_year}
+                    onChange={(e) => setBookForm({ ...bookForm, publication_year: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
+                  <input
+                    type="text"
+                    value={bookForm.category}
+                    onChange={(e) => setBookForm({ ...bookForm, category: e.target.value })}
+                    placeholder="e.g., Fiction, Science, History"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Total Copies *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={bookForm.total_copies}
+                    onChange={(e) => setBookForm({ ...bookForm, total_copies: e.target.value })}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Branch</label>
+                <select
+                  value={bookForm.branch_id}
+                  onChange={(e) => setBookForm({ ...bookForm, branch_id: e.target.value })}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="">Select Branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                <textarea
+                  rows={3}
+                  value={bookForm.description}
+                  onChange={(e) => setBookForm({ ...bookForm, description: e.target.value })}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-amber-600 text-white rounded-xl font-medium hover:bg-amber-700"
+                >
+                  Update Book
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEditBook(false)}
+                  className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-medium hover:bg-slate-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

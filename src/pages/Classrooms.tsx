@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { Toast } from '../components/Toast';
 import {
   GraduationCap,
   Search,
@@ -63,6 +64,7 @@ export function Classrooms() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [userRole, setUserRole] = useState<string>('');
   const [userProfileId, setUserProfileId] = useState<string>('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [classroomForm, setClassroomForm] = useState({
     name: '',
@@ -233,7 +235,7 @@ export function Classrooms() {
         await supabase.from('classroom_enrollments').insert(enrollments);
       }
 
-      alert('Classroom created successfully!');
+      setToast({ message: 'Classroom created successfully!', type: 'success' });
       setShowAddClassroom(false);
       setClassroomForm({
         name: '',
@@ -251,7 +253,7 @@ export function Classrooms() {
       setSelectedStudents([]);
       loadClassrooms();
     } catch (error: any) {
-      alert('Error creating classroom: ' + error.message);
+      setToast({ message: 'Error creating classroom: ' + error.message, type: 'error' });
     }
   }
 
@@ -263,10 +265,10 @@ export function Classrooms() {
 
       if (error) throw error;
 
-      alert('Classroom deleted successfully!');
+      setToast({ message: 'Classroom deleted successfully!', type: 'success' });
       loadClassrooms();
     } catch (error: any) {
-      alert('Error deleting classroom: ' + error.message);
+      setToast({ message: 'Error deleting classroom: ' + error.message, type: 'error' });
     }
   }
 
@@ -284,7 +286,7 @@ export function Classrooms() {
 
       if (error) throw error;
 
-      alert('Students enrolled successfully!');
+      setToast({ message: 'Students enrolled successfully!', type: 'success' });
       setShowEnrollModal(false);
       setSelectedStudents([]);
       loadClassrooms();
@@ -292,7 +294,7 @@ export function Classrooms() {
         loadEnrollments(selectedClassroom.id);
       }
     } catch (error: any) {
-      alert('Error enrolling students: ' + error.message);
+      setToast({ message: 'Error enrolling students: ' + error.message, type: 'error' });
     }
   }
 
@@ -306,7 +308,7 @@ export function Classrooms() {
         .maybeSingle();
 
       if (!classroom) {
-        alert('Invalid classroom code');
+        setToast({ message: 'Invalid classroom code', type: 'error' });
         return;
       }
 
@@ -318,10 +320,10 @@ export function Classrooms() {
 
       if (error) throw error;
 
-      alert('Enrolled successfully!');
+      setToast({ message: 'Enrolled successfully!', type: 'success' });
       loadClassrooms();
     } catch (error: any) {
-      alert('Error enrolling: ' + error.message);
+      setToast({ message: 'Error enrolling: ' + error.message, type: 'error' });
     }
   }
 
@@ -336,13 +338,13 @@ export function Classrooms() {
 
       if (error) throw error;
 
-      alert('Enrollment dropped');
+      setToast({ message: 'Enrollment dropped', type: 'success' });
       if (selectedClassroom) {
         loadEnrollments(selectedClassroom.id);
       }
       loadClassrooms();
     } catch (error: any) {
-      alert('Error dropping enrollment: ' + error.message);
+      setToast({ message: 'Error dropping enrollment: ' + error.message, type: 'error' });
     }
   }
 
@@ -815,6 +817,14 @@ export function Classrooms() {
             </div>
           </div>
         </div>
+      )}
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );
