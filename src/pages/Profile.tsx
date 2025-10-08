@@ -358,9 +358,17 @@ export function Profile() {
 
         <div className="px-8 pb-8">
           <div className="flex items-end justify-between -mt-16 mb-6">
-            <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl">
-              {formData.first_name?.charAt(0) || profile?.full_name?.charAt(0) || 'U'}
-            </div>
+            {formData.profile_photo_url ? (
+              <img
+                src={formData.profile_photo_url}
+                alt="Profile"
+                className="w-32 h-32 rounded-2xl object-cover border-4 border-white shadow-xl"
+              />
+            ) : (
+              <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl">
+                {formData.first_name?.charAt(0) || profile?.full_name?.charAt(0) || 'U'}
+              </div>
+            )}
 
             {!editing && (
               <button
@@ -647,20 +655,9 @@ export function Profile() {
               </div>
 
               <div className="border-t border-slate-200 pt-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">File Uploads</h3>
-                <p className="text-sm text-slate-600 mb-4">
-                  Note: File upload functionality will be available soon. Please contact an administrator to upload documents.
-                </p>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Documents</h3>
 
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-4 border-2 border-dashed border-slate-300 rounded-xl">
-                    <Upload className="w-5 h-5 text-slate-400" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">Profile Photo</p>
-                      <p className="text-xs text-slate-500">Upload your photo</p>
-                    </div>
-                  </div>
-
                   <DocumentUpload
                     userId={user?.id || ''}
                     documentType="profile_photo"

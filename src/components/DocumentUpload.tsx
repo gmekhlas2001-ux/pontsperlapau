@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Upload, X, File, ExternalLink } from 'lucide-react';
+import { Upload, X, File, ExternalLink, Download, User } from 'lucide-react';
 
 interface DocumentUploadProps {
   userId: string;
@@ -57,6 +57,32 @@ export function DocumentUpload({
     }
   }
 
+  async function handleDownload() {
+    if (!currentUrl) return;
+
+    try {
+      const path = currentUrl.split('/documents/')[1];
+      if (path) {
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .download(path);
+
+        if (error) throw error;
+
+        const url = URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = path.split('/').pop() || 'download';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error: any) {
+      setError(error.message);
+    }
+  }
+
   async function handleDelete() {
     if (!currentUrl || !confirm('Are you sure you want to delete this document?')) return;
 
@@ -76,25 +102,41 @@ export function DocumentUpload({
       <label className="block text-sm font-medium text-slate-700 mb-2">{label}</label>
 
       {currentUrl ? (
-        <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-300 rounded-xl">
-          <File className="w-5 h-5 text-slate-600" />
-          <a
-            href={currentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 text-sm text-blue-600 hover:underline truncate flex items-center gap-1"
-          >
-            View Document
-            <ExternalLink className="w-3 h-3" />
-          </a>
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="p-1 hover:bg-red-100 rounded text-red-600"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        documentType === 'profile_photo' ? (
+          <div className="relative group">
+            <img
+              src={currentUrl}
+              alt="Profile"
+              className="w-32 h-32 rounded-full object-cover border-4 border-slate-200"
+            />
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="absolute top-0 right-0 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-300 rounded-xl">
+            <File className="w-5 h-5 text-slate-600" />
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="flex-1 text-sm text-blue-600 hover:underline truncate flex items-center gap-1 text-left"
+            >
+              Download Document
+              <Download className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="p-1 hover:bg-red-100 rounded text-red-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )
       ) : (
         <div className="relative">
           <input
@@ -109,12 +151,25 @@ export function DocumentUpload({
             htmlFor={`upload-${documentType}-${userId}`}
             className={`flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors ${
               uploading ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
+              documentType === 'profile_photo' ? 'w-32 h-32 rounded-full flex-col' : ''
             }`}
           >
-            <Upload className="w-5 h-5 text-slate-600" />
-            <span className="text-sm text-slate-600">
-              {uploading ? 'Uploading...' : 'Click to upload'}
-            </span>
+            {documentType === 'profile_photo' ? (
+              <>
+                <User className="w-12 h-12 text-slate-400" />
+                <span className="text-xs text-slate-600 text-center">
+                  {uploading ? 'Uploading...' : 'Upload Photo'}
+                </span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-5 h-5 text-slate-600" />
+                <span className="text-sm text-slate-600">
+                  {uploading ? 'Uploading...' : 'Click to upload'}
+                </span>
+              </>
+            )}
           </label>
         </div>
       )}

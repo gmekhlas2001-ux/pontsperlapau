@@ -353,9 +353,17 @@ export function Staff() {
               <div className={`h-24 ${member.role_id === 'admin' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500'}`}></div>
 
               <div className="p-6 -mt-12">
-                <div className="w-24 h-24 bg-white rounded-2xl border-4 border-white shadow-lg flex items-center justify-center text-3xl font-bold text-slate-700 mb-4">
-                  {member.full_name?.charAt(0) || 'U'}
-                </div>
+                {member.profile_photo_url ? (
+                  <img
+                    src={member.profile_photo_url}
+                    alt={member.full_name}
+                    className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg mb-4"
+                  />
+                ) : (
+                  <div className="w-24 h-24 bg-white rounded-2xl border-4 border-white shadow-lg flex items-center justify-center text-3xl font-bold text-slate-700 mb-4">
+                    {member.full_name?.charAt(0) || 'U'}
+                  </div>
+                )}
 
                 <div className="space-y-2 mb-4">
                   <h3 className="text-xl font-bold text-slate-900">{member.full_name}</h3>
@@ -436,9 +444,17 @@ export function Staff() {
 
             <div className="p-6 space-y-6">
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center text-white text-3xl font-bold">
-                  {selectedMember.full_name?.charAt(0) || 'U'}
-                </div>
+                {selectedMember.profile_photo_url ? (
+                  <img
+                    src={selectedMember.profile_photo_url}
+                    alt={selectedMember.full_name}
+                    className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-200"
+                  />
+                ) : (
+                  <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center text-white text-3xl font-bold">
+                    {selectedMember.full_name?.charAt(0) || 'U'}
+                  </div>
+                )}
                 <div>
                   <h3 className="text-2xl font-bold text-slate-900">{selectedMember.full_name}</h3>
                   <p className="text-slate-600 capitalize">{selectedMember.position || selectedMember.role_id}</p>
