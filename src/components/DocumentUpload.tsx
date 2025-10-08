@@ -103,19 +103,42 @@ export function DocumentUpload({
 
       {currentUrl ? (
         documentType === 'profile_photo' ? (
-          <div className="relative group">
-            <img
-              src={currentUrl}
-              alt="Profile"
-              className="w-32 h-32 rounded-full object-cover border-4 border-slate-200"
-            />
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="absolute top-0 right-0 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X className="w-4 h-4" />
-            </button>
+          <div className="space-y-2">
+            <div className="relative group">
+              <img
+                src={currentUrl}
+                alt="Profile"
+                className="w-32 h-32 rounded-full object-cover border-4 border-slate-200"
+              />
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="absolute top-0 right-0 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type="file"
+                accept={accept}
+                onChange={handleFileUpload}
+                disabled={uploading}
+                className="hidden"
+                id={`upload-${documentType}-${userId}-replace`}
+              />
+              <label
+                htmlFor={`upload-${documentType}-${userId}-replace`}
+                className={`flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors ${
+                  uploading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <Upload className="w-4 h-4 text-slate-600" />
+                <span className="text-sm text-slate-600">
+                  {uploading ? 'Uploading...' : 'Change Photo'}
+                </span>
+              </label>
+            </div>
           </div>
         ) : (
           <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-300 rounded-xl">
