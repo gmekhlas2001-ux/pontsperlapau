@@ -58,18 +58,37 @@ export function Students() {
   }
 
   async function handleDelete(student: Student) {
-    if (!confirm(`Are you sure you want to delete ${student.full_name}? This action cannot be undone.`)) return;
+    if (!confirm(`Are you sure you want to delete ${student.full_name}? This action cannot be undone. They will be removed from both the database and authentication system.`)) return;
 
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', student.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('You must be logged in to perform this action');
+        return;
+      }
 
-    if (error) {
-      alert('Error deleting student: ' + error.message);
-    } else {
-      alert('Student deleted successfully!');
-      loadStudents();
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ profileId: student.id }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(`Error deleting student: ${result.error}`);
+      } else {
+        alert('Student deleted successfully!');
+        loadStudents();
+      }
+    } catch (error: any) {
+      alert(`Error deleting student: ${error.message}`);
     }
   }
 
