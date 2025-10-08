@@ -24,8 +24,8 @@ export function Layout({ children }: LayoutProps) {
     { path: '/staff', label: 'Staff', icon: UserCheck, roles: ['admin'] },
     { path: '/students', label: 'Students', icon: Users, roles: ['admin'] },
     { path: '/branches', label: 'Branches', icon: Building2, roles: ['admin'] },
-    { path: '/classrooms', label: 'Classrooms', icon: GraduationCap, roles: ['admin', 'teacher', 'librarian'] },
-    { path: '/libraries/books', label: 'Library', icon: Library, roles: ['admin', 'teacher', 'librarian'] },
+    { path: '/classrooms', label: 'Classrooms', icon: GraduationCap, roles: ['admin', 'teacher', 'librarian', 'student'] },
+    { path: '/libraries/books', label: 'Library', icon: Library, roles: ['admin', 'teacher', 'librarian', 'student'] },
     { path: '/reports', label: 'Reports', icon: FileText, roles: ['admin'] },
     { path: '/profile', label: 'Profile', icon: UserCircle, roles: ['admin', 'teacher', 'librarian', 'student'] },
   ];

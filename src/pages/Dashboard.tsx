@@ -148,16 +148,19 @@ export function Dashboard() {
             {profile?.role_id === 'student' && (
               <>
                 <a
-                  href="/profile"
+                  href="/classrooms"
                   className="block p-4 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors"
                 >
-                  <p className="font-medium text-blue-900">My Profile</p>
-                  <p className="text-sm text-blue-600">View and update your information</p>
+                  <p className="font-medium text-blue-900">My Classrooms</p>
+                  <p className="text-sm text-blue-600">View and enroll in classes</p>
                 </a>
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                  <p className="font-medium text-slate-700">My Courses</p>
-                  <p className="text-sm text-slate-500">Coming soon</p>
-                </div>
+                <a
+                  href="/libraries/books"
+                  className="block p-4 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors"
+                >
+                  <p className="font-medium text-emerald-900">Browse Library</p>
+                  <p className="text-sm text-emerald-600">Borrow books and materials</p>
+                </a>
               </>
             )}
           </div>
