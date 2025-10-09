@@ -40,8 +40,8 @@ export function PendingApproval() {
         </button>
 
         <div className="mt-8">
-          <div className="inline-flex items-center justify-center">
-            <img src="/image.png" alt="PXP - Ponts per la Pau" className="h-10 w-auto object-contain opacity-40" />
+          <div className="inline-flex items-center justify-center text-slate-400">
+            <img src="/logo-ponts-per-la-pau-web.png" alt="Ponts per la Pau" className="w-12 h-12 object-contain opacity-50" />
           </div>
         </div>
       </div>
