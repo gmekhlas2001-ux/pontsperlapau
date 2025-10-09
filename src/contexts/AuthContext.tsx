@@ -163,19 +163,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error && error.message !== 'Session from session_id claim in JWT does not exist') {
-        console.error('Error signing out:', error);
-      }
-    } catch (error: any) {
-      if (error?.message !== 'Session from session_id claim in JWT does not exist') {
-        console.error('Error signing out:', error);
-      }
-    }
     setUser(null);
     setProfile(null);
     setSession(null);
+
+    try {
+      await supabase.auth.signOut();
+    } catch (error: any) {
+      console.error('Error signing out:', error);
+    }
+
+    localStorage.removeItem('supabase.auth.token');
+    const keysToRemove = Object.keys(localStorage).filter(key =>
+      key.startsWith('sb-') && key.includes('-auth-token')
+    );
+    keysToRemove.forEach(key => localStorage.removeItem(key));
   }
 
   const value = {
