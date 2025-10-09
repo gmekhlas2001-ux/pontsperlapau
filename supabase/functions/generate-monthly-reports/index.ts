@@ -117,12 +117,6 @@ Deno.serve(async (req: Request) => {
     const totalAmount = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
     const currency = transactions[0]?.currency || 'AFN';
 
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('auth_user_id', user.id)
-      .maybeSingle();
-
     const { data: report, error: reportError } = await supabase
       .from('generated_reports')
       .insert({
@@ -135,7 +129,7 @@ Deno.serve(async (req: Request) => {
         transaction_count: transactions.length,
         total_amount: totalAmount,
         currency: currency,
-        generated_by: profileData?.id,
+        generated_by: user.id,
         status: 'completed',
       })
       .select()
