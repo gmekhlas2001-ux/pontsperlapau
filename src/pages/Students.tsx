@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, Search, Plus, CreditCard as Edit, Eye, Trash2, X, Mail, Phone, MapPin, Calendar, User as UserIcon, Building2, Briefcase, FileText } from 'lucide-react';
 import { EditStudentModal } from '../components/EditStudentModal';
+import { Pagination } from '../components/Pagination';
 
 interface Student {
   id: string;
@@ -38,6 +39,8 @@ export function Students() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(12);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -357,6 +360,14 @@ export function Students() {
     );
   });
 
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -401,8 +412,9 @@ export function Students() {
           </p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStudents.map((student) => (
+        <>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedStudents.map((student) => (
             <div
               key={student.id}
               className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden hover:shadow-lg transition-all"
@@ -457,8 +469,18 @@ export function Students() {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={filteredStudents.length}
+            />
+          </div>
+        </>
       )}
 
       {showDetails && selectedStudent && (
