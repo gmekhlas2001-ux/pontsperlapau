@@ -1147,10 +1147,10 @@ export function Reports() {
 
       {showAddBudget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full">
-            <div className="border-b border-slate-200 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">
-                {editingBudget ? 'Edit Budget' : 'Add Branch Budget'}
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">
+                {editingBudget ? 'Edit Budget' : 'Add Budget'}
               </h2>
               <button
                 onClick={() => {
@@ -1158,19 +1158,19 @@ export function Reports() {
                   setEditingBudget(null);
                   resetBudgetForm();
                 }}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddBudget} className="p-6 space-y-4">
+            <form onSubmit={handleAddBudget} className="p-4 space-y-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Branch</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Branch</label>
                 <select
                   value={budgetForm.branch_id}
                   onChange={(e) => setBudgetForm({ ...budgetForm, branch_id: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="">Select branch</option>
@@ -1181,36 +1181,36 @@ export function Reports() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Budget Period</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Budget Period</label>
                 <select
                   value={budgetForm.budget_period}
                   onChange={(e) => setBudgetForm({ ...budgetForm, budget_period: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="monthly">Monthly</option>
                   <option value="yearly">Yearly</option>
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Year</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Year</label>
                   <input
                     type="number"
                     value={budgetForm.year}
                     onChange={(e) => setBudgetForm({ ...budgetForm, year: parseInt(e.target.value) })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
 
                 {budgetForm.budget_period === 'monthly' && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Month</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Month</label>
                     <select
                       value={budgetForm.month}
                       onChange={(e) => setBudgetForm({ ...budgetForm, month: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
                         <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('default', { month: 'long' })}</option>
@@ -1220,40 +1220,40 @@ export function Reports() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Allocated Amount</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Allocated Amount</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={budgetForm.allocated_amount}
                     onChange={(e) => setBudgetForm({ ...budgetForm, allocated_amount: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Spent Amount</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Spent Amount</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={budgetForm.spent_amount}
                     onChange={(e) => setBudgetForm({ ...budgetForm, spent_amount: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder="0.00"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Currency</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Currency</label>
                 <select
                   value={budgetForm.currency}
                   onChange={(e) => setBudgetForm({ ...budgetForm, currency: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="AFN">AFN (Afghan Afghani)</option>
                   <option value="USD">USD (US Dollar)</option>
@@ -1263,23 +1263,23 @@ export function Reports() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Notes</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Notes</label>
                 <textarea
                   value={budgetForm.notes}
                   onChange={(e) => setBudgetForm({ ...budgetForm, notes: e.target.value })}
-                  rows={3}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Additional notes..."
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  <Save className="w-5 h-5" />
-                  {editingBudget ? 'Update Budget' : 'Save Budget'}
+                  <Save className="w-4 h-4" />
+                  {editingBudget ? 'Update' : 'Save'}
                 </button>
                 <button
                   type="button"
@@ -1288,7 +1288,7 @@ export function Reports() {
                     setEditingBudget(null);
                     resetBudgetForm();
                   }}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                  className="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
