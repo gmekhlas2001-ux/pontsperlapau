@@ -553,6 +553,62 @@ export interface Database {
           created_at?: string | null
         }
       }
+      generated_reports: {
+        Row: {
+          id: string
+          branch_id: string | null
+          report_type: string
+          report_period: string
+          file_name: string
+          file_path: string
+          file_size: number
+          transaction_count: number
+          total_amount: number
+          currency: string
+          generated_by: string | null
+          generated_at: string | null
+          status: string
+          error_message: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          branch_id?: string | null
+          report_type?: string
+          report_period: string
+          file_name: string
+          file_path: string
+          file_size?: number
+          transaction_count?: number
+          total_amount?: number
+          currency?: string
+          generated_by?: string | null
+          generated_at?: string | null
+          status?: string
+          error_message?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          branch_id?: string | null
+          report_type?: string
+          report_period?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          transaction_count?: number
+          total_amount?: number
+          currency?: string
+          generated_by?: string | null
+          generated_at?: string | null
+          status?: string
+          error_message?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never

@@ -60,6 +60,24 @@ interface StaffMember {
   email: string;
 }
 
+interface GeneratedReport {
+  id: string;
+  branch_id: string | null;
+  report_type: string;
+  report_period: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  transaction_count: number;
+  total_amount: number;
+  currency: string;
+  generated_by: string | null;
+  generated_at: string | null;
+  status: string;
+  error_message: string | null;
+  branch?: { name: string };
+}
+
 export function Reports() {
   const { isAdmin } = useAuth();
   const { toast, showSuccess, showError, hideToast } = useToast();
@@ -68,11 +86,13 @@ export function Reports() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [generatedReports, setGeneratedReports] = useState<GeneratedReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showAddBudget, setShowAddBudget] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const [transactionForm, setTransactionForm] = useState({
     from_branch_id: '',
@@ -113,6 +133,7 @@ export function Reports() {
         loadBudgets(),
         loadBranches(),
         loadStaff(),
+        loadGeneratedReports(),
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -169,6 +190,105 @@ export function Reports() {
       .in('role_id', ['admin', 'teacher', 'librarian'])
       .order('full_name');
     setStaff(data || []);
+  }
+
+  async function loadGeneratedReports() {
+    const { data, error } = await supabase
+      .from('generated_reports')
+      .select('*, branch:branches(name)')
+      .order('generated_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading generated reports:', error);
+    } else {
+      setGeneratedReports(data || []);
+    }
+  }
+
+  async function generateMonthlyReport(branchId: string | null) {
+    setGeneratingReport(true);
+    try {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-monthly-reports`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ branchId, year, month }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate report');
+      }
+
+      showSuccess('Report generated successfully!');
+      await loadGeneratedReports();
+    } catch (error: any) {
+      showError(error.message || 'Failed to generate report');
+    } finally {
+      setGeneratingReport(false);
+    }
+  }
+
+  async function downloadReport(report: GeneratedReport) {
+    try {
+      const { data, error } = await supabase.storage
+        .from('reports')
+        .download(report.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = report.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showSuccess('Report downloaded successfully!');
+    } catch (error: any) {
+      showError('Failed to download report: ' + error.message);
+    }
+  }
+
+  async function deleteReport(reportId: string) {
+    if (!confirm('Are you sure you want to delete this report?')) return;
+
+    try {
+      const report = generatedReports.find(r => r.id === reportId);
+      if (!report) return;
+
+      await supabase.storage
+        .from('reports')
+        .remove([report.file_path]);
+
+      const { error } = await supabase
+        .from('generated_reports')
+        .delete()
+        .eq('id', reportId);
+
+      if (error) throw error;
+
+      showSuccess('Report deleted successfully!');
+      await loadGeneratedReports();
+    } catch (error: any) {
+      showError('Failed to delete report: ' + error.message);
+    }
   }
 
   async function handleAddTransaction(e: React.FormEvent) {
@@ -265,128 +385,6 @@ export function Reports() {
     }
   }
 
-  async function generateMonthlyReport(branchId: string | null, year: number, month: number) {
-    const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
-
-    let query = supabase
-      .from('transactions')
-      .select(`
-        *,
-        from_branch:branches!transactions_from_branch_id_fkey(name),
-        to_branch:branches!transactions_to_branch_id_fkey(name),
-        from_staff:profiles!transactions_from_staff_id_fkey(full_name),
-        to_staff:profiles!transactions_to_staff_id_fkey(full_name)
-      `)
-      .gte('transaction_date', startDate)
-      .lte('transaction_date', endDate)
-      .order('transaction_date', { ascending: false });
-
-    if (branchId) {
-      query = query.or(`from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`);
-    }
-
-    const { data: transactionData, error } = await query;
-
-    if (error) {
-      showError('Error fetching transactions: ' + error.message);
-      return;
-    }
-
-    if (!transactionData || transactionData.length === 0) {
-      showError('No transactions found for this period');
-      return;
-    }
-
-    generatePDFReport(transactionData, branchId, startDate, endDate);
-  }
-
-  function generatePDFReport(data: Transaction[], branchId: string | null, startDate: string, endDate: string) {
-    const branchName = branchId
-      ? branches.find(b => b.id === branchId)?.name || 'Unknown Branch'
-      : 'All Branches';
-
-    const totalAmount = data.reduce((sum, t) => sum + t.amount, 0);
-
-    let reportContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Transaction Report - ${branchName}</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    h1 { color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 10px; }
-    .header { margin-bottom: 30px; }
-    .summary { background: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th { background: #1e293b; color: white; padding: 12px; text-align: left; }
-    td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
-    tr:hover { background: #f8fafc; }
-    .status-confirmed { color: #10b981; font-weight: bold; }
-    .status-pending { color: #f59e0b; font-weight: bold; }
-    .status-cancelled { color: #ef4444; font-weight: bold; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Transaction Report</h1>
-    <p><strong>Branch:</strong> ${branchName}</p>
-    <p><strong>Period:</strong> ${startDate} to ${endDate}</p>
-    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
-  </div>
-
-  <div class="summary">
-    <h2>Summary</h2>
-    <p><strong>Total Transactions:</strong> ${data.length}</p>
-    <p><strong>Total Amount:</strong> ${totalAmount.toLocaleString()} AFN</p>
-    <p><strong>Confirmed:</strong> ${data.filter(t => t.status === 'confirmed').length}</p>
-    <p><strong>Pending:</strong> ${data.filter(t => t.status === 'pending').length}</p>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Transaction #</th>
-        <th>Date</th>
-        <th>From</th>
-        <th>To</th>
-        <th>Amount</th>
-        <th>Method</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${data.map(t => `
-        <tr>
-          <td>${t.transaction_number}</td>
-          <td>${new Date(t.transaction_date).toLocaleDateString()}</td>
-          <td>${t.from_branch?.name || 'N/A'} - ${t.from_staff?.full_name || 'N/A'}</td>
-          <td>${t.to_branch?.name || 'N/A'} - ${t.to_staff?.full_name || 'N/A'}</td>
-          <td>${t.amount.toLocaleString()} ${t.currency}</td>
-          <td>${t.transfer_method}</td>
-          <td class="status-${t.status}">${t.status.toUpperCase()}</td>
-        </tr>
-      `).join('')}
-    </tbody>
-  </table>
-</body>
-</html>
-    `;
-
-    const blob = new Blob([reportContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const timestamp = new Date().getTime();
-    a.download = `transaction-report-${branchName.replace(/\s+/g, '-')}-${startDate}-${timestamp}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    showSuccess(`Report generated with ${data.length} transaction(s)!`);
-  }
 
   const filteredTransactions = transactions.filter(t => {
     const matchesSearch =
@@ -656,19 +654,17 @@ export function Reports() {
                           </div>
                         </div>
                         <button
-                          onClick={() => {
-                            generateMonthlyReport(branch.id, now.getFullYear(), now.getMonth() + 1);
-                          }}
-                          disabled={currentMonthTransactions.length === 0}
+                          onClick={() => generateMonthlyReport(branch.id)}
+                          disabled={currentMonthTransactions.length === 0 || generatingReport}
                           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                            currentMonthTransactions.length === 0
+                            currentMonthTransactions.length === 0 || generatingReport
                               ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                               : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                           }`}
-                          title={currentMonthTransactions.length === 0 ? 'No transactions this month' : 'Generate report'}
+                          title={currentMonthTransactions.length === 0 ? 'No transactions this month' : 'Generate PDF report'}
                         >
                           <Download className="w-4 h-4" />
-                          Generate This Month
+                          {generatingReport ? 'Generating...' : 'Generate PDF Report'}
                         </button>
                       </div>
                     );
@@ -697,10 +693,7 @@ export function Reports() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    const now = new Date();
-                    generateMonthlyReport(null, now.getFullYear(), now.getMonth() + 1);
-                  }}
+                  onClick={() => generateMonthlyReport(null)}
                   disabled={(() => {
                     const now = new Date();
                     const currentMonthTransactions = transactions.filter(t => {
@@ -710,7 +703,7 @@ export function Reports() {
                         transDate.getFullYear() === now.getFullYear()
                       );
                     });
-                    return currentMonthTransactions.length === 0;
+                    return currentMonthTransactions.length === 0 || generatingReport;
                   })()}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     (() => {
@@ -722,7 +715,7 @@ export function Reports() {
                           transDate.getFullYear() === now.getFullYear()
                         );
                       });
-                      return currentMonthTransactions.length === 0;
+                      return currentMonthTransactions.length === 0 || generatingReport;
                     })()
                       ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -736,14 +729,83 @@ export function Reports() {
                         transDate.getFullYear() === now.getFullYear()
                       );
                     });
-                    return currentMonthTransactions.length === 0 ? 'No transactions this month' : 'Generate combined report';
+                    return currentMonthTransactions.length === 0 ? 'No transactions this month' : 'Generate combined PDF report';
                   })()}
                 >
                   <Download className="w-4 h-4" />
-                  Generate Combined Report
+                  {generatingReport ? 'Generating...' : 'Generate Combined PDF Report'}
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-4">Generated Reports</h2>
+            <p className="text-slate-600 mb-6">View and download previously generated PDF reports.</p>
+
+            {generatedReports.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p>No reports generated yet.</p>
+                <p className="text-sm mt-2">Generate your first report above!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {generatedReports.map((report) => (
+                  <div key={report.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className={`p-3 rounded-lg ${
+                        report.status === 'completed' ? 'bg-green-100' :
+                        report.status === 'failed' ? 'bg-red-100' : 'bg-yellow-100'
+                      }`}>
+                        <FileText className={`w-6 h-6 ${
+                          report.status === 'completed' ? 'text-green-600' :
+                          report.status === 'failed' ? 'text-red-600' : 'text-yellow-600'
+                        }`} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-900">{report.branch?.name || 'All Branches'}</h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-slate-600">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {report.report_period}
+                          </span>
+                          <span>{report.transaction_count} transactions</span>
+                          <span className="font-medium">{report.total_amount.toLocaleString()} {report.currency}</span>
+                        </div>
+                        {report.generated_at && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            Generated {new Date(report.generated_at).toLocaleString()}
+                          </p>
+                        )}
+                        {report.error_message && (
+                          <p className="text-xs text-red-600 mt-1">Error: {report.error_message}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {report.status === 'completed' && (
+                        <button
+                          onClick={() => downloadReport(report)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                          title="Download PDF"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteReport(report.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete report"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
