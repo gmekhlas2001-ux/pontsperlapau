@@ -55,14 +55,18 @@ export function Login() {
     setResetLoading(true);
 
     try {
+      const redirectUrl = window.location.hostname === 'localhost'
+        ? `${window.location.origin}/reset-password`
+        : `${window.location.origin}/reset-password`;
+
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectUrl,
       });
 
       if (error) {
         setResetError(error.message);
       } else {
-        setResetMessage('Password reset email sent! Check your inbox.');
+        setResetMessage('Password reset email sent! Check your inbox and click the link to reset your password.');
         setResetEmail('');
       }
     } catch (err) {

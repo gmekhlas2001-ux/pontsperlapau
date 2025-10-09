@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { ResetPassword } from './pages/ResetPassword';
 import { PendingApproval } from './pages/PendingApproval';
 import { Dashboard } from './pages/Dashboard';
 import { Approvals } from './pages/Approvals';
@@ -21,6 +22,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
 
         <Route
