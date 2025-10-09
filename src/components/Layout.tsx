@@ -40,7 +40,7 @@ export function Layout({ children }: LayoutProps) {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <BookOpen className="w-6 h-6 text-blue-600" />
+            <img src="/logo-ponts-per-la-pau-web.png" alt="Ponts per la Pau" className="w-8 h-8 object-contain" />
             <span className="font-bold text-slate-900">PXP</span>
           </div>
           <button
@@ -62,9 +62,7 @@ export function Layout({ children }: LayoutProps) {
           {/* Logo */}
           <div className="p-6 border-b border-slate-200">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-white" />
-              </div>
+              <img src="/logo-ponts-per-la-pau-web.png" alt="Ponts per la Pau" className="w-12 h-12 object-contain" />
               <div>
                 <h1 className="font-bold text-slate-900">PXP</h1>
                 <p className="text-xs text-slate-500">Ponts per la Pau</p>

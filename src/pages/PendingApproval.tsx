@@ -40,9 +40,8 @@ export function PendingApproval() {
         </button>
 
         <div className="mt-8">
-          <div className="inline-flex items-center text-slate-400">
-            <BookOpen className="w-4 h-4 mr-2" />
-            <span className="text-xs">PXP Management System</span>
+          <div className="inline-flex items-center justify-center text-slate-400">
+            <img src="/logo-ponts-per-la-pau-web.png" alt="Ponts per la Pau" className="w-12 h-12 object-contain opacity-50" />
           </div>
         </div>
       </div>

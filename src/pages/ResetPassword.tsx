@@ -60,8 +60,8 @@ export function ResetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
-            <Key className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src="/logo-ponts-per-la-pau-web.png" alt="Ponts per la Pau" className="w-32 h-32 object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Reset Password</h1>
           <p className="text-slate-600">Enter your new password below</p>
