@@ -859,12 +859,19 @@ export function Staff() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Position</label>
-                  <input
-                    type="text"
+                  <select
                     value={editForm.position}
                     onChange={(e) => setEditForm({ ...editForm, position: e.target.value })}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
+                  >
+                    <option value="">Select Position</option>
+                    <option value="Teacher">Teacher</option>
+                    <option value="Librarian">Librarian</option>
+                    <option value="Administrator">Administrator</option>
+                    <option value="Coordinator">Coordinator</option>
+                    <option value="Assistant">Assistant</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
 
                 <div>
