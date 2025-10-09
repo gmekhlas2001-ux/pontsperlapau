@@ -38,22 +38,37 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing authorization header');
+    const cronSecret = req.headers.get('X-Cron-Secret');
+    const expectedCronSecret = Deno.env.get('CRON_SECRET') || 'your-secure-cron-secret';
+
+    const isCronJob = cronSecret === expectedCronSecret;
+    let userId = null;
+
+    if (!isCronJob) {
+      if (!authHeader) {
+        throw new Error('Missing authorization header');
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+      if (authError || !user) {
+        throw new Error('Unauthorized');
+      }
+      userId = user.id;
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const body = await req.json();
+    const { branchId, year, month, isAutomated } = body;
 
-    if (authError || !user) {
-      throw new Error('Unauthorized');
-    }
+    const now = new Date();
+    const targetYear = year || now.getFullYear();
+    const targetMonth = month || (now.getMonth() === 0 ? 12 : now.getMonth());
+    const adjustedYear = targetMonth === 12 && !month ? targetYear - 1 : targetYear;
 
-    const { branchId, year, month } = await req.json();
-
-    const reportPeriod = `${year}-${String(month).padStart(2, '0')}`;
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59);
+    const reportPeriod = `${adjustedYear}-${String(targetMonth).padStart(2, '0')}`;
+    const startDate = new Date(adjustedYear, targetMonth - 1, 1);
+    const endDate = new Date(adjustedYear, targetMonth, 0, 23, 59, 59);
 
     let query = supabase
       .from('transactions')
@@ -80,6 +95,12 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!transactions || transactions.length === 0) {
+      if (isAutomated) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'No transactions found for this period', skipped: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       throw new Error('No transactions found for this period');
     }
 
@@ -129,7 +150,7 @@ Deno.serve(async (req: Request) => {
         transaction_count: transactions.length,
         total_amount: totalAmount,
         currency: currency,
-        generated_by: user.id,
+        generated_by: userId,
         status: 'completed',
       })
       .select()
