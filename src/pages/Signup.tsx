@@ -66,8 +66,8 @@ export function Signup() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 px-4">
         <div className="max-w-4xl w-full">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center mb-4">
-              <img src="/logo-ponts-per-la-pau-web.png" alt="Ponts per la Pau" className="w-32 h-32 object-contain" />
+            <div className="inline-flex items-center justify-center mb-6">
+              <img src="/image.png" alt="PXP - Ponts per la Pau" className="h-20 w-auto object-contain" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Join PXP</h1>
             <p className="text-slate-600">Select your role to get started</p>
@@ -118,8 +118,8 @@ export function Signup() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4">
-            <img src="/logo-ponts-per-la-pau-web.png" alt="Ponts per la Pau" className="w-32 h-32 object-contain" />
+          <div className="inline-flex items-center justify-center mb-6">
+            <img src="/image.png" alt="PXP - Ponts per la Pau" className="h-16 w-auto object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
             {role === 'student' ? 'Student Registration' : 'Staff Registration'}
