@@ -18,10 +18,12 @@ export function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('Login useEffect - user:', user, 'profile:', profile);
-    if (user && profile && profile.status === 'approved') {
-      console.log('Already authenticated, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
+    if (user && profile) {
+      if (profile.status === 'approved' || profile.status === 'active') {
+        navigate('/dashboard', { replace: true });
+      } else if (profile.status === 'pending') {
+        navigate('/pending-approval', { replace: true });
+      }
     }
   }, [user, profile, navigate]);
 
@@ -34,16 +36,12 @@ export function Login() {
       const { error } = await signIn(email, password);
 
       if (error) {
-        console.error('Login error:', error);
         setError(error.message);
-        setLoading(false);
-      } else {
-        console.log('Login successful, navigating to dashboard');
-        navigate('/dashboard');
       }
     } catch (err) {
       console.error('Unexpected error:', err);
       setError('An unexpected error occurred');
+    } finally {
       setLoading(false);
     }
   }
