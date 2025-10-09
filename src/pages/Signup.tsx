@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { BookOpen, User, Users } from 'lucide-react';
 
 export function Signup() {
@@ -23,24 +22,12 @@ export function Signup() {
     dob: '',
     education_level: '',
     parent_phone: '',
-    branch_id: '',
-    date_joined: '',
     address: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [branches, setBranches] = useState<any[]>([]);
   const { signUp } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    loadBranches();
-  }, []);
-
-  async function loadBranches() {
-    const { data } = await supabase.from('branches').select('id, name, province').order('name');
-    setBranches(data || []);
-  }
 
   function handleRoleSelect(selectedRole: 'student' | 'staff') {
     setRole(selectedRole);
@@ -350,42 +337,6 @@ export function Signup() {
                 </select>
               </div>
             )}
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Branch *
-                </label>
-                <select
-                  name="branch_id"
-                  required
-                  value={formData.branch_id}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                >
-                  <option value="">Select Branch</option>
-                  {branches.map(branch => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}{branch.province && ` - ${branch.province}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Date Joined *
-                </label>
-                <input
-                  type="date"
-                  name="date_joined"
-                  required
-                  value={formData.date_joined}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
-            </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
