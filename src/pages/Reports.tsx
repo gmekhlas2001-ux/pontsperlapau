@@ -50,6 +50,10 @@ interface Branch {
   name: string;
 }
 
+interface BranchWithTransactionCount extends Branch {
+  transactionCount: number;
+}
+
 interface StaffMember {
   id: string;
   full_name: string;
@@ -275,13 +279,19 @@ export function Reports() {
         to_staff:profiles!transactions_to_staff_id_fkey(full_name)
       `)
       .gte('transaction_date', startDate)
-      .lte('transaction_date', endDate);
+      .lte('transaction_date', endDate)
+      .order('transaction_date', { ascending: false });
 
     if (branchId) {
       query = query.or(`from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`);
     }
 
-    const { data: transactionData } = await query;
+    const { data: transactionData, error } = await query;
+
+    if (error) {
+      showError('Error fetching transactions: ' + error.message);
+      return;
+    }
 
     if (!transactionData || transactionData.length === 0) {
       showError('No transactions found for this period');
@@ -368,13 +378,14 @@ export function Reports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `transaction-report-${branchName.replace(/\s+/g, '-')}-${startDate}.html`;
+    const timestamp = new Date().getTime();
+    a.download = `transaction-report-${branchName.replace(/\s+/g, '-')}-${startDate}-${timestamp}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    showSuccess('Report generated and downloaded successfully!');
+    showSuccess(`Report generated with ${data.length} transaction(s)!`);
   }
 
   const filteredTransactions = transactions.filter(t => {
@@ -612,39 +623,121 @@ export function Reports() {
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
             <h2 className="text-xl font-bold text-slate-900 mb-4">Generate Monthly Reports</h2>
-            <p className="text-slate-600 mb-6">Generate transaction reports for each branch or all branches.</p>
+            <p className="text-slate-600 mb-6">Generate transaction reports for each branch or all branches for the current month.</p>
 
             <div className="space-y-4">
-              {branches.map((branch) => (
-                <div key={branch.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Building2 className="w-5 h-5 text-blue-600" />
-                    <span className="font-medium text-slate-900">{branch.name}</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const now = new Date();
-                      generateMonthlyReport(branch.id, now.getFullYear(), now.getMonth() + 1);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    Generate This Month
-                  </button>
+              {branches.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <Building2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No branches available. Create branches first.</p>
                 </div>
-              ))}
+              ) : (
+                <>
+                  {branches.map((branch) => {
+                    const now = new Date();
+                    const currentMonthTransactions = transactions.filter(t => {
+                      const transDate = new Date(t.transaction_date);
+                      return (
+                        transDate.getMonth() === now.getMonth() &&
+                        transDate.getFullYear() === now.getFullYear() &&
+                        (t.from_branch_id === branch.id || t.to_branch_id === branch.id)
+                      );
+                    });
+
+                    return (
+                      <div key={branch.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Building2 className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <span className="font-medium text-slate-900">{branch.name}</span>
+                            <p className="text-sm text-slate-500">
+                              {currentMonthTransactions.length} transaction{currentMonthTransactions.length !== 1 ? 's' : ''} this month
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            generateMonthlyReport(branch.id, now.getFullYear(), now.getMonth() + 1);
+                          }}
+                          disabled={currentMonthTransactions.length === 0}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                            currentMonthTransactions.length === 0
+                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                              : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                          }`}
+                          title={currentMonthTransactions.length === 0 ? 'No transactions this month' : 'Generate report'}
+                        >
+                          <Download className="w-4 h-4" />
+                          Generate This Month
+                        </button>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
 
               <div className="flex items-center justify-between p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
                 <div className="flex items-center gap-3">
                   <FileText className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium text-slate-900">All Branches Combined</span>
+                  <div>
+                    <span className="font-medium text-slate-900">All Branches Combined</span>
+                    <p className="text-sm text-slate-600">
+                      {(() => {
+                        const now = new Date();
+                        const currentMonthTransactions = transactions.filter(t => {
+                          const transDate = new Date(t.transaction_date);
+                          return (
+                            transDate.getMonth() === now.getMonth() &&
+                            transDate.getFullYear() === now.getFullYear()
+                          );
+                        });
+                        return `${currentMonthTransactions.length} transaction${currentMonthTransactions.length !== 1 ? 's' : ''} this month`;
+                      })()}
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => {
                     const now = new Date();
                     generateMonthlyReport(null, now.getFullYear(), now.getMonth() + 1);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={(() => {
+                    const now = new Date();
+                    const currentMonthTransactions = transactions.filter(t => {
+                      const transDate = new Date(t.transaction_date);
+                      return (
+                        transDate.getMonth() === now.getMonth() &&
+                        transDate.getFullYear() === now.getFullYear()
+                      );
+                    });
+                    return currentMonthTransactions.length === 0;
+                  })()}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    (() => {
+                      const now = new Date();
+                      const currentMonthTransactions = transactions.filter(t => {
+                        const transDate = new Date(t.transaction_date);
+                        return (
+                          transDate.getMonth() === now.getMonth() &&
+                          transDate.getFullYear() === now.getFullYear()
+                        );
+                      });
+                      return currentMonthTransactions.length === 0;
+                    })()
+                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                  title={(() => {
+                    const now = new Date();
+                    const currentMonthTransactions = transactions.filter(t => {
+                      const transDate = new Date(t.transaction_date);
+                      return (
+                        transDate.getMonth() === now.getMonth() &&
+                        transDate.getFullYear() === now.getFullYear()
+                      );
+                    });
+                    return currentMonthTransactions.length === 0 ? 'No transactions this month' : 'Generate combined report';
+                  })()}
                 >
                   <Download className="w-4 h-4" />
                   Generate Combined Report
