@@ -6,7 +6,7 @@ import { useToast } from '../hooks/useToast';
 import {
   FileText, Plus, DollarSign, TrendingUp, Calendar,
   Download, Search, Filter, X, Save, Building2,
-  Users, ArrowRight, CheckCircle, Clock, XCircle, Trash2
+  Users, ArrowRight, CheckCircle, Clock, XCircle, Trash2, Edit
 } from 'lucide-react';
 
 interface Transaction {
@@ -90,6 +90,7 @@ export function Reports() {
   const [loading, setLoading] = useState(true);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showAddBudget, setShowAddBudget] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [generatingReport, setGeneratingReport] = useState(false);
@@ -115,6 +116,7 @@ export function Reports() {
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
     allocated_amount: '',
+    spent_amount: '',
     currency: 'AFN',
     notes: '',
   });
@@ -378,28 +380,93 @@ export function Reports() {
       .eq('auth_user_id', (await supabase.auth.getUser()).data.user?.id)
       .single();
 
-    const { error } = await supabase.from('branch_budgets').insert({
-      ...budgetForm,
-      allocated_amount: parseFloat(budgetForm.allocated_amount),
-      month: budgetForm.budget_period === 'yearly' ? null : budgetForm.month,
-      notes: budgetForm.notes || null,
-      created_by: profileData?.id,
+    if (editingBudget) {
+      const { error } = await supabase
+        .from('branch_budgets')
+        .update({
+          branch_id: budgetForm.branch_id,
+          budget_period: budgetForm.budget_period,
+          year: budgetForm.year,
+          month: budgetForm.budget_period === 'yearly' ? null : budgetForm.month,
+          allocated_amount: parseFloat(budgetForm.allocated_amount),
+          spent_amount: parseFloat(budgetForm.spent_amount || '0'),
+          currency: budgetForm.currency,
+          notes: budgetForm.notes || null,
+        })
+        .eq('id', editingBudget.id);
+
+      if (error) {
+        showError('Error updating budget: ' + error.message);
+      } else {
+        showSuccess('Budget updated successfully!');
+        setShowAddBudget(false);
+        setEditingBudget(null);
+        resetBudgetForm();
+        loadBudgets();
+      }
+    } else {
+      const { error } = await supabase.from('branch_budgets').insert({
+        ...budgetForm,
+        allocated_amount: parseFloat(budgetForm.allocated_amount),
+        spent_amount: parseFloat(budgetForm.spent_amount || '0'),
+        month: budgetForm.budget_period === 'yearly' ? null : budgetForm.month,
+        notes: budgetForm.notes || null,
+        created_by: profileData?.id,
+      });
+
+      if (error) {
+        showError('Error creating budget: ' + error.message);
+      } else {
+        showSuccess('Budget created successfully!');
+        setShowAddBudget(false);
+        resetBudgetForm();
+        loadBudgets();
+      }
+    }
+  }
+
+  function resetBudgetForm() {
+    setBudgetForm({
+      branch_id: '',
+      budget_period: 'monthly',
+      year: new Date().getFullYear(),
+      month: new Date().getMonth() + 1,
+      allocated_amount: '',
+      spent_amount: '',
+      currency: 'AFN',
+      notes: '',
     });
+  }
+
+  function handleEditBudget(budget: Budget) {
+    setEditingBudget(budget);
+    setBudgetForm({
+      branch_id: budget.branch_id,
+      budget_period: budget.budget_period,
+      year: budget.year,
+      month: budget.month || new Date().getMonth() + 1,
+      allocated_amount: budget.allocated_amount.toString(),
+      spent_amount: budget.spent_amount.toString(),
+      currency: budget.currency,
+      notes: budget.notes || '',
+    });
+    setShowAddBudget(true);
+  }
+
+  async function handleDeleteBudget(id: string) {
+    if (!confirm('Are you sure you want to delete this budget?')) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('branch_budgets')
+      .delete()
+      .eq('id', id);
 
     if (error) {
-      showError('Error creating budget: ' + error.message);
+      showError('Error deleting budget: ' + error.message);
     } else {
-      showSuccess('Budget created successfully!');
-      setShowAddBudget(false);
-      setBudgetForm({
-        branch_id: '',
-        budget_period: 'monthly',
-        year: new Date().getFullYear(),
-        month: new Date().getMonth() + 1,
-        allocated_amount: '',
-        currency: 'AFN',
-        notes: '',
-      });
+      showSuccess('Budget deleted successfully!');
       loadBudgets();
     }
   }
@@ -593,45 +660,99 @@ export function Reports() {
           </div>
 
           <div className="grid gap-4">
-            {budgets.map((budget) => (
-              <div key={budget.id} className="bg-white rounded-xl border border-slate-200 p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
+            {budgets.map((budget) => {
+              const remaining = budget.allocated_amount - budget.spent_amount;
+              const percentageSpent = budget.allocated_amount > 0 ? (budget.spent_amount / budget.allocated_amount) * 100 : 0;
+
+              return (
+                <div key={budget.id} className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
                       <Building2 className="w-5 h-5 text-blue-600" />
                       <h3 className="text-lg font-bold text-slate-900">{budget.branch?.name}</h3>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-slate-500">Period</p>
-                        <p className="text-sm font-medium text-slate-900">
-                          {budget.budget_period === 'monthly' && `${budget.month}/${budget.year}`}
-                          {budget.budget_period === 'yearly' && budget.year}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Allocated Amount</p>
-                        <p className="text-sm font-medium text-slate-900">
-                          {budget.allocated_amount.toLocaleString()} {budget.currency}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Spent Amount</p>
-                        <p className="text-sm font-medium text-slate-900">
-                          {budget.spent_amount.toLocaleString()} {budget.currency}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">Remaining</p>
-                        <p className="text-sm font-medium text-green-600">
-                          {(budget.allocated_amount - budget.spent_amount).toLocaleString()} {budget.currency}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditBudget(budget)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit budget"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBudget(budget.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete budget"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-sm text-slate-500">Period</p>
+                      <p className="text-sm font-medium text-slate-900">
+                        {budget.budget_period === 'monthly' && `${budget.month}/${budget.year}`}
+                        {budget.budget_period === 'yearly' && budget.year}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">Currency</p>
+                      <p className="text-sm font-medium text-slate-900">{budget.currency}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">Allocated</span>
+                      <span className="text-lg font-bold text-slate-900">
+                        {budget.allocated_amount.toLocaleString()} {budget.currency}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">Spent</span>
+                      <span className="text-lg font-semibold text-red-600">
+                        {budget.spent_amount.toLocaleString()} {budget.currency}
+                      </span>
+                    </div>
+
+                    <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all ${
+                          percentageSpent >= 100
+                            ? 'bg-red-500'
+                            : percentageSpent >= 75
+                            ? 'bg-yellow-500'
+                            : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(percentageSpent, 100)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                      <span className="text-sm font-medium text-slate-600">Remaining</span>
+                      <span className={`text-xl font-bold ${
+                        remaining >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {remaining.toLocaleString()} {budget.currency}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-slate-500 text-center">
+                      {percentageSpent.toFixed(1)}% of budget used
+                    </div>
+                  </div>
+
+                  {budget.notes && (
+                    <div className="mt-4 pt-4 border-t border-slate-200">
+                      <p className="text-sm text-slate-600">{budget.notes}</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1028,9 +1149,15 @@ export function Reports() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full">
             <div className="border-b border-slate-200 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">Add Branch Budget</h2>
+              <h2 className="text-2xl font-bold text-slate-900">
+                {editingBudget ? 'Edit Budget' : 'Add Branch Budget'}
+              </h2>
               <button
-                onClick={() => setShowAddBudget(false)}
+                onClick={() => {
+                  setShowAddBudget(false);
+                  setEditingBudget(null);
+                  resetBudgetForm();
+                }}
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
                 <X className="w-6 h-6" />
@@ -1099,6 +1226,7 @@ export function Reports() {
                   <input
                     type="number"
                     step="0.01"
+                    min="0"
                     value={budgetForm.allocated_amount}
                     onChange={(e) => setBudgetForm({ ...budgetForm, allocated_amount: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1107,18 +1235,31 @@ export function Reports() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Currency</label>
-                  <select
-                    value={budgetForm.currency}
-                    onChange={(e) => setBudgetForm({ ...budgetForm, currency: e.target.value })}
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Spent Amount</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={budgetForm.spent_amount}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, spent_amount: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="AFN">AFN</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                  </select>
+                    placeholder="0.00"
+                  />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Currency</label>
+                <select
+                  value={budgetForm.currency}
+                  onChange={(e) => setBudgetForm({ ...budgetForm, currency: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="AFN">AFN (Afghan Afghani)</option>
+                  <option value="USD">USD (US Dollar)</option>
+                  <option value="EUR">EUR (Euro)</option>
+                  <option value="GBP">GBP (British Pound)</option>
+                </select>
               </div>
 
               <div>
@@ -1138,11 +1279,15 @@ export function Reports() {
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Save className="w-5 h-5" />
-                  Save Budget
+                  {editingBudget ? 'Update Budget' : 'Save Budget'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddBudget(false)}
+                  onClick={() => {
+                    setShowAddBudget(false);
+                    setEditingBudget(null);
+                    resetBudgetForm();
+                  }}
                   className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
                 >
                   Cancel
