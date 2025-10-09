@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, Search, Plus, CreditCard as Edit, Eye, Trash2, X, Mail, Phone, MapPin, Calendar, User as UserIcon, Building2, Briefcase, FileText } from 'lucide-react';
 import { EditStudentModal } from '../components/EditStudentModal';
+import { useToast } from '../hooks/useToast';
+import { Toast } from '../components/Toast';
 
 interface Student {
   id: string;
@@ -35,6 +37,7 @@ interface Student {
 }
 
 export function Students() {
+  const { toast, showSuccess, showError, hideToast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -161,13 +164,13 @@ export function Students() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(`Error deleting student: ${result.error}`);
+        showError(`Error deleting student: ${result.error}`);
       } else {
-        alert('Student deleted successfully!');
+        showSuccess('Student deleted successfully!');
         loadStudents();
       }
     } catch (error: any) {
-      alert(`Error deleting student: ${error.message}`);
+      showError(`Error deleting student: ${error.message}`);
     }
   }
 
@@ -267,11 +270,11 @@ export function Students() {
         if (studentError) throw studentError;
       }
 
-      alert('Student updated successfully!');
+      showSuccess('Student updated successfully!');
       setShowEdit(false);
       loadStudents();
     } catch (error: any) {
-      alert('Error updating student: ' + error.message);
+      showError('Error updating student: ' + error.message);
     }
   }
 
@@ -318,11 +321,11 @@ export function Students() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert('Error creating student: ' + (result.error || 'Unknown error'));
+        showError('Error creating student: ' + (result.error || 'Unknown error'));
         return;
       }
 
-      alert('Student added successfully!');
+      showSuccess('Student added successfully!');
       setShowAdd(false);
       setAddForm({
         first_name: '',
@@ -345,7 +348,7 @@ export function Students() {
       });
       loadStudents();
     } catch (error: any) {
-      alert('Error creating student: ' + error.message);
+      showError('Error creating student: ' + error.message);
     }
   }
 
@@ -358,7 +361,9 @@ export function Students() {
   });
 
   return (
-    <div className="space-y-6">
+    <>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Students</h1>
@@ -762,6 +767,7 @@ export function Students() {
         </div>
       )}
     </div>
+    </>
   );
 }
 

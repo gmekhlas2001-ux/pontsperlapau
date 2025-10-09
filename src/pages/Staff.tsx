@@ -4,6 +4,8 @@ import { UserCheck, Search, Plus, Edit, Eye, ShieldCheck, Trash2, X, Mail, Phone
 import { DocumentUpload } from '../components/DocumentUpload';
 import { AddStaffModal } from '../components/AddStaffModal';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
+import { Toast } from '../components/Toast';
 
 interface StaffMember {
   id: string;
@@ -45,6 +47,7 @@ interface StaffMember {
 
 export function Staff() {
   const { isSuperAdmin } = useAuth();
+  const { toast, showSuccess, showError, hideToast } = useToast();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,9 +166,9 @@ export function Staff() {
       .eq('id', member.id);
 
     if (error) {
-      alert('Error promoting to admin: ' + error.message);
+      showError('Error promoting to admin: ' + error.message);
     } else {
-      alert('Successfully promoted to admin!');
+      showSuccess('Successfully promoted to admin!');
       loadStaff();
     }
   }
@@ -195,13 +198,13 @@ export function Staff() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(`Error deleting staff member: ${result.error}`);
+        showError(`Error deleting staff member: ${result.error}`);
       } else {
-        alert('Staff member deleted successfully!');
+        showSuccess('Staff member deleted successfully!');
         loadStaff();
       }
     } catch (error: any) {
-      alert(`Error deleting staff member: ${error.message}`);
+      showError(`Error deleting staff member: ${error.message}`);
     }
   }
 
@@ -314,11 +317,11 @@ export function Staff() {
         if (staffError) throw staffError;
       }
 
-      alert('Staff member updated successfully!');
+      showSuccess('Staff member updated successfully!');
       setShowEdit(false);
       loadStaff();
     } catch (error: any) {
-      alert('Error updating staff member: ' + error.message);
+      showError('Error updating staff member: ' + error.message);
     }
   }
 
@@ -364,11 +367,11 @@ export function Staff() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert('Error creating staff member: ' + (result.error || 'Unknown error'));
+        showError('Error creating staff member: ' + (result.error || 'Unknown error'));
         return;
       }
 
-      alert('Staff member added successfully!');
+      showSuccess('Staff member added successfully!');
       setShowAdd(false);
       setAddForm({
         first_name: '',
@@ -392,7 +395,7 @@ export function Staff() {
       });
       loadStaff();
     } catch (error: any) {
-      alert('Error creating staff member: ' + error.message);
+      showError('Error creating staff member: ' + error.message);
     }
   }
 
@@ -407,7 +410,9 @@ export function Staff() {
   });
 
   return (
-    <div className="space-y-6">
+    <>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Staff</h1>
@@ -1056,6 +1061,7 @@ export function Staff() {
         branches={branches}
       />
     </div>
+    </>
   );
 }
 
