@@ -693,13 +693,19 @@ export function Students() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Education Level</label>
-                  <input
-                    type="text"
+                  <select
                     value={addForm.education_level}
                     onChange={(e) => setAddForm({ ...addForm, education_level: e.target.value })}
-                    placeholder="e.g., Grade 10, High School"
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
+                  >
+                    <option value="">Select Education Level</option>
+                    <option value="Elementary School">Elementary School</option>
+                    <option value="Middle School">Middle School</option>
+                    <option value="High School">High School</option>
+                    <option value="University">University</option>
+                    <option value="Graduate">Graduate</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
 
                 <div>
