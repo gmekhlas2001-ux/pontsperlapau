@@ -9,22 +9,22 @@ const corsHeaders = {
 
 interface Transaction {
   id: string;
+  transaction_number: string;
   transaction_date: string;
-  type: string;
-  from_branch_id: string | null;
-  to_branch_id: string | null;
+  from_branch_id: string;
+  to_branch_id: string;
+  from_staff_id: string;
+  to_staff_id: string;
   amount: number;
   currency: string;
-  category: string;
-  description: string;
+  transfer_method: string;
+  status: string;
+  confirmation_code: string | null;
   notes: string | null;
   from_branch?: { name: string };
   to_branch?: { name: string };
-}
-
-interface Branch {
-  id: string;
-  name: string;
+  from_staff?: { full_name: string };
+  to_staff?: { full_name: string };
 }
 
 Deno.serve(async (req: Request) => {
@@ -44,7 +44,7 @@ Deno.serve(async (req: Request) => {
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+
     if (authError || !user) {
       throw new Error('Unauthorized');
     }
@@ -60,10 +60,12 @@ Deno.serve(async (req: Request) => {
       .select(`
         *,
         from_branch:branches!transactions_from_branch_id_fkey(name),
-        to_branch:branches!transactions_to_branch_id_fkey(name)
+        to_branch:branches!transactions_to_branch_id_fkey(name),
+        from_staff:profiles!transactions_from_staff_id_fkey(full_name),
+        to_staff:profiles!transactions_to_staff_id_fkey(full_name)
       `)
-      .gte('transaction_date', startDate.toISOString())
-      .lte('transaction_date', endDate.toISOString())
+      .gte('transaction_date', startDate.toISOString().split('T')[0])
+      .lte('transaction_date', endDate.toISOString().split('T')[0])
       .order('transaction_date', { ascending: true });
 
     if (branchId) {
@@ -72,7 +74,10 @@ Deno.serve(async (req: Request) => {
 
     const { data: transactions, error: txError } = await query;
 
-    if (txError) throw txError;
+    if (txError) {
+      console.error('Transaction query error:', txError);
+      throw txError;
+    }
 
     if (!transactions || transactions.length === 0) {
       throw new Error('No transactions found for this period');
@@ -90,6 +95,10 @@ Deno.serve(async (req: Request) => {
 
     const pdfBytes = await generatePDF(transactions, branchName, reportPeriod);
 
+    if (!pdfBytes || pdfBytes.length === 0) {
+      throw new Error('Failed to generate PDF');
+    }
+
     const fileName = `${branchName.replace(/\s+/g, '_')}_${reportPeriod}.pdf`;
     const filePath = `${reportPeriod}/${fileName}`;
 
@@ -100,10 +109,19 @@ Deno.serve(async (req: Request) => {
         upsert: true,
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw uploadError;
+    }
 
     const totalAmount = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
     const currency = transactions[0]?.currency || 'AFN';
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
 
     const { data: report, error: reportError } = await supabase
       .from('generated_reports')
@@ -117,13 +135,16 @@ Deno.serve(async (req: Request) => {
         transaction_count: transactions.length,
         total_amount: totalAmount,
         currency: currency,
-        generated_by: user.id,
+        generated_by: profileData?.id,
         status: 'completed',
       })
       .select()
       .single();
 
-    if (reportError) throw reportError;
+    if (reportError) {
+      console.error('Report insert error:', reportError);
+      throw reportError;
+    }
 
     return new Response(
       JSON.stringify({ success: true, report }),
@@ -150,7 +171,6 @@ async function generatePDF(
   const pageWidth = 595;
   const pageHeight = 842;
   const margin = 50;
-  const contentWidth = pageWidth - 2 * margin;
 
   let page = pdfDoc.addPage([pageWidth, pageHeight]);
   let yPosition = pageHeight - margin;
@@ -209,8 +229,8 @@ async function generatePDF(
   });
   yPosition -= 20;
 
-  const headers = ['Date', 'Type', 'From/To', 'Amount', 'Category'];
-  const columnWidths = [80, 70, 150, 100, 95];
+  const headers = ['Date', 'TX #', 'From → To', 'Amount', 'Method', 'Status'];
+  const columnWidths = [60, 65, 140, 80, 80, 70];
   let xPosition = margin;
 
   headers.forEach((header, i) => {
@@ -233,22 +253,18 @@ async function generatePDF(
 
     xPosition = margin;
     const date = new Date(transaction.transaction_date).toLocaleDateString('en-GB');
-    
-    let fromTo = '';
-    if (transaction.type === 'income') {
-      fromTo = transaction.from_branch?.name || 'External';
-    } else if (transaction.type === 'expense') {
-      fromTo = transaction.to_branch?.name || 'External';
-    } else {
-      fromTo = `${transaction.from_branch?.name || 'N/A'} → ${transaction.to_branch?.name || 'N/A'}`;
-    }
+
+    const fromBranch = transaction.from_branch?.name || 'N/A';
+    const toBranch = transaction.to_branch?.name || 'N/A';
+    const fromTo = `${fromBranch.substring(0, 10)} → ${toBranch.substring(0, 10)}`;
 
     const rowData = [
       date,
-      transaction.type,
+      transaction.transaction_number.substring(0, 10),
       fromTo.length > 20 ? fromTo.substring(0, 18) + '...' : fromTo,
       `${Number(transaction.amount).toLocaleString()} ${transaction.currency}`,
-      transaction.category.length > 12 ? transaction.category.substring(0, 10) + '...' : transaction.category,
+      transaction.transfer_method.substring(0, 12),
+      transaction.status.toUpperCase(),
     ];
 
     rowData.forEach((data, i) => {
