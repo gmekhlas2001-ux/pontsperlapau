@@ -229,7 +229,7 @@ async function generatePDF(
   });
   yPosition -= 20;
 
-  const headers = ['Date', 'TX #', 'From → To', 'Amount', 'Method', 'Status'];
+  const headers = ['Date', 'TX #', 'From - To', 'Amount', 'Method', 'Status'];
   const columnWidths = [60, 65, 140, 80, 80, 70];
   let xPosition = margin;
 
@@ -256,7 +256,7 @@ async function generatePDF(
 
     const fromBranch = transaction.from_branch?.name || 'N/A';
     const toBranch = transaction.to_branch?.name || 'N/A';
-    const fromTo = `${fromBranch.substring(0, 10)} → ${toBranch.substring(0, 10)}`;
+    const fromTo = `${fromBranch.substring(0, 10)} - ${toBranch.substring(0, 10)}`;
 
     const rowData = [
       date,
