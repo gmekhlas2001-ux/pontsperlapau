@@ -236,6 +236,10 @@ export function Reports() {
 
       showSuccess('Report generated successfully!');
       await loadGeneratedReports();
+
+      if (result.report) {
+        await downloadReport(result.report);
+      }
     } catch (error: any) {
       showError(error.message || 'Failed to generate report');
     } finally {
