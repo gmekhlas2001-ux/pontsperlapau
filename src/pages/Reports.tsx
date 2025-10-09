@@ -245,11 +245,22 @@ export function Reports() {
 
   async function downloadReport(report: GeneratedReport) {
     try {
+      console.log('Downloading report:', report.file_path);
+
       const { data, error } = await supabase.storage
         .from('reports')
         .download(report.file_path);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Download error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('No data received from storage');
+      }
+
+      console.log('Download successful, file size:', data.size);
 
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
@@ -257,11 +268,15 @@ export function Reports() {
       a.download = report.file_name;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
 
       showSuccess('Report downloaded successfully!');
     } catch (error: any) {
+      console.error('Download failed:', error);
       showError('Failed to download report: ' + error.message);
     }
   }
