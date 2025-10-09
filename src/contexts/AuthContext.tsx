@@ -164,9 +164,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signOut() {
     try {
-      await supabase.auth.signOut({ scope: 'local' });
-    } catch (error) {
-      console.error('Error signing out:', error);
+      const { error } = await supabase.auth.signOut();
+      if (error && error.message !== 'Session from session_id claim in JWT does not exist') {
+        console.error('Error signing out:', error);
+      }
+    } catch (error: any) {
+      if (error?.message !== 'Session from session_id claim in JWT does not exist') {
+        console.error('Error signing out:', error);
+      }
     }
     setUser(null);
     setProfile(null);
