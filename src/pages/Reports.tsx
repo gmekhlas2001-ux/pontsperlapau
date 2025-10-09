@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { Toast } from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 import {
   FileText, Plus, DollarSign, TrendingUp, Calendar,
   Download, Search, Filter, X, Save, Building2,
-  Users, ArrowRight, CheckCircle, Clock, XCircle
+  Users, ArrowRight, CheckCircle, Clock, XCircle, Trash2
 } from 'lucide-react';
 
 interface Transaction {
@@ -56,6 +58,7 @@ interface StaffMember {
 
 export function Reports() {
   const { isAdmin } = useAuth();
+  const { toast, showSuccess, showError, hideToast } = useToast();
   const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'reports'>('transactions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -183,9 +186,9 @@ export function Reports() {
     });
 
     if (error) {
-      alert('Error creating transaction: ' + error.message);
+      showError('Error creating transaction: ' + error.message);
     } else {
-      alert('Transaction created successfully!');
+      showSuccess('Transaction created successfully!');
       setShowAddTransaction(false);
       setTransactionForm({
         from_branch_id: '',
@@ -201,6 +204,24 @@ export function Reports() {
         confirmation_code: '',
         notes: '',
       });
+      loadTransactions();
+    }
+  }
+
+  async function handleDeleteTransaction(id: string, transactionNumber: string) {
+    if (!confirm(`Are you sure you want to delete transaction ${transactionNumber}?`)) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      showError('Error deleting transaction: ' + error.message);
+    } else {
+      showSuccess('Transaction deleted successfully!');
       loadTransactions();
     }
   }
@@ -223,9 +244,9 @@ export function Reports() {
     });
 
     if (error) {
-      alert('Error creating budget: ' + error.message);
+      showError('Error creating budget: ' + error.message);
     } else {
-      alert('Budget created successfully!');
+      showSuccess('Budget created successfully!');
       setShowAddBudget(false);
       setBudgetForm({
         branch_id: '',
@@ -263,7 +284,7 @@ export function Reports() {
     const { data: transactionData } = await query;
 
     if (!transactionData || transactionData.length === 0) {
-      alert('No transactions found for this period');
+      showError('No transactions found for this period');
       return;
     }
 
@@ -353,7 +374,7 @@ export function Reports() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert('Report generated and downloaded successfully!');
+    showSuccess('Report generated and downloaded successfully!');
   }
 
   const filteredTransactions = transactions.filter(t => {
@@ -471,6 +492,7 @@ export function Reports() {
                       <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">Amount</th>
                       <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">Method</th>
                       <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">Status</th>
+                      <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
@@ -509,6 +531,15 @@ export function Reports() {
                             {transaction.status === 'cancelled' && <XCircle className="w-3 h-3" />}
                             {transaction.status.toUpperCase()}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <button
+                            onClick={() => handleDeleteTransaction(transaction.id, transaction.transaction_number)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete transaction"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -946,6 +977,14 @@ export function Reports() {
             </form>
           </div>
         </div>
+      )}
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
+        />
       )}
     </div>
   );
