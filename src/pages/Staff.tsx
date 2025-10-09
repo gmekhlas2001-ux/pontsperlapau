@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 import { UserCheck, Search, Plus, Edit, Eye, ShieldCheck, Trash2, X, Mail, Phone, MapPin, Calendar, User, Building2, Briefcase, FileText, File, ExternalLink } from 'lucide-react';
 import { DocumentUpload } from '../components/DocumentUpload';
 import { AddStaffModal } from '../components/AddStaffModal';
-import { Pagination } from '../components/Pagination';
 import { useAuth } from '../contexts/AuthContext';
 
 interface StaffMember {
@@ -50,8 +49,6 @@ export function Staff() {
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(12);
   const [selectedMember, setSelectedMember] = useState<StaffMember | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -409,14 +406,6 @@ export function Staff() {
     );
   });
 
-  const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedStaff = filteredStaff.slice(startIndex, startIndex + itemsPerPage);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search]);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -461,9 +450,8 @@ export function Staff() {
           </p>
         </div>
       ) : (
-        <>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedStaff.map((member) => (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredStaff.map((member) => (
             <div
               key={member.id}
               className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden hover:shadow-lg transition-all"
@@ -547,18 +535,8 @@ export function Staff() {
                 </div>
               </div>
             </div>
-            ))}
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              totalItems={filteredStaff.length}
-            />
-          </div>
-        </>
+          ))}
+        </div>
       )}
 
       {showDetails && selectedMember && (

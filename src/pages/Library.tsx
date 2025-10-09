@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../components/Toast';
-import { Pagination } from '../components/Pagination';
 import {
   Library as LibraryIcon,
   Search,
@@ -62,8 +61,6 @@ export function Library() {
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(12);
   const [activeTab, setActiveTab] = useState<'books' | 'loans' | 'myLoans'>('books');
   const [showAddBook, setShowAddBook] = useState(false);
   const [showEditBook, setShowEditBook] = useState(false);
@@ -427,14 +424,6 @@ export function Library() {
   const returnRequestedLoans = loans.filter(loan => loan.status === 'return_requested');
   const isAdmin = userRole === 'admin' || userRole === 'librarian';
 
-  const totalPages = Math.ceil(filteredBooks.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedBooks = filteredBooks.slice(startIndex, startIndex + itemsPerPage);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, activeTab]);
-
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
@@ -506,7 +495,7 @@ export function Library() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedBooks.map((book) => (
+            {filteredBooks.map((book) => (
               <div key={book.id} className="bg-white rounded-2xl p-6 border border-slate-200 hover:shadow-lg transition-all">
                 <div className="flex items-start gap-4 mb-4">
                   <div className="w-16 h-20 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-2xl flex-shrink-0">
@@ -602,17 +591,6 @@ export function Library() {
               </div>
             ))}
           </div>
-          {filteredBooks.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                totalItems={filteredBooks.length}
-              />
-            </div>
-          )}
         </>
       )}
 

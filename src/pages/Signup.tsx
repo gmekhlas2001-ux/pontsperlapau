@@ -22,7 +22,6 @@ export function Signup() {
     parent_phone: '',
   });
   const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
@@ -33,42 +32,15 @@ export function Signup() {
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    if (fieldErrors[name]) {
-      setFieldErrors({ ...fieldErrors, [name]: '' });
-    }
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    setFieldErrors({});
-
-    const errors: Record<string, string> = {};
-
-    if (!formData.email || !formData.email.includes('@')) {
-      errors.email = 'Please enter a valid email address';
-    }
-
-    if (!formData.password || formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
 
     if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (!formData.first_name || formData.first_name.trim().length < 2) {
-      errors.first_name = 'First name must be at least 2 characters';
-    }
-
-    if (!formData.last_name || formData.last_name.trim().length < 2) {
-      errors.last_name = 'Last name must be at least 2 characters';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
+      setError('Passwords do not match');
       return;
     }
 
@@ -173,13 +145,8 @@ export function Signup() {
                   required
                   value={formData.first_name}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition-all ${
-                    fieldErrors.first_name ? 'border-red-300 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
-                {fieldErrors.first_name && (
-                  <p className="mt-1 text-sm text-red-600">{fieldErrors.first_name}</p>
-                )}
               </div>
 
               <div>

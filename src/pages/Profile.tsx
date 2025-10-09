@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { User, Mail, Phone, Calendar, MapPin, Save, FileText, Briefcase, CreditCard, Building2, Upload, FileUp, Lock, Key } from 'lucide-react';
+import { User, Mail, Phone, Calendar, MapPin, Save, FileText, Briefcase, CreditCard, Building2, Upload, FileUp } from 'lucide-react';
 import { DocumentUpload } from '../components/DocumentUpload';
 
 interface Branch {
@@ -87,13 +87,6 @@ export function Profile() {
   const [studentDetails, setStudentDetails] = useState<StudentDetails | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [formData, setFormData] = useState<any>({});
-
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     loadBranches();
@@ -339,46 +332,6 @@ export function Profile() {
     return branch ? `${branch.name}${branch.province ? ` - ${branch.province}` : ''}` : 'Not set';
   }
 
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault();
-    setPasswordMessage(null);
-
-    if (newPassword !== confirmPassword) {
-      setPasswordMessage({ type: 'error', text: 'New passwords do not match' });
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setPasswordMessage({ type: 'error', text: 'Password must be at least 6 characters' });
-      return;
-    }
-
-    setPasswordLoading(true);
-
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) {
-        setPasswordMessage({ type: 'error', text: error.message });
-      } else {
-        setPasswordMessage({ type: 'success', text: 'Password changed successfully!' });
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setTimeout(() => {
-          setShowChangePassword(false);
-          setPasswordMessage(null);
-        }, 2000);
-      }
-    } catch (error: any) {
-      setPasswordMessage({ type: 'error', text: error.message || 'Failed to change password' });
-    } finally {
-      setPasswordLoading(false);
-    }
-  }
-
   if (loadingDetails) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -418,21 +371,12 @@ export function Profile() {
             )}
 
             {!editing && (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setEditing(true)}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Edit Profile
-                </button>
-                <button
-                  onClick={() => setShowChangePassword(true)}
-                  className="flex items-center gap-2 px-6 py-2 bg-slate-600 text-white rounded-xl font-medium hover:bg-slate-700 transition-colors"
-                >
-                  <Lock className="w-4 h-4" />
-                  Change Password
-                </button>
-              </div>
+              <button
+                onClick={() => setEditing(true)}
+                className="px-6 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              >
+                Edit Profile
+              </button>
             )}
           </div>
 
@@ -995,92 +939,6 @@ export function Profile() {
           )}
         </div>
       </div>
-
-      {showChangePassword && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Key className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">Change Password</h2>
-                <p className="text-sm text-slate-600">Update your account password</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div>
-                <label htmlFor="new-password" className="block text-sm font-medium text-slate-700 mb-2">
-                  New Password
-                </label>
-                <input
-                  id="new-password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Enter new password"
-                />
-                <p className="text-xs text-slate-500 mt-1">Must be at least 6 characters</p>
-              </div>
-
-              <div>
-                <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-700 mb-2">
-                  Confirm New Password
-                </label>
-                <input
-                  id="confirm-password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Confirm new password"
-                />
-              </div>
-
-              {passwordMessage && (
-                <div
-                  className={`p-4 rounded-xl text-sm ${
-                    passwordMessage.type === 'success'
-                      ? 'bg-green-50 border border-green-200 text-green-700'
-                      : 'bg-red-50 border border-red-200 text-red-700'
-                  }`}
-                >
-                  {passwordMessage.text}
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowChangePassword(false);
-                    setCurrentPassword('');
-                    setNewPassword('');
-                    setConfirmPassword('');
-                    setPasswordMessage(null);
-                  }}
-                  className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={passwordLoading}
-                  className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  {passwordLoading ? 'Changing...' : 'Change Password'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

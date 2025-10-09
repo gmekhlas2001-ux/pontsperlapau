@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Users, UserCheck, BookOpen, Building2, GraduationCap, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Tooltip } from '../components/Tooltip';
 
 interface Stats {
   activeStaff: number;
@@ -195,11 +194,8 @@ export function Dashboard() {
                 className={`bg-white rounded-2xl p-6 border ${colors.border} hover:shadow-lg transition-all`}
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="text-sm font-medium text-slate-600">{card.label}</p>
-                      <Tooltip content={getStatTooltip(card.label)} />
-                    </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 mb-2">{card.label}</p>
                     <p className="text-3xl font-bold text-slate-900">{card.value}</p>
                   </div>
                   <div className={`${colors.bg} ${colors.text} p-3 rounded-xl`}>
@@ -304,17 +300,4 @@ export function Dashboard() {
       </div>
     </div>
   );
-
-  function getStatTooltip(label: string): string {
-    const tooltips: Record<string, string> = {
-      'Active Staff': 'Total number of approved staff members currently active in the system',
-      'Active Students': 'Total number of approved students currently enrolled',
-      'Branches': 'Total number of branch locations in your organization',
-      'Books': 'Total number of books available in all libraries',
-      'Active Loans': 'Number of books currently checked out and not yet returned',
-      'Return Requests': 'Books that users have requested to return, awaiting admin confirmation',
-      'Pending Approvals': 'New user registrations waiting for admin approval',
-    };
-    return tooltips[label] || 'Statistical information';
-  }
 }
