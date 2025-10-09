@@ -80,7 +80,7 @@ export function Students() {
         .from('profiles')
         .select('*')
         .eq('role_id', 'student')
-        .eq('status', 'approved')
+        .in('status', ['approved', 'active'])
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
