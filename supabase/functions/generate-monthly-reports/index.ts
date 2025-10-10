@@ -68,7 +68,6 @@ Deno.serve(async (req: Request) => {
     const adjustedYear = targetMonth === 12 && !month ? targetYear - 1 : targetYear;
 
     const reportPeriod = `${adjustedYear}-${String(targetMonth).padStart(2, '0')}`;
-    const startDate = new Date(adjustedYear, targetMonth - 1, 1);
     const endDate = new Date(adjustedYear, targetMonth, 0, 23, 59, 59);
 
     let query = supabase
@@ -80,7 +79,6 @@ Deno.serve(async (req: Request) => {
         from_staff:profiles!transactions_from_staff_id_fkey(full_name),
         to_staff:profiles!transactions_to_staff_id_fkey(full_name)
       `)
-      .gte('transaction_date', startDate.toISOString().split('T')[0])
       .lte('transaction_date', endDate.toISOString().split('T')[0])
       .order('transaction_date', { ascending: true });
 
@@ -209,7 +207,7 @@ async function generatePDF(
   });
   yPosition -= 20;
 
-  page.drawText(`Period: ${reportPeriod}`, {
+  page.drawText(`Period: All transactions up to ${reportPeriod}`, {
     x: margin,
     y: yPosition,
     size: 12,
