@@ -128,7 +128,7 @@ Deno.serve(async (req: Request) => {
       .lte('transaction_date', endDateString)
       .order('transaction_date', { ascending: true });
 
-    if (branchId) {
+    if (branchId && branchId !== '' && branchId !== null) {
       query = query.or(`from_branch_id.eq.${branchId},to_branch_id.eq.${branchId}`);
     }
 
@@ -294,8 +294,8 @@ async function generatePDF(
   });
   yPosition -= 20;
 
-  const headers = ['Date', 'From - To', 'Sender - Receiver', 'MTCN', 'Amount', 'Status'];
-  const columnWidths = [50, 90, 110, 85, 75, 55];
+  const headers = ['Date', 'Branch From-To', 'Staff From-To', 'MTCN', 'Amount', 'Status'];
+  const columnWidths = [45, 85, 140, 80, 70, 45];
   let xPosition = margin;
 
   headers.forEach((header, i) => {
@@ -321,28 +321,28 @@ async function generatePDF(
 
     const fromBranch = transaction.from_branch?.name || 'N/A';
     const toBranch = transaction.to_branch?.name || 'N/A';
-    const fromTo = `${fromBranch.substring(0, 10)} - ${toBranch.substring(0, 10)}`;
+    const fromTo = `${fromBranch.substring(0, 9)} - ${toBranch.substring(0, 9)}`;
 
     const fromStaff = transaction.from_staff?.full_name || 'N/A';
     const toStaff = transaction.to_staff?.full_name || 'N/A';
-    const staffNames = `${fromStaff.substring(0, 12)} - ${toStaff.substring(0, 12)}`;
+    const staffNames = `${fromStaff} - ${toStaff}`;
 
     const mtcn = transaction.confirmation_code || 'N/A';
 
     const rowData = [
       date,
-      fromTo.length > 20 ? fromTo.substring(0, 18) + '...' : fromTo,
-      staffNames.length > 26 ? staffNames.substring(0, 24) + '...' : staffNames,
-      mtcn.substring(0, 12),
+      fromTo.length > 18 ? fromTo.substring(0, 16) + '...' : fromTo,
+      staffNames.length > 28 ? staffNames.substring(0, 26) + '..' : staffNames,
+      mtcn.length > 14 ? mtcn.substring(0, 12) + '..' : mtcn,
       `${Number(transaction.amount).toLocaleString()} ${transaction.currency}`,
-      transaction.status.substring(0, 8).toUpperCase(),
+      transaction.status.substring(0, 6).toUpperCase(),
     ];
 
     rowData.forEach((data, i) => {
       page.drawText(data, {
         x: xPosition,
         y: yPosition,
-        size: 7,
+        size: 6.5,
         font: font,
         color: rgb(0.3, 0.3, 0.3),
       });
