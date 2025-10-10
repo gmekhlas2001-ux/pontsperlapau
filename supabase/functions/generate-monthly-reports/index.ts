@@ -69,6 +69,11 @@ Deno.serve(async (req: Request) => {
 
     const reportPeriod = `${adjustedYear}-${String(targetMonth).padStart(2, '0')}`;
     const endDate = new Date(adjustedYear, targetMonth, 0, 23, 59, 59);
+    const endDateString = endDate.toISOString().split('T')[0];
+
+    console.log('Report Period:', reportPeriod);
+    console.log('End Date:', endDateString);
+    console.log('Branch ID:', branchId);
 
     let query = supabase
       .from('transactions')
@@ -79,7 +84,7 @@ Deno.serve(async (req: Request) => {
         from_staff:profiles!transactions_from_staff_id_fkey(full_name),
         to_staff:profiles!transactions_to_staff_id_fkey(full_name)
       `)
-      .lte('transaction_date', endDate.toISOString().split('T')[0])
+      .lte('transaction_date', endDateString)
       .order('transaction_date', { ascending: true });
 
     if (branchId) {
@@ -87,6 +92,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const { data: transactions, error: txError } = await query;
+
+    console.log('Transactions found:', transactions?.length || 0);
 
     if (txError) {
       console.error('Transaction query error:', txError);
