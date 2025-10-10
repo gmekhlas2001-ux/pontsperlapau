@@ -96,6 +96,8 @@ export function Reports() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [reportSearchTerm, setReportSearchTerm] = useState('');
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
   const [transactionForm, setTransactionForm] = useState({
     from_branch_id: '',
@@ -213,10 +215,6 @@ export function Reports() {
   async function generateMonthlyReport(branchId: string | null) {
     setGeneratingReport(true);
     try {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('Not authenticated');
@@ -230,7 +228,7 @@ export function Reports() {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ branchId, year, month }),
+        body: JSON.stringify({ branchId, year: selectedYear, month: selectedMonth }),
       });
 
       const result = await response.json();
@@ -837,7 +835,47 @@ export function Reports() {
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
             <h2 className="text-xl font-bold text-slate-900 mb-4">Generate Monthly Reports</h2>
-            <p className="text-slate-600 mb-6">Generate comprehensive transaction reports including all past transactions up to the current month.</p>
+            <p className="text-slate-600 mb-4">Generate comprehensive transaction reports including all past transactions up to the selected month.</p>
+
+            <div className="flex gap-4 mb-6">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Select Month
+                </label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value={1}>January</option>
+                  <option value={2}>February</option>
+                  <option value={3}>March</option>
+                  <option value={4}>April</option>
+                  <option value={5}>May</option>
+                  <option value={6}>June</option>
+                  <option value={7}>July</option>
+                  <option value={8}>August</option>
+                  <option value={9}>September</option>
+                  <option value={10}>October</option>
+                  <option value={11}>November</option>
+                  <option value={12}>December</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Select Year
+                </label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             <div className="space-y-4">
               {branches.length === 0 ? (
@@ -848,11 +886,13 @@ export function Reports() {
               ) : (
                 <>
                   {branches.map((branch) => {
-                    const now = new Date();
+                    const selectedDate = new Date(selectedYear, selectedMonth - 1);
+                    const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
+
                     const branchTransactions = transactions.filter(t => {
                       const transDate = new Date(t.transaction_date);
                       return (
-                        transDate <= now &&
+                        transDate <= endOfSelectedMonth &&
                         (t.from_branch_id === branch.id || t.to_branch_id === branch.id)
                       );
                     });
@@ -864,7 +904,7 @@ export function Reports() {
                           <div>
                             <span className="font-medium text-slate-900">{branch.name}</span>
                             <p className="text-sm text-slate-500">
-                              {branchTransactions.length} transaction{branchTransactions.length !== 1 ? 's' : ''} total
+                              {branchTransactions.length} transaction{branchTransactions.length !== 1 ? 's' : ''} up to {selectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                             </p>
                           </div>
                         </div>
@@ -876,7 +916,7 @@ export function Reports() {
                               ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                               : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                           }`}
-                          title={branchTransactions.length === 0 ? 'No transactions yet' : 'Generate PDF report'}
+                          title={branchTransactions.length === 0 ? 'No transactions for this period' : 'Generate PDF report'}
                         >
                           <Download className="w-4 h-4" />
                           {generatingReport ? 'Generating...' : 'Generate PDF Report'}
@@ -894,12 +934,13 @@ export function Reports() {
                     <span className="font-medium text-slate-900">All Branches Combined</span>
                     <p className="text-sm text-slate-600">
                       {(() => {
-                        const now = new Date();
+                        const selectedDate = new Date(selectedYear, selectedMonth - 1);
+                        const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
                         const allTransactions = transactions.filter(t => {
                           const transDate = new Date(t.transaction_date);
-                          return transDate <= now;
+                          return transDate <= endOfSelectedMonth;
                         });
-                        return `${allTransactions.length} transaction${allTransactions.length !== 1 ? 's' : ''} total`;
+                        return `${allTransactions.length} transaction${allTransactions.length !== 1 ? 's' : ''} up to ${selectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
                       })()}
                     </p>
                   </div>
@@ -907,19 +948,19 @@ export function Reports() {
                 <button
                   onClick={() => generateMonthlyReport(null)}
                   disabled={(() => {
-                    const now = new Date();
+                    const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
                     const allTransactions = transactions.filter(t => {
                       const transDate = new Date(t.transaction_date);
-                      return transDate <= now;
+                      return transDate <= endOfSelectedMonth;
                     });
                     return allTransactions.length === 0 || generatingReport;
                   })()}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     (() => {
-                      const now = new Date();
+                      const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
                       const allTransactions = transactions.filter(t => {
                         const transDate = new Date(t.transaction_date);
-                        return transDate <= now;
+                        return transDate <= endOfSelectedMonth;
                       });
                       return allTransactions.length === 0 || generatingReport;
                     })()
@@ -927,12 +968,12 @@ export function Reports() {
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
                   title={(() => {
-                    const now = new Date();
+                    const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
                     const allTransactions = transactions.filter(t => {
                       const transDate = new Date(t.transaction_date);
-                      return transDate <= now;
+                      return transDate <= endOfSelectedMonth;
                     });
-                    return allTransactions.length === 0 ? 'No transactions yet' : 'Generate combined PDF report';
+                    return allTransactions.length === 0 ? 'No transactions for this period' : 'Generate combined PDF report';
                   })()}
                 >
                   <Download className="w-4 h-4" />
