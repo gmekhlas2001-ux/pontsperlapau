@@ -501,17 +501,25 @@ export function Reports() {
 
 
   const filteredTransactions = transactions.filter(t => {
+    const searchLower = searchTerm.toLowerCase();
+
+    // Format dates for better matching (converts to MM/DD/YYYY format)
+    const transactionDateFormatted = t.transaction_date ? new Date(t.transaction_date).toLocaleDateString() : '';
+    const receivedDateFormatted = t.received_date ? new Date(t.received_date).toLocaleDateString() : '';
+
     const matchesSearch =
-      t.transaction_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.from_branch?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.to_branch?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.from_staff?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.to_staff?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.transaction_number.toLowerCase().includes(searchLower) ||
+      t.from_branch?.name?.toLowerCase().includes(searchLower) ||
+      t.to_branch?.name?.toLowerCase().includes(searchLower) ||
+      t.from_staff?.full_name?.toLowerCase().includes(searchLower) ||
+      t.to_staff?.full_name?.toLowerCase().includes(searchLower) ||
       t.transaction_date?.includes(searchTerm) ||
+      transactionDateFormatted.includes(searchTerm) ||
       t.received_date?.includes(searchTerm) ||
-      t.purpose?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.confirmation_code?.toLowerCase().includes(searchTerm.toLowerCase());
+      receivedDateFormatted.includes(searchTerm) ||
+      t.purpose?.toLowerCase().includes(searchLower) ||
+      t.notes?.toLowerCase().includes(searchLower) ||
+      t.confirmation_code?.toLowerCase().includes(searchLower);
 
     const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
 
