@@ -358,6 +358,27 @@ export function Reports() {
     }
   }
 
+  async function handleChangeTransactionStatus(id: string, currentStatus: string, transactionNumber: string) {
+    const newStatus = currentStatus === 'pending' ? 'confirmed' : 'pending';
+    const statusLabel = newStatus === 'confirmed' ? 'confirm' : 'mark as pending';
+
+    if (!confirm(`Are you sure you want to ${statusLabel} transaction ${transactionNumber}?\n\nNote: Budget changes only apply when status is "confirmed".`)) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('transactions')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (error) {
+      showError('Error updating transaction status: ' + error.message);
+    } else {
+      showSuccess(`Transaction ${newStatus === 'confirmed' ? 'confirmed' : 'marked as pending'} successfully!`);
+      loadTransactions();
+    }
+  }
+
   async function handleDeleteTransaction(id: string, transactionNumber: string) {
     if (!confirm(`Are you sure you want to delete transaction ${transactionNumber}?`)) {
       return;
@@ -577,6 +598,12 @@ export function Reports() {
             </button>
           </div>
 
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Transaction Status:</strong> Budget changes only apply when a transaction status is "confirmed". You can change the status by clicking the status toggle button in the Actions column. Pending transactions do not affect budgets.
+            </p>
+          </div>
+
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -639,13 +666,30 @@ export function Reports() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm">
-                          <button
-                            onClick={() => handleDeleteTransaction(transaction.id, transaction.transaction_number)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete transaction"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleChangeTransactionStatus(transaction.id, transaction.status, transaction.transaction_number)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                transaction.status === 'pending'
+                                  ? 'text-green-600 hover:bg-green-50'
+                                  : 'text-yellow-600 hover:bg-yellow-50'
+                              }`}
+                              title={transaction.status === 'pending' ? 'Confirm transaction' : 'Mark as pending'}
+                            >
+                              {transaction.status === 'pending' ? (
+                                <CheckCircle className="w-4 h-4" />
+                              ) : (
+                                <Clock className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTransaction(transaction.id, transaction.transaction_number)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete transaction"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
