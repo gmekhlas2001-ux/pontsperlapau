@@ -393,7 +393,6 @@ export function Reports() {
           year: budgetForm.year,
           month: budgetForm.budget_period === 'yearly' ? null : budgetForm.month,
           allocated_amount: parseFloat(budgetForm.allocated_amount),
-          spent_amount: parseFloat(budgetForm.spent_amount || '0'),
           currency: budgetForm.currency,
           notes: budgetForm.notes || null,
         })
@@ -410,10 +409,13 @@ export function Reports() {
       }
     } else {
       const { error } = await supabase.from('branch_budgets').insert({
-        ...budgetForm,
-        allocated_amount: parseFloat(budgetForm.allocated_amount),
-        spent_amount: parseFloat(budgetForm.spent_amount || '0'),
+        branch_id: budgetForm.branch_id,
+        budget_period: budgetForm.budget_period,
+        year: budgetForm.year,
         month: budgetForm.budget_period === 'yearly' ? null : budgetForm.month,
+        allocated_amount: parseFloat(budgetForm.allocated_amount),
+        spent_amount: 0,
+        currency: budgetForm.currency,
         notes: budgetForm.notes || null,
         created_by: profileData?.id,
       });
@@ -665,6 +667,12 @@ export function Reports() {
               <Plus className="w-5 h-5" />
               Add Budget
             </button>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Auto-deduction:</strong> When you create a confirmed transaction to a branch, the spent amount automatically deducts from the budget for that branch, matching the currency and period.
+            </p>
           </div>
 
           <div className="grid gap-4">
@@ -1255,16 +1263,18 @@ export function Reports() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Spent Amount</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Spent Amount (Auto-calculated)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={budgetForm.spent_amount}
-                    onChange={(e) => setBudgetForm({ ...budgetForm, spent_amount: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-slate-100 cursor-not-allowed"
+                    placeholder="Auto-calculated from transactions"
+                    disabled
+                    readOnly
                   />
+                  <p className="text-xs text-slate-500 mt-1">Automatically updated when confirmed transactions are added</p>
                 </div>
               </div>
 
