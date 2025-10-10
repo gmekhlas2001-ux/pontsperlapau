@@ -56,7 +56,7 @@ export function Approvals() {
           full_name: payload?.full_name || `${payload?.first_name || ''} ${payload?.last_name || ''}`.trim(),
         }).eq('id', approval.requester_profile_id!);
 
-        if (targetRole === 'staff') {
+        if (['admin', 'teacher', 'librarian', 'staff'].includes(targetRole)) {
           const { data: existingStaff } = await supabase
             .from('staff')
             .select('id')
@@ -69,10 +69,13 @@ export function Approvals() {
               first_name: payload?.first_name,
               last_name: payload?.last_name,
               father_name: payload?.father_name,
+              age: payload?.age ? parseInt(payload.age) : null,
+              dob: payload?.dob,
               gender: payload?.gender,
               national_id: payload?.national_id,
+              passport_number: payload?.passport_number,
+              address: payload?.address,
               phone: payload?.phone,
-              email: payload?.email,
               position: payload?.position,
               date_joined: new Date().toISOString().split('T')[0],
               status: 'active',
