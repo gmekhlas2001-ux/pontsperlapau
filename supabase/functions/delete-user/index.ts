@@ -54,13 +54,34 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: profile } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role_id, status')
       .eq('auth_user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (!profile || profile.role_id !== 'admin' || !['active', 'approved'].includes(profile.status)) {
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      return new Response(
+        JSON.stringify({ error: `Failed to fetch user profile: ${profileError.message}` }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    if (!profile) {
+      return new Response(
+        JSON.stringify({ error: 'User profile not found' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    if (profile.role_id !== 'admin' || !['active', 'approved'].includes(profile.status)) {
       return new Response(
         JSON.stringify({ error: 'Only admins can delete users' }),
         {
@@ -82,11 +103,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: targetProfile } = await supabaseAdmin
+    const { data: targetProfile, error: targetProfileError } = await supabaseAdmin
       .from('profiles')
       .select('auth_user_id, full_name')
       .eq('id', profileId)
-      .single();
+      .maybeSingle();
 
     if (!targetProfile) {
       return new Response(
