@@ -294,8 +294,8 @@ async function generatePDF(
   });
   yPosition -= 20;
 
-  const headers = ['Date', 'Branch From-To', 'Staff From-To', 'MTCN', 'Amount', 'Status'];
-  const columnWidths = [42, 75, 165, 75, 68, 40];
+  const headers = ['Date', 'Branch From-To', 'Sender - Receiver', 'MTCN', 'Amount', 'Status'];
+  const columnWidths = [40, 70, 185, 65, 65, 40];
   let xPosition = margin;
 
   headers.forEach((header, i) => {
@@ -321,7 +321,7 @@ async function generatePDF(
 
     const fromBranch = transaction.from_branch?.name || 'N/A';
     const toBranch = transaction.to_branch?.name || 'N/A';
-    const fromTo = `${fromBranch.substring(0, 8)} - ${toBranch.substring(0, 8)}`;
+    const fromTo = `${fromBranch.substring(0, 7)} - ${toBranch.substring(0, 7)}`;
 
     const fromStaff = transaction.from_staff?.full_name || 'N/A';
     const toStaff = transaction.to_staff?.full_name || 'N/A';
@@ -331,9 +331,9 @@ async function generatePDF(
 
     const rowData = [
       date,
-      fromTo.length > 16 ? fromTo.substring(0, 14) + '..' : fromTo,
-      staffNames.length > 33 ? staffNames.substring(0, 31) + '..' : staffNames,
-      mtcn.length > 13 ? mtcn.substring(0, 11) + '..' : mtcn,
+      fromTo.length > 15 ? fromTo.substring(0, 13) + '..' : fromTo,
+      staffNames.length > 38 ? staffNames.substring(0, 36) + '..' : staffNames,
+      mtcn.length > 11 ? mtcn.substring(0, 9) + '..' : mtcn,
       `${Number(transaction.amount).toLocaleString()} ${transaction.currency}`,
       transaction.status.substring(0, 5).toUpperCase(),
     ];
@@ -342,7 +342,7 @@ async function generatePDF(
       page.drawText(data, {
         x: xPosition,
         y: yPosition,
-        size: 6.5,
+        size: 6,
         font: font,
         color: rgb(0.3, 0.3, 0.3),
       });
