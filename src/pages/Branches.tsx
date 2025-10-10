@@ -10,6 +10,7 @@ interface Branch {
   phone: string | null;
   year_built: number | null;
   year_closed: number | null;
+  is_main_branch: boolean;
   created_at: string;
   staff_count?: number;
   students_count?: number;
@@ -30,6 +31,7 @@ export function Branches() {
     phone: '',
     year_built: '',
     year_closed: '',
+    is_main_branch: false,
   });
 
   useEffect(() => {
@@ -83,6 +85,7 @@ export function Branches() {
       phone: '',
       year_built: '',
       year_closed: '',
+      is_main_branch: false,
     });
   }
 
@@ -100,6 +103,7 @@ export function Branches() {
       phone: branch.phone || '',
       year_built: branch.year_built?.toString() || '',
       year_closed: branch.year_closed?.toString() || '',
+      is_main_branch: branch.is_main_branch || false,
     });
     setShowEditModal(true);
   }
@@ -114,6 +118,7 @@ export function Branches() {
       phone: formData.phone || null,
       year_built: formData.year_built ? parseInt(formData.year_built) : null,
       year_closed: formData.year_closed ? parseInt(formData.year_closed) : null,
+      is_main_branch: formData.is_main_branch,
     };
 
     try {
@@ -141,6 +146,7 @@ export function Branches() {
       phone: formData.phone || null,
       year_built: formData.year_built ? parseInt(formData.year_built) : null,
       year_closed: formData.year_closed ? parseInt(formData.year_closed) : null,
+      is_main_branch: formData.is_main_branch,
     };
 
     try {
@@ -245,7 +251,14 @@ export function Branches() {
                 </div>
               </div>
 
-              <h3 className="text-xl font-bold text-slate-900 mb-1">{branch.name}</h3>
+              <div className="flex items-start gap-2 mb-1">
+                <h3 className="text-xl font-bold text-slate-900">{branch.name}</h3>
+                {branch.is_main_branch && (
+                  <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-800 rounded-full">
+                    Main
+                  </span>
+                )}
+              </div>
               {branch.province && (
                 <p className="text-sm text-slate-600 mb-4">{branch.province}</p>
               )}
@@ -425,6 +438,19 @@ export function Branches() {
                 />
               </div>
 
+              <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <input
+                  type="checkbox"
+                  id="is_main_branch_add"
+                  checked={formData.is_main_branch}
+                  onChange={(e) => setFormData({ ...formData, is_main_branch: e.target.checked })}
+                  className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <label htmlFor="is_main_branch_add" className="text-sm font-medium text-slate-700 cursor-pointer">
+                  This is a main branch (Budget deducts when sending money to other branches)
+                </label>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
@@ -555,6 +581,19 @@ export function Branches() {
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter phone number"
                 />
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <input
+                  type="checkbox"
+                  id="is_main_branch_edit"
+                  checked={formData.is_main_branch}
+                  onChange={(e) => setFormData({ ...formData, is_main_branch: e.target.checked })}
+                  className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <label htmlFor="is_main_branch_edit" className="text-sm font-medium text-slate-700 cursor-pointer">
+                  This is a main branch (Budget deducts when sending money to other branches)
+                </label>
               </div>
 
               <div className="flex gap-3 pt-4">
