@@ -295,7 +295,7 @@ async function generatePDF(
   yPosition -= 20;
 
   const headers = ['Date', 'Branch From-To', 'Staff From-To', 'MTCN', 'Amount', 'Status'];
-  const columnWidths = [45, 85, 140, 80, 70, 45];
+  const columnWidths = [42, 75, 165, 75, 68, 40];
   let xPosition = margin;
 
   headers.forEach((header, i) => {
@@ -321,7 +321,7 @@ async function generatePDF(
 
     const fromBranch = transaction.from_branch?.name || 'N/A';
     const toBranch = transaction.to_branch?.name || 'N/A';
-    const fromTo = `${fromBranch.substring(0, 9)} - ${toBranch.substring(0, 9)}`;
+    const fromTo = `${fromBranch.substring(0, 8)} - ${toBranch.substring(0, 8)}`;
 
     const fromStaff = transaction.from_staff?.full_name || 'N/A';
     const toStaff = transaction.to_staff?.full_name || 'N/A';
@@ -331,11 +331,11 @@ async function generatePDF(
 
     const rowData = [
       date,
-      fromTo.length > 18 ? fromTo.substring(0, 16) + '...' : fromTo,
-      staffNames.length > 28 ? staffNames.substring(0, 26) + '..' : staffNames,
-      mtcn.length > 14 ? mtcn.substring(0, 12) + '..' : mtcn,
+      fromTo.length > 16 ? fromTo.substring(0, 14) + '..' : fromTo,
+      staffNames.length > 33 ? staffNames.substring(0, 31) + '..' : staffNames,
+      mtcn.length > 13 ? mtcn.substring(0, 11) + '..' : mtcn,
       `${Number(transaction.amount).toLocaleString()} ${transaction.currency}`,
-      transaction.status.substring(0, 6).toUpperCase(),
+      transaction.status.substring(0, 5).toUpperCase(),
     ];
 
     rowData.forEach((data, i) => {
