@@ -45,8 +45,8 @@ export function Dashboard() {
   async function loadStats() {
     try {
       const [staff, students, branches, books, loans, approvals, returnRequests] = await Promise.all([
-        supabase.from('staff').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('students').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('staff').select('id', { count: 'exact', head: true }).in('status', ['active', 'approved']),
+        supabase.from('students').select('id', { count: 'exact', head: true }).in('status', ['active', 'approved']),
         supabase.from('branches').select('id', { count: 'exact', head: true }),
         supabase.from('books').select('id', { count: 'exact', head: true }),
         supabase.from('book_loans').select('id', { count: 'exact', head: true }).eq('status', 'active'),
