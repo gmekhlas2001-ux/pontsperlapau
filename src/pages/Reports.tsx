@@ -504,7 +504,14 @@ export function Reports() {
     const matchesSearch =
       t.transaction_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.from_branch?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.to_branch?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      t.to_branch?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.from_staff?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.to_staff?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.transaction_date?.includes(searchTerm) ||
+      t.received_date?.includes(searchTerm) ||
+      t.purpose?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.confirmation_code?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
 
@@ -572,7 +579,7 @@ export function Reports() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search transactions..."
+                  placeholder="Search by MTCN, date, branch, staff name, purpose..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -953,7 +960,7 @@ export function Reports() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search reports by branch, period, or date..."
+                  placeholder="Search by branch, period, type, date, file name, currency..."
                   value={reportSearchTerm}
                   onChange={(e) => setReportSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -967,7 +974,11 @@ export function Reports() {
               return (
                 (report.branch?.name || 'All Branches').toLowerCase().includes(searchLower) ||
                 report.report_period.toLowerCase().includes(searchLower) ||
-                (report.generated_at && new Date(report.generated_at).toLocaleDateString().toLowerCase().includes(searchLower))
+                report.report_type.toLowerCase().includes(searchLower) ||
+                report.file_name.toLowerCase().includes(searchLower) ||
+                report.currency.toLowerCase().includes(searchLower) ||
+                (report.generated_at && new Date(report.generated_at).toLocaleDateString().includes(reportSearchTerm)) ||
+                (report.generated_at && report.generated_at.includes(reportSearchTerm))
               );
             }).length === 0 ? (
               <div className="text-center py-12 text-slate-500">
@@ -983,7 +994,11 @@ export function Reports() {
                   return (
                     (report.branch?.name || 'All Branches').toLowerCase().includes(searchLower) ||
                     report.report_period.toLowerCase().includes(searchLower) ||
-                    (report.generated_at && new Date(report.generated_at).toLocaleDateString().toLowerCase().includes(searchLower))
+                    report.report_type.toLowerCase().includes(searchLower) ||
+                    report.file_name.toLowerCase().includes(searchLower) ||
+                    report.currency.toLowerCase().includes(searchLower) ||
+                    (report.generated_at && new Date(report.generated_at).toLocaleDateString().includes(reportSearchTerm)) ||
+                    (report.generated_at && report.generated_at.includes(reportSearchTerm))
                   );
                 }).map((report) => (
                   <div key={report.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
