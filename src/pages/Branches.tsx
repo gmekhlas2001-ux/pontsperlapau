@@ -180,7 +180,11 @@ export function Branches() {
       alert('Branch deleted successfully!');
       loadBranches();
     } catch (error: any) {
-      alert('Error deleting branch: ' + error.message);
+      if (error.message?.includes('foreign key constraint')) {
+        alert('Cannot delete this branch because it has staff, students, classrooms, or books assigned to it. Please reassign or remove them first.');
+      } else {
+        alert('Error deleting branch: ' + error.message);
+      }
     }
   }
 
