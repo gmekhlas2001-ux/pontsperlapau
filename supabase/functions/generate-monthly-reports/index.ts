@@ -60,18 +60,58 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { branchId, year, month, isAutomated } = body;
+    const { branchId, year, month, isAutomated, reportType, startYear, startMonth, endYear, endMonth } = body;
 
-    const now = new Date();
-    const targetYear = year || now.getFullYear();
-    const targetMonth = month || (now.getMonth() === 0 ? 12 : now.getMonth());
-    const adjustedYear = targetMonth === 12 && !month ? targetYear - 1 : targetYear;
+    let reportPeriod: string;
+    let startDateString: string;
+    let endDateString: string;
+    let periodDescription: string;
 
-    const reportPeriod = `${adjustedYear}-${String(targetMonth).padStart(2, '0')}`;
-    const endDate = new Date(adjustedYear, targetMonth, 0, 23, 59, 59);
-    const endDateString = endDate.toISOString().split('T')[0];
+    if (reportType === 'single') {
+      const targetYear = year;
+      const targetMonth = month;
+      const startDate = new Date(targetYear, targetMonth - 1, 1);
+      const endDate = new Date(targetYear, targetMonth, 0, 23, 59, 59);
 
+      startDateString = startDate.toISOString().split('T')[0];
+      endDateString = endDate.toISOString().split('T')[0];
+      reportPeriod = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+      periodDescription = `${new Date(targetYear, targetMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+    } else if (reportType === 'yearly') {
+      const targetYear = year;
+      const startDate = new Date(targetYear, 0, 1);
+      const endDate = new Date(targetYear, 11, 31, 23, 59, 59);
+
+      startDateString = startDate.toISOString().split('T')[0];
+      endDateString = endDate.toISOString().split('T')[0];
+      reportPeriod = `${targetYear}`;
+      periodDescription = `Year ${targetYear}`;
+    } else if (reportType === 'range') {
+      const startDate = new Date(startYear, startMonth - 1, 1);
+      const endDate = new Date(endYear, endMonth, 0, 23, 59, 59);
+
+      startDateString = startDate.toISOString().split('T')[0];
+      endDateString = endDate.toISOString().split('T')[0];
+      reportPeriod = `${startYear}-${String(startMonth).padStart(2, '0')}_to_${endYear}-${String(endMonth).padStart(2, '0')}`;
+      periodDescription = `${new Date(startYear, startMonth - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} to ${new Date(endYear, endMonth - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    } else {
+      const now = new Date();
+      const targetYear = year || now.getFullYear();
+      const targetMonth = month || (now.getMonth() === 0 ? 12 : now.getMonth());
+      const adjustedYear = targetMonth === 12 && !month ? targetYear - 1 : targetYear;
+
+      const startDate = new Date(adjustedYear, targetMonth - 1, 1);
+      const endDate = new Date(adjustedYear, targetMonth, 0, 23, 59, 59);
+
+      startDateString = startDate.toISOString().split('T')[0];
+      endDateString = endDate.toISOString().split('T')[0];
+      reportPeriod = `${adjustedYear}-${String(targetMonth).padStart(2, '0')}`;
+      periodDescription = `${new Date(adjustedYear, targetMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+    }
+
+    console.log('Report Type:', reportType);
     console.log('Report Period:', reportPeriod);
+    console.log('Start Date:', startDateString);
     console.log('End Date:', endDateString);
     console.log('Branch ID:', branchId);
 
@@ -84,6 +124,7 @@ Deno.serve(async (req: Request) => {
         from_staff:profiles!transactions_from_staff_id_fkey(full_name),
         to_staff:profiles!transactions_to_staff_id_fkey(full_name)
       `)
+      .gte('transaction_date', startDateString)
       .lte('transaction_date', endDateString)
       .order('transaction_date', { ascending: true });
 
@@ -120,7 +161,7 @@ Deno.serve(async (req: Request) => {
       if (branch) branchName = branch.name;
     }
 
-    const pdfBytes = await generatePDF(transactions, branchName, reportPeriod);
+    const pdfBytes = await generatePDF(transactions, branchName, periodDescription);
 
     if (!pdfBytes || pdfBytes.length === 0) {
       throw new Error('Failed to generate PDF');
@@ -214,7 +255,7 @@ async function generatePDF(
   });
   yPosition -= 20;
 
-  page.drawText(`Period: All transactions up to ${reportPeriod}`, {
+  page.drawText(`Period: ${reportPeriod}`, {
     x: margin,
     y: yPosition,
     size: 12,

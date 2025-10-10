@@ -96,8 +96,13 @@ export function Reports() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [reportSearchTerm, setReportSearchTerm] = useState('');
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [reportType, setReportType] = useState<'single' | 'yearly' | 'range'>('single');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [startMonth, setStartMonth] = useState(1);
+  const [startYear, setStartYear] = useState(new Date().getFullYear());
+  const [endMonth, setEndMonth] = useState(new Date().getMonth() + 1);
+  const [endYear, setEndYear] = useState(new Date().getFullYear());
 
   const [transactionForm, setTransactionForm] = useState({
     from_branch_id: '',
@@ -222,13 +227,30 @@ export function Reports() {
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-monthly-reports`;
 
+      let requestBody: any = { branchId };
+
+      if (reportType === 'single') {
+        requestBody.year = selectedYear;
+        requestBody.month = selectedMonth;
+        requestBody.reportType = 'single';
+      } else if (reportType === 'yearly') {
+        requestBody.year = selectedYear;
+        requestBody.reportType = 'yearly';
+      } else if (reportType === 'range') {
+        requestBody.startYear = startYear;
+        requestBody.startMonth = startMonth;
+        requestBody.endYear = endYear;
+        requestBody.endMonth = endMonth;
+        requestBody.reportType = 'range';
+      }
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ branchId, year: selectedYear, month: selectedMonth }),
+        body: JSON.stringify(requestBody),
       });
 
       const result = await response.json();
@@ -497,6 +519,48 @@ export function Reports() {
     }
   }
 
+
+  function getFilteredTransactionsByPeriod(branchFilter?: (t: Transaction) => boolean) {
+    if (reportType === 'single') {
+      const startOfMonth = new Date(selectedYear, selectedMonth - 1, 1);
+      const endOfMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
+      return transactions.filter(t => {
+        const transDate = new Date(t.transaction_date);
+        const inPeriod = transDate >= startOfMonth && transDate <= endOfMonth;
+        return inPeriod && (branchFilter ? branchFilter(t) : true);
+      });
+    } else if (reportType === 'yearly') {
+      const startOfYear = new Date(selectedYear, 0, 1);
+      const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
+      return transactions.filter(t => {
+        const transDate = new Date(t.transaction_date);
+        const inPeriod = transDate >= startOfYear && transDate <= endOfYear;
+        return inPeriod && (branchFilter ? branchFilter(t) : true);
+      });
+    } else if (reportType === 'range') {
+      const startDate = new Date(startYear, startMonth - 1, 1);
+      const endDate = new Date(endYear, endMonth, 0, 23, 59, 59);
+      return transactions.filter(t => {
+        const transDate = new Date(t.transaction_date);
+        const inPeriod = transDate >= startDate && transDate <= endDate;
+        return inPeriod && (branchFilter ? branchFilter(t) : true);
+      });
+    }
+    return [];
+  }
+
+  function getPeriodDescription() {
+    if (reportType === 'single') {
+      return new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    } else if (reportType === 'yearly') {
+      return `${selectedYear}`;
+    } else if (reportType === 'range') {
+      const start = new Date(startYear, startMonth - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      const end = new Date(endYear, endMonth - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      return `${start} - ${end}`;
+    }
+    return '';
+  }
 
   const filteredTransactions = transactions.filter(t => {
     const searchLower = searchTerm.toLowerCase();
@@ -834,36 +898,93 @@ export function Reports() {
       {activeTab === 'reports' && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">Generate Monthly Reports</h2>
-            <p className="text-slate-600 mb-4">Generate comprehensive transaction reports including all past transactions up to the selected month.</p>
+            <h2 className="text-xl font-bold text-slate-900 mb-4">Generate Transaction Reports</h2>
+            <p className="text-slate-600 mb-4">Generate comprehensive transaction reports for specific periods.</p>
 
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Select Month
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Report Type
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="single"
+                    checked={reportType === 'single'}
+                    onChange={(e) => setReportType(e.target.value as 'single' | 'yearly' | 'range')}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-slate-700">Single Month</span>
                 </label>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value={1}>January</option>
-                  <option value={2}>February</option>
-                  <option value={3}>March</option>
-                  <option value={4}>April</option>
-                  <option value={5}>May</option>
-                  <option value={6}>June</option>
-                  <option value={7}>July</option>
-                  <option value={8}>August</option>
-                  <option value={9}>September</option>
-                  <option value={10}>October</option>
-                  <option value={11}>November</option>
-                  <option value={12}>December</option>
-                </select>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="yearly"
+                    checked={reportType === 'yearly'}
+                    onChange={(e) => setReportType(e.target.value as 'single' | 'yearly' | 'range')}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-slate-700">Full Year</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="range"
+                    checked={reportType === 'range'}
+                    onChange={(e) => setReportType(e.target.value as 'single' | 'yearly' | 'range')}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-slate-700">Date Range</span>
+                </label>
               </div>
-              <div className="flex-1">
+            </div>
+
+            {reportType === 'single' && (
+              <div className="flex gap-4 mb-6">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Month
+                  </label>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value={1}>January</option>
+                    <option value={2}>February</option>
+                    <option value={3}>March</option>
+                    <option value={4}>April</option>
+                    <option value={5}>May</option>
+                    <option value={6}>June</option>
+                    <option value={7}>July</option>
+                    <option value={8}>August</option>
+                    <option value={9}>September</option>
+                    <option value={10}>October</option>
+                    <option value={11}>November</option>
+                    <option value={12}>December</option>
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Year
+                  </label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {reportType === 'yearly' && (
+              <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Select Year
+                  Year
                 </label>
                 <select
                   value={selectedYear}
@@ -875,7 +996,90 @@ export function Reports() {
                   ))}
                 </select>
               </div>
-            </div>
+            )}
+
+            {reportType === 'range' && (
+              <div className="space-y-4 mb-6">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      From Month
+                    </label>
+                    <select
+                      value={startMonth}
+                      onChange={(e) => setStartMonth(Number(e.target.value))}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value={1}>January</option>
+                      <option value={2}>February</option>
+                      <option value={3}>March</option>
+                      <option value={4}>April</option>
+                      <option value={5}>May</option>
+                      <option value={6}>June</option>
+                      <option value={7}>July</option>
+                      <option value={8}>August</option>
+                      <option value={9}>September</option>
+                      <option value={10}>October</option>
+                      <option value={11}>November</option>
+                      <option value={12}>December</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      From Year
+                    </label>
+                    <select
+                      value={startYear}
+                      onChange={(e) => setStartYear(Number(e.target.value))}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      To Month
+                    </label>
+                    <select
+                      value={endMonth}
+                      onChange={(e) => setEndMonth(Number(e.target.value))}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value={1}>January</option>
+                      <option value={2}>February</option>
+                      <option value={3}>March</option>
+                      <option value={4}>April</option>
+                      <option value={5}>May</option>
+                      <option value={6}>June</option>
+                      <option value={7}>July</option>
+                      <option value={8}>August</option>
+                      <option value={9}>September</option>
+                      <option value={10}>October</option>
+                      <option value={11}>November</option>
+                      <option value={12}>December</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      To Year
+                    </label>
+                    <select
+                      value={endYear}
+                      onChange={(e) => setEndYear(Number(e.target.value))}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               {branches.length === 0 ? (
@@ -886,16 +1090,9 @@ export function Reports() {
               ) : (
                 <>
                   {branches.map((branch) => {
-                    const selectedDate = new Date(selectedYear, selectedMonth - 1);
-                    const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
-
-                    const branchTransactions = transactions.filter(t => {
-                      const transDate = new Date(t.transaction_date);
-                      return (
-                        transDate <= endOfSelectedMonth &&
-                        (t.from_branch_id === branch.id || t.to_branch_id === branch.id)
-                      );
-                    });
+                    const branchTransactions = getFilteredTransactionsByPeriod(
+                      (t) => t.from_branch_id === branch.id || t.to_branch_id === branch.id
+                    );
 
                     return (
                       <div key={branch.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
@@ -904,7 +1101,7 @@ export function Reports() {
                           <div>
                             <span className="font-medium text-slate-900">{branch.name}</span>
                             <p className="text-sm text-slate-500">
-                              {branchTransactions.length} transaction{branchTransactions.length !== 1 ? 's' : ''} up to {selectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                              {branchTransactions.length} transaction{branchTransactions.length !== 1 ? 's' : ''} in {getPeriodDescription()}
                             </p>
                           </div>
                         </div>
@@ -934,13 +1131,8 @@ export function Reports() {
                     <span className="font-medium text-slate-900">All Branches Combined</span>
                     <p className="text-sm text-slate-600">
                       {(() => {
-                        const selectedDate = new Date(selectedYear, selectedMonth - 1);
-                        const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
-                        const allTransactions = transactions.filter(t => {
-                          const transDate = new Date(t.transaction_date);
-                          return transDate <= endOfSelectedMonth;
-                        });
-                        return `${allTransactions.length} transaction${allTransactions.length !== 1 ? 's' : ''} up to ${selectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+                        const allTransactions = getFilteredTransactionsByPeriod();
+                        return `${allTransactions.length} transaction${allTransactions.length !== 1 ? 's' : ''} in ${getPeriodDescription()}`;
                       })()}
                     </p>
                   </div>
@@ -948,31 +1140,19 @@ export function Reports() {
                 <button
                   onClick={() => generateMonthlyReport(null)}
                   disabled={(() => {
-                    const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
-                    const allTransactions = transactions.filter(t => {
-                      const transDate = new Date(t.transaction_date);
-                      return transDate <= endOfSelectedMonth;
-                    });
+                    const allTransactions = getFilteredTransactionsByPeriod();
                     return allTransactions.length === 0 || generatingReport;
                   })()}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     (() => {
-                      const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
-                      const allTransactions = transactions.filter(t => {
-                        const transDate = new Date(t.transaction_date);
-                        return transDate <= endOfSelectedMonth;
-                      });
+                      const allTransactions = getFilteredTransactionsByPeriod();
                       return allTransactions.length === 0 || generatingReport;
                     })()
                       ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
                   title={(() => {
-                    const endOfSelectedMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
-                    const allTransactions = transactions.filter(t => {
-                      const transDate = new Date(t.transaction_date);
-                      return transDate <= endOfSelectedMonth;
-                    });
+                    const allTransactions = getFilteredTransactionsByPeriod();
                     return allTransactions.length === 0 ? 'No transactions for this period' : 'Generate combined PDF report';
                   })()}
                 >
