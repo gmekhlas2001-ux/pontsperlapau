@@ -837,7 +837,7 @@ export function Reports() {
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
             <h2 className="text-xl font-bold text-slate-900 mb-4">Generate Monthly Reports</h2>
-            <p className="text-slate-600 mb-6">Generate transaction reports for each branch or all branches for the current month.</p>
+            <p className="text-slate-600 mb-6">Generate comprehensive transaction reports including all past transactions up to the current month.</p>
 
             <div className="space-y-4">
               {branches.length === 0 ? (
@@ -849,11 +849,10 @@ export function Reports() {
                 <>
                   {branches.map((branch) => {
                     const now = new Date();
-                    const currentMonthTransactions = transactions.filter(t => {
+                    const branchTransactions = transactions.filter(t => {
                       const transDate = new Date(t.transaction_date);
                       return (
-                        transDate.getMonth() === now.getMonth() &&
-                        transDate.getFullYear() === now.getFullYear() &&
+                        transDate <= now &&
                         (t.from_branch_id === branch.id || t.to_branch_id === branch.id)
                       );
                     });
@@ -865,19 +864,19 @@ export function Reports() {
                           <div>
                             <span className="font-medium text-slate-900">{branch.name}</span>
                             <p className="text-sm text-slate-500">
-                              {currentMonthTransactions.length} transaction{currentMonthTransactions.length !== 1 ? 's' : ''} this month
+                              {branchTransactions.length} transaction{branchTransactions.length !== 1 ? 's' : ''} total
                             </p>
                           </div>
                         </div>
                         <button
                           onClick={() => generateMonthlyReport(branch.id)}
-                          disabled={currentMonthTransactions.length === 0 || generatingReport}
+                          disabled={branchTransactions.length === 0 || generatingReport}
                           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                            currentMonthTransactions.length === 0 || generatingReport
+                            branchTransactions.length === 0 || generatingReport
                               ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                               : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                           }`}
-                          title={currentMonthTransactions.length === 0 ? 'No transactions this month' : 'Generate PDF report'}
+                          title={branchTransactions.length === 0 ? 'No transactions yet' : 'Generate PDF report'}
                         >
                           <Download className="w-4 h-4" />
                           {generatingReport ? 'Generating...' : 'Generate PDF Report'}
@@ -896,14 +895,11 @@ export function Reports() {
                     <p className="text-sm text-slate-600">
                       {(() => {
                         const now = new Date();
-                        const currentMonthTransactions = transactions.filter(t => {
+                        const allTransactions = transactions.filter(t => {
                           const transDate = new Date(t.transaction_date);
-                          return (
-                            transDate.getMonth() === now.getMonth() &&
-                            transDate.getFullYear() === now.getFullYear()
-                          );
+                          return transDate <= now;
                         });
-                        return `${currentMonthTransactions.length} transaction${currentMonthTransactions.length !== 1 ? 's' : ''} this month`;
+                        return `${allTransactions.length} transaction${allTransactions.length !== 1 ? 's' : ''} total`;
                       })()}
                     </p>
                   </div>
@@ -912,40 +908,31 @@ export function Reports() {
                   onClick={() => generateMonthlyReport(null)}
                   disabled={(() => {
                     const now = new Date();
-                    const currentMonthTransactions = transactions.filter(t => {
+                    const allTransactions = transactions.filter(t => {
                       const transDate = new Date(t.transaction_date);
-                      return (
-                        transDate.getMonth() === now.getMonth() &&
-                        transDate.getFullYear() === now.getFullYear()
-                      );
+                      return transDate <= now;
                     });
-                    return currentMonthTransactions.length === 0 || generatingReport;
+                    return allTransactions.length === 0 || generatingReport;
                   })()}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     (() => {
                       const now = new Date();
-                      const currentMonthTransactions = transactions.filter(t => {
+                      const allTransactions = transactions.filter(t => {
                         const transDate = new Date(t.transaction_date);
-                        return (
-                          transDate.getMonth() === now.getMonth() &&
-                          transDate.getFullYear() === now.getFullYear()
-                        );
+                        return transDate <= now;
                       });
-                      return currentMonthTransactions.length === 0 || generatingReport;
+                      return allTransactions.length === 0 || generatingReport;
                     })()
                       ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
                   title={(() => {
                     const now = new Date();
-                    const currentMonthTransactions = transactions.filter(t => {
+                    const allTransactions = transactions.filter(t => {
                       const transDate = new Date(t.transaction_date);
-                      return (
-                        transDate.getMonth() === now.getMonth() &&
-                        transDate.getFullYear() === now.getFullYear()
-                      );
+                      return transDate <= now;
                     });
-                    return currentMonthTransactions.length === 0 ? 'No transactions this month' : 'Generate combined PDF report';
+                    return allTransactions.length === 0 ? 'No transactions yet' : 'Generate combined PDF report';
                   })()}
                 >
                   <Download className="w-4 h-4" />
