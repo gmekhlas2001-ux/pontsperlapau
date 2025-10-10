@@ -20,6 +20,7 @@ interface Transaction {
   transfer_method: string;
   status: string;
   confirmation_code: string | null;
+  purpose: string | null;
   notes: string | null;
   from_branch?: { name: string };
   to_branch?: { name: string };
@@ -244,8 +245,8 @@ async function generatePDF(
   });
   yPosition -= 20;
 
-  const headers = ['Date', 'TX #', 'From - To', 'Amount', 'Method', 'Status'];
-  const columnWidths = [60, 65, 140, 80, 80, 70];
+  const headers = ['Date', 'TX #', 'From - To', 'Purpose', 'Amount', 'Status'];
+  const columnWidths = [55, 60, 115, 120, 75, 70];
   let xPosition = margin;
 
   headers.forEach((header, i) => {
@@ -271,14 +272,17 @@ async function generatePDF(
 
     const fromBranch = transaction.from_branch?.name || 'N/A';
     const toBranch = transaction.to_branch?.name || 'N/A';
-    const fromTo = `${fromBranch.substring(0, 10)} - ${toBranch.substring(0, 10)}`;
+    const fromTo = `${fromBranch.substring(0, 8)} - ${toBranch.substring(0, 8)}`;
+
+    const purpose = transaction.purpose || 'No purpose';
+    const truncatedPurpose = purpose.length > 18 ? purpose.substring(0, 16) + '...' : purpose;
 
     const rowData = [
       date,
       transaction.transaction_number.substring(0, 10),
-      fromTo.length > 20 ? fromTo.substring(0, 18) + '...' : fromTo,
+      fromTo.length > 18 ? fromTo.substring(0, 16) + '...' : fromTo,
+      truncatedPurpose,
       `${Number(transaction.amount).toLocaleString()} ${transaction.currency}`,
-      transaction.transfer_method.substring(0, 12),
       transaction.status.toUpperCase(),
     ];
 
