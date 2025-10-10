@@ -94,6 +94,7 @@ export function Reports() {
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [reportSearchTerm, setReportSearchTerm] = useState('');
   const [generatingReport, setGeneratingReport] = useState(false);
 
   const [transactionForm, setTransactionForm] = useState({
@@ -896,10 +897,35 @@ export function Reports() {
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">Generated Reports</h2>
-            <p className="text-slate-600 mb-6">View and download previously generated PDF reports.</p>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Generated Reports</h2>
+                <p className="text-slate-600 mt-1">View and download previously generated PDF reports.</p>
+              </div>
+            </div>
 
-            {generatedReports.length === 0 ? (
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search reports by branch, period, or date..."
+                  value={reportSearchTerm}
+                  onChange={(e) => setReportSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {generatedReports.filter(report => {
+              if (!reportSearchTerm) return true;
+              const searchLower = reportSearchTerm.toLowerCase();
+              return (
+                (report.branch?.name || 'All Branches').toLowerCase().includes(searchLower) ||
+                report.report_period.toLowerCase().includes(searchLower) ||
+                (report.generated_at && new Date(report.generated_at).toLocaleDateString().toLowerCase().includes(searchLower))
+              );
+            }).length === 0 ? (
               <div className="text-center py-12 text-slate-500">
                 <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
                 <p>No reports generated yet.</p>
@@ -907,7 +933,15 @@ export function Reports() {
               </div>
             ) : (
               <div className="space-y-3">
-                {generatedReports.map((report) => (
+                {generatedReports.filter(report => {
+                  if (!reportSearchTerm) return true;
+                  const searchLower = reportSearchTerm.toLowerCase();
+                  return (
+                    (report.branch?.name || 'All Branches').toLowerCase().includes(searchLower) ||
+                    report.report_period.toLowerCase().includes(searchLower) ||
+                    (report.generated_at && new Date(report.generated_at).toLocaleDateString().toLowerCase().includes(searchLower))
+                  );
+                }).map((report) => (
                   <div key={report.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-4 flex-1">
                       <div className={`p-3 rounded-lg ${
