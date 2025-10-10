@@ -63,23 +63,31 @@ export function Approvals() {
             .eq('profile_id', approval.requester_profile_id)
             .maybeSingle();
 
+          const staffData = {
+            first_name: payload?.first_name,
+            last_name: payload?.last_name,
+            father_name: payload?.father_name,
+            age: payload?.age ? parseInt(payload.age) : null,
+            dob: payload?.dob,
+            gender: payload?.gender,
+            national_id: payload?.national_id,
+            passport_number: payload?.passport_number,
+            address: payload?.address,
+            phone: payload?.phone,
+            position: payload?.position,
+            status: 'active',
+          };
+
           if (!existingStaff) {
             await supabase.from('staff').insert({
               profile_id: approval.requester_profile_id,
-              first_name: payload?.first_name,
-              last_name: payload?.last_name,
-              father_name: payload?.father_name,
-              age: payload?.age ? parseInt(payload.age) : null,
-              dob: payload?.dob,
-              gender: payload?.gender,
-              national_id: payload?.national_id,
-              passport_number: payload?.passport_number,
-              address: payload?.address,
-              phone: payload?.phone,
-              position: payload?.position,
+              ...staffData,
               date_joined: new Date().toISOString().split('T')[0],
-              status: 'active',
             });
+          } else {
+            await supabase.from('staff')
+              .update(staffData)
+              .eq('id', existingStaff.id);
           }
         } else if (targetRole === 'student') {
           const { data: existingStudent } = await supabase
@@ -88,21 +96,33 @@ export function Approvals() {
             .eq('profile_id', approval.requester_profile_id)
             .maybeSingle();
 
+          const studentData = {
+            first_name: payload?.first_name,
+            last_name: payload?.last_name,
+            father_name: payload?.father_name,
+            age: payload?.age ? parseInt(payload.age) : null,
+            dob: payload?.dob,
+            gender: payload?.gender,
+            national_id: payload?.national_id,
+            passport_number: payload?.passport_number,
+            address: payload?.address,
+            phone: payload?.phone,
+            parent_phone: payload?.parent_phone,
+            education_level: payload?.education_level,
+            email: payload?.email,
+            status: 'active',
+          };
+
           if (!existingStudent) {
             await supabase.from('students').insert({
               profile_id: approval.requester_profile_id,
-              first_name: payload?.first_name,
-              last_name: payload?.last_name,
-              father_name: payload?.father_name,
-              age: payload?.age ? parseInt(payload.age) : null,
-              gender: payload?.gender,
-              national_id: payload?.national_id,
-              phone: payload?.phone,
-              parent_phone: payload?.parent_phone,
-              education_level: payload?.education_level,
+              ...studentData,
               date_joined: new Date().toISOString().split('T')[0],
-              status: 'active',
             });
+          } else {
+            await supabase.from('students')
+              .update(studentData)
+              .eq('id', existingStudent.id);
           }
         }
 
