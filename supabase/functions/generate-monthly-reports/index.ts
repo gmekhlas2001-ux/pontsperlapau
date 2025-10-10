@@ -135,6 +135,9 @@ Deno.serve(async (req: Request) => {
     const { data: transactions, error: txError } = await query;
 
     console.log('Transactions found:', transactions?.length || 0);
+    if (transactions && transactions.length > 0) {
+      console.log('Sample transaction:', JSON.stringify(transactions[0], null, 2));
+    }
 
     if (txError) {
       console.error('Transaction query error:', txError);
