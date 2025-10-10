@@ -23,6 +23,7 @@ interface Transaction {
   received_date: string | null;
   status: string;
   confirmation_code: string | null;
+  purpose: string | null;
   notes: string | null;
   receipt_url: string | null;
   created_at: string;
@@ -107,6 +108,7 @@ export function Reports() {
     received_date: '',
     status: 'pending',
     confirmation_code: '',
+    purpose: '',
     notes: '',
   });
 
@@ -326,6 +328,7 @@ export function Reports() {
       amount: parseFloat(transactionForm.amount),
       received_date: transactionForm.received_date || null,
       confirmation_code: transactionForm.confirmation_code || null,
+      purpose: transactionForm.purpose || null,
       notes: transactionForm.notes || null,
       created_by: profileData?.id,
     });
@@ -347,6 +350,7 @@ export function Reports() {
         received_date: '',
         status: 'pending',
         confirmation_code: '',
+        purpose: '',
         notes: '',
       });
       loadTransactions();
@@ -584,6 +588,7 @@ export function Reports() {
                       <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">Date</th>
                       <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">From</th>
                       <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">To</th>
+                      <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">Purpose</th>
                       <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">Amount</th>
                       <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">Method</th>
                       <th className="text-left px-6 py-3 text-sm font-semibold text-slate-900">Status</th>
@@ -606,6 +611,9 @@ export function Reports() {
                         <td className="px-6 py-4 text-sm text-slate-600">
                           <div className="font-medium">{transaction.to_branch?.name || 'N/A'}</div>
                           <div className="text-xs text-slate-500">{transaction.to_staff?.full_name || 'N/A'}</div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {transaction.purpose || <span className="text-slate-400 italic">No purpose specified</span>}
                         </td>
                         <td className="px-6 py-4 text-sm font-semibold text-slate-900">
                           {transaction.amount.toLocaleString()} {transaction.currency}
@@ -1114,7 +1122,19 @@ export function Reports() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Notes</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Purpose / Reason *</label>
+                <textarea
+                  value={transactionForm.purpose}
+                  onChange={(e) => setTransactionForm({ ...transactionForm, purpose: e.target.value })}
+                  rows={2}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Monthly staff salaries, Office supplies, Equipment purchase..."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Additional Notes</label>
                 <textarea
                   value={transactionForm.notes}
                   onChange={(e) => setTransactionForm({ ...transactionForm, notes: e.target.value })}
