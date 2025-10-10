@@ -291,15 +291,15 @@ async function generatePDF(
   });
   yPosition -= 20;
 
-  const headers = ['Date', 'TX #', 'From - To', 'Purpose', 'Amount', 'Status'];
-  const columnWidths = [55, 60, 115, 120, 75, 70];
+  const headers = ['Date', 'From - To', 'Sender - Receiver', 'MTCN', 'Amount', 'Status'];
+  const columnWidths = [50, 90, 110, 85, 75, 55];
   let xPosition = margin;
 
   headers.forEach((header, i) => {
     page.drawText(header, {
       x: xPosition,
       y: yPosition,
-      size: 9,
+      size: 8,
       font: boldFont,
       color: rgb(0.2, 0.2, 0.2),
     });
@@ -318,25 +318,28 @@ async function generatePDF(
 
     const fromBranch = transaction.from_branch?.name || 'N/A';
     const toBranch = transaction.to_branch?.name || 'N/A';
-    const fromTo = `${fromBranch.substring(0, 8)} - ${toBranch.substring(0, 8)}`;
+    const fromTo = `${fromBranch.substring(0, 10)} - ${toBranch.substring(0, 10)}`;
 
-    const purpose = transaction.purpose || 'No purpose';
-    const truncatedPurpose = purpose.length > 18 ? purpose.substring(0, 16) + '...' : purpose;
+    const fromStaff = transaction.from_staff?.full_name || 'N/A';
+    const toStaff = transaction.to_staff?.full_name || 'N/A';
+    const staffNames = `${fromStaff.substring(0, 12)} - ${toStaff.substring(0, 12)}`;
+
+    const mtcn = transaction.confirmation_code || 'N/A';
 
     const rowData = [
       date,
-      transaction.transaction_number.substring(0, 10),
-      fromTo.length > 18 ? fromTo.substring(0, 16) + '...' : fromTo,
-      truncatedPurpose,
+      fromTo.length > 20 ? fromTo.substring(0, 18) + '...' : fromTo,
+      staffNames.length > 26 ? staffNames.substring(0, 24) + '...' : staffNames,
+      mtcn.substring(0, 12),
       `${Number(transaction.amount).toLocaleString()} ${transaction.currency}`,
-      transaction.status.toUpperCase(),
+      transaction.status.substring(0, 8).toUpperCase(),
     ];
 
     rowData.forEach((data, i) => {
       page.drawText(data, {
         x: xPosition,
         y: yPosition,
-        size: 8,
+        size: 7,
         font: font,
         color: rgb(0.3, 0.3, 0.3),
       });
