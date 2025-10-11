@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getSignedUrl, extractPathFromUrl } from '../lib/storage-utils';
 import { Upload, X, File, ExternalLink, Download, User } from 'lucide-react';
 
 interface DocumentUploadProps {
@@ -21,6 +22,19 @@ export function DocumentUpload({
 }: DocumentUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [displayUrl, setDisplayUrl] = useState<string | null>(currentUrl || null);
+
+  useEffect(() => {
+    async function updateUrl() {
+      if (currentUrl) {
+        const signedUrl = await getSignedUrl(currentUrl);
+        setDisplayUrl(signedUrl);
+      } else {
+        setDisplayUrl(null);
+      }
+    }
+    updateUrl();
+  }, [currentUrl]);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -44,11 +58,13 @@ export function DocumentUpload({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('documents')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 315360000);
 
-      onUploadComplete(publicUrl);
+      if (signedUrlError) throw signedUrlError;
+
+      onUploadComplete(signedUrlData.signedUrl);
     } catch (error: any) {
       setError(error.message);
       console.error('Upload error:', error);
@@ -61,7 +77,8 @@ export function DocumentUpload({
     if (!currentUrl) return;
 
     try {
-      const path = currentUrl.split('/documents/')[1];
+      const path = extractPathFromUrl(currentUrl);
+
       if (path) {
         const { data, error } = await supabase.storage
           .from('documents')
@@ -87,7 +104,8 @@ export function DocumentUpload({
     if (!currentUrl || !confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      const path = currentUrl.split('/documents/')[1];
+      const path = extractPathFromUrl(currentUrl);
+
       if (path) {
         await supabase.storage.from('documents').remove([path]);
         onUploadComplete('');
@@ -101,12 +119,12 @@ export function DocumentUpload({
     <div>
       <label className="block text-sm font-medium text-slate-700 mb-2">{label}</label>
 
-      {currentUrl ? (
+      {displayUrl ? (
         documentType === 'profile_photo' ? (
           <div className="space-y-2">
             <div className="relative group">
               <img
-                src={currentUrl}
+                src={displayUrl}
                 alt="Profile"
                 className="w-32 h-32 rounded-full object-cover border-4 border-slate-200"
               />
