@@ -21,7 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Globe, Moon, Sun, Loader2 } from 'lucide-react';
+import { Globe, Moon, Sun, Loader as Loader2 } from 'lucide-react';
 // Login page component
 
 export function Login() {
