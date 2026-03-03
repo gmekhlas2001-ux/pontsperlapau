@@ -55,9 +55,11 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
     <>
       <div className="flex items-center justify-between p-4 border-b">
         <div className={cn('flex items-center gap-3', isCollapsed && 'justify-center')}>
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">P</span>
-          </div>
+          <img
+            src="/image.png"
+            alt="Ponts per la Pau"
+            className={cn('object-contain flex-shrink-0', isCollapsed ? 'h-8 w-8' : 'h-10 w-10')}
+          />
           {!isCollapsed && (
             <div className="flex flex-col">
               <span className="font-semibold text-sm">{t('app.name')}</span>
