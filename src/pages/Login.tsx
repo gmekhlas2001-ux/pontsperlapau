@@ -169,17 +169,6 @@ export function Login() {
               )}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-sm font-medium text-center mb-2">Demo Accounts:</p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p>superadmin@pxpmanagement.es / admin123</p>
-              <p>admin@pxpmanagement.es / admin123</p>
-              <p>teacher@pxpmanagement.es / teacher123</p>
-              <p>librarian@pxpmanagement.es / librarian123</p>
-              <p>student@pxpmanagement.es / student123</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

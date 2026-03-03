@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export type UserRole = 'superadmin' | 'admin' | 'teacher' | 'librarian' | 'student';
 
@@ -18,84 +19,74 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   hasPermission: (requiredRoles: UserRole[]) => boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock users for demonstration
-const MOCK_USERS: Record<string, { password: string; user: User }> = {
-  'superadmin@pxpmanagement.es': {
-    password: 'admin123',
-    user: {
-      id: '1',
-      email: 'superadmin@pxpmanagement.es',
-      firstName: 'Super',
-      lastName: 'Admin',
-      role: 'superadmin',
-      department: 'Management',
-    },
-  },
-  'admin@pxpmanagement.es': {
-    password: 'admin123',
-    user: {
-      id: '2',
-      email: 'admin@pxpmanagement.es',
-      firstName: 'Admin',
-      lastName: 'User',
-      role: 'admin',
-      department: 'Management',
-    },
-  },
-  'teacher@pxpmanagement.es': {
-    password: 'teacher123',
-    user: {
-      id: '3',
-      email: 'teacher@pxpmanagement.es',
-      firstName: 'Maria',
-      lastName: 'Garcia',
-      role: 'teacher',
-      department: 'Education',
-    },
-  },
-  'librarian@pxpmanagement.es': {
-    password: 'librarian123',
-    user: {
-      id: '4',
-      email: 'librarian@pxpmanagement.es',
-      firstName: 'John',
-      lastName: 'Smith',
-      role: 'librarian',
-      department: 'Library',
-    },
-  },
-  'student@pxpmanagement.es': {
-    password: 'student123',
-    user: {
-      id: '5',
-      email: 'student@pxpmanagement.es',
-      firstName: 'Ahmed',
-      lastName: 'Hassan',
-      role: 'student',
-    },
-  },
-};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     const stored = localStorage.getItem('user');
     return stored ? JSON.parse(stored) : null;
   });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+      setIsLoading(false);
+    };
+    initAuth();
+  }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    const mockUser = MOCK_USERS[email.toLowerCase()];
-    
-    if (mockUser && mockUser.password === password) {
-      setUser(mockUser.user);
-      localStorage.setItem('user', JSON.stringify(mockUser.user));
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name, role, profile_picture_url, status')
+        .eq('email', email.toLowerCase())
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (error || !data) {
+        console.error('Login error:', error);
+        return false;
+      }
+
+      const { data: isValidPassword } = await supabase.rpc('verify_password', {
+        user_email: email.toLowerCase(),
+        user_password: password
+      });
+
+      if (!isValidPassword) {
+        return false;
+      }
+
+      const userData: User = {
+        id: data.id,
+        email: data.email,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        role: data.role as UserRole,
+        avatar: data.profile_picture_url,
+      };
+
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      await supabase
+        .from('users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', data.id);
+
       return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    
-    return false;
   }, []);
 
   const logout = useCallback(() => {
@@ -117,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         hasPermission,
+        isLoading,
       }}
     >
       {children}
