@@ -61,7 +61,14 @@ VITE_SUPABASE_ANON_KEY=your_anon_key
 
 ## Database Schema
 
-The complete database has been created with the following tables:
+### Current Status
+
+**Active in Supabase**:
+- ✅ `users` table (with 1 superadmin user)
+- See `SUPERADMIN_CREDENTIALS.md` for login details
+
+**Migration Files Ready** (in `supabase/migrations/`):
+The complete database schema has been designed with the following tables:
 
 ### Core Tables
 - **users** - Main user authentication and profiles
