@@ -1,13 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mockStudents, mockClasses } from '@/lib/mockData';
 import { DataTable } from '@/components/ui-custom/DataTable';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { createStudent, type CreateStudentData } from '@/services/studentService';
+import {
+  createStudent,
+  getStudentsList,
+  updateStudent,
+  deleteStudent,
+  updateStudentCredentials,
+  type CreateStudentData,
+  type UpdateStudentData,
+} from '@/services/studentService';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -31,21 +49,169 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List, BookOpen } from 'lucide-react';
+import {
+  Plus,
+  MoveHorizontal as MoreHorizontal,
+  Mail,
+  Phone,
+  Pencil,
+  Trash2,
+  Grid3x2 as Grid3X3,
+  List,
+  Eye,
+  Calendar,
+  BookOpen,
+} from 'lucide-react';
 import { formatDate, getFullName } from '@/lib/utils';
-import type { Student } from '@/types';
+
+interface StudentRecord {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  gradeLevel?: string;
+  enrollmentDate: string;
+  status: 'active' | 'inactive';
+  classes: string[];
+  attendanceRate?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export function Students() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [studentList, setStudentList] = useState<StudentRecord[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
   const [formData, setFormData] = useState<Partial<CreateStudentData>>({
     gender: 'male',
   });
+  const [editData, setEditData] = useState<Partial<UpdateStudentData>>({});
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+
+  const fetchStudents = useCallback(async () => {
+    const result = await getStudentsList();
+    if (result.success && result.data) {
+      const mapped: StudentRecord[] = (result.data as any[]).map((s) => ({
+        id: s.id,
+        userId: s.user_id ?? s.user?.id ?? '',
+        firstName: s.user?.first_name ?? '',
+        lastName: s.user?.last_name ?? '',
+        email: s.user?.email ?? '',
+        phone: s.user?.phone_number ?? undefined,
+        avatar: s.user?.profile_picture_url ?? undefined,
+        gradeLevel: s.grade_level ?? undefined,
+        enrollmentDate: s.enrollment_date ?? '',
+        status: (s.user?.status ?? 'active') as 'active' | 'inactive',
+        classes: [],
+        attendanceRate: s.attendance_rate ?? undefined,
+        createdAt: s.created_at ?? '',
+        updatedAt: s.updated_at ?? '',
+      }));
+      setStudentList(mapped);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const handleInputChange = (field: keyof CreateStudentData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditChange = (field: keyof UpdateStudentData, value: string) => {
+    setEditData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleViewStudent = (student: StudentRecord) => {
+    setSelectedStudent(student);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditStudent = (student: StudentRecord) => {
+    setSelectedStudent(student);
+    setEditData({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      phone: student.phone ?? '',
+      gradeLevel: student.gradeLevel ?? '',
+      enrollmentDate: student.enrollmentDate,
+      status: student.status,
+    });
+    setEditEmail(student.email);
+    setEditPassword('');
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteStudent = (student: StudentRecord) => {
+    setSelectedStudent(student);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedStudent) return;
+    setIsSubmitting(true);
+    try {
+      const result = await deleteStudent(selectedStudent.id, selectedStudent.userId);
+      if (result.success) {
+        toast.success('Student removed successfully');
+        setIsDeleteDialogOpen(false);
+        setSelectedStudent(null);
+        await fetchStudents();
+      } else {
+        toast.error(result.error || 'Failed to remove student');
+      }
+    } catch {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedStudent) return;
+    setIsSubmitting(true);
+    try {
+      const result = await updateStudent(selectedStudent.id, selectedStudent.userId, editData);
+      if (!result.success) {
+        toast.error(result.error || 'Failed to update student');
+        return;
+      }
+
+      const emailChanged = editEmail && editEmail !== selectedStudent.email;
+      const passwordChanged = !!editPassword;
+      if ((emailChanged || passwordChanged) && user?.role === 'superadmin') {
+        const credResult = await updateStudentCredentials(
+          selectedStudent.userId,
+          emailChanged ? editEmail : undefined,
+          passwordChanged ? editPassword : undefined
+        );
+        if (!credResult.success) {
+          toast.error(credResult.error || 'Profile updated but credentials failed to update');
+          return;
+        }
+      }
+
+      toast.success('Student updated successfully');
+      setIsEditDialogOpen(false);
+      setSelectedStudent(null);
+      await fetchStudents();
+    } catch {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSaveStudent = async () => {
@@ -65,16 +231,15 @@ export function Students() {
     setIsSubmitting(true);
     try {
       const result = await createStudent(formData as CreateStudentData);
-
       if (result.success) {
         toast.success('Student created successfully');
         setIsAddDialogOpen(false);
         setFormData({ gender: 'male' });
-        window.location.reload();
+        await fetchStudents();
       } else {
         toast.error(result.error || 'Failed to create student');
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred');
     } finally {
       setIsSubmitting(false);
@@ -85,7 +250,7 @@ export function Students() {
     {
       key: 'name',
       header: t('students.fullName'),
-      cell: (student: Student) => (
+      cell: (student: StudentRecord) => (
         <div className="flex items-center gap-3">
           <AvatarWithFallback
             src={student.avatar}
@@ -101,64 +266,39 @@ export function Students() {
     {
       key: 'email',
       header: t('students.email'),
-      cell: (student: Student) => (
+      cell: (student: StudentRecord) => (
         <a href={`mailto:${student.email}`} className="text-primary hover:underline">
           {student.email}
         </a>
       ),
     },
     {
+      key: 'phone',
+      header: t('students.phone'),
+      cell: (student: StudentRecord) => student.phone || '-',
+    },
+    {
       key: 'gradeLevel',
       header: t('students.gradeLevel'),
-      cell: (student: Student) => student.gradeLevel || '-',
+      cell: (student: StudentRecord) => student.gradeLevel || '-',
       sortable: true,
     },
     {
-      key: 'classes',
-      header: t('students.classesEnrolled'),
-      cell: (student: Student) => (
-        <div className="flex flex-wrap gap-1">
-          {student.classes.map((classId) => {
-            const cls = mockClasses.find((c) => c.id === classId);
-            return cls ? (
-              <span
-                key={classId}
-                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary"
-              >
-                {cls.name}
-              </span>
-            ) : null;
-          })}
-          {student.classes.length === 0 && '-'}
-        </div>
-      ),
-    },
-    {
-      key: 'attendanceRate',
-      header: t('students.attendanceRate'),
-      cell: (student: Student) => (
-        <div className="flex items-center gap-2">
-          <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full"
-              style={{ width: `${student.attendanceRate || 0}%` }}
-            />
-          </div>
-          <span className="text-sm">{student.attendanceRate}%</span>
-        </div>
-      ),
+      key: 'enrollmentDate',
+      header: t('students.enrollmentDate'),
+      cell: (student: StudentRecord) => formatDate(student.enrollmentDate),
       sortable: true,
     },
     {
       key: 'status',
       header: t('students.status'),
-      cell: (student: Student) => <StatusBadge status={student.status} />,
+      cell: (student: StudentRecord) => <StatusBadge status={student.status} />,
       sortable: true,
     },
     {
       key: 'actions',
       header: t('common.actions'),
-      cell: (_student: Student) => (
+      cell: (student: StudentRecord) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -166,15 +306,15 @@ export function Students() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <BookOpen className="mr-2 h-4 w-4" />
+            <DropdownMenuItem onClick={() => handleViewStudent(student)}>
+              <Eye className="mr-2 h-4 w-4" />
               {t('common.view')}
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEditStudent(student)}>
               <Pencil className="mr-2 h-4 w-4" />
               {t('common.edit')}
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteStudent(student)}>
               <Trash2 className="mr-2 h-4 w-4" />
               {t('common.delete')}
             </DropdownMenuItem>
@@ -186,7 +326,7 @@ export function Students() {
 
   const renderCardView = () => (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {mockStudents.map((student) => (
+      {studentList.map((student) => (
         <Card key={student.id}>
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
@@ -199,12 +339,12 @@ export function Students() {
                 />
                 <div>
                   <h3 className="font-semibold">{getFullName(student.firstName, student.lastName)}</h3>
-                  <p className="text-sm text-muted-foreground">{student.gradeLevel}</p>
+                  <p className="text-sm text-muted-foreground">{student.gradeLevel || '-'}</p>
                   <StatusBadge status={student.status} />
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-4 space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <Mail className="h-4 w-4 text-muted-foreground" />
@@ -223,26 +363,19 @@ export function Students() {
               <div className="text-sm text-muted-foreground">
                 {t('students.enrollmentDate')}: {formatDate(student.enrollmentDate)}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{t('students.attendanceRate')}:</span>
-                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full"
-                    style={{ width: `${student.attendanceRate || 0}%` }}
-                  />
-                </div>
-                <span className="text-sm">{student.attendanceRate}%</span>
-              </div>
             </div>
-            
+
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewStudent(student)}>
+                <Eye className="mr-2 h-4 w-4" />
+                {t('common.view')}
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditStudent(student)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 {t('common.edit')}
               </Button>
-              <Button variant="outline" size="sm" className="flex-1 text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('common.delete')}
+              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteStudent(student)}>
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>
@@ -437,7 +570,7 @@ export function Students() {
 
       {viewMode === 'list' ? (
         <DataTable
-          data={mockStudents}
+          data={studentList}
           columns={columns}
           keyExtractor={(student) => student.id}
           searchKeys={['firstName', 'lastName', 'email', 'gradeLevel']}
@@ -445,6 +578,202 @@ export function Students() {
       ) : (
         renderCardView()
       )}
+
+      {/* View Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Student Profile</DialogTitle>
+            <DialogDescription>Full details for this student</DialogDescription>
+          </DialogHeader>
+          {selectedStudent && (
+            <div className="space-y-6 py-2">
+              <div className="flex items-center gap-4">
+                <AvatarWithFallback
+                  src={selectedStudent.avatar}
+                  firstName={selectedStudent.firstName}
+                  lastName={selectedStudent.lastName}
+                  className="h-16 w-16 text-lg"
+                />
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {getFullName(selectedStudent.firstName, selectedStudent.lastName)}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{selectedStudent.gradeLevel || '-'}</p>
+                  <StatusBadge status={selectedStudent.status} />
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{selectedStudent.email}</span>
+                </div>
+                {selectedStudent.phone && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span>{selectedStudent.phone}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 text-sm">
+                  <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{t('students.gradeLevel')}: {selectedStudent.gradeLevel || '-'}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{t('students.enrollmentDate')}: {formatDate(selectedStudent.enrollmentDate)}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                  {t('common.close')}
+                </Button>
+                <Button onClick={() => { setIsViewDialogOpen(false); handleEditStudent(selectedStudent); }}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  {t('common.edit')}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+            <DialogDescription>Update the details for this student</DialogDescription>
+          </DialogHeader>
+          {selectedStudent && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-firstName">{t('students.firstName')}</Label>
+                  <Input
+                    id="edit-firstName"
+                    value={editData.firstName ?? ''}
+                    onChange={(e) => handleEditChange('firstName', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lastName">{t('students.lastName')}</Label>
+                  <Input
+                    id="edit-lastName"
+                    value={editData.lastName ?? ''}
+                    onChange={(e) => handleEditChange('lastName', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">{t('students.phone')}</Label>
+                <Input
+                  id="edit-phone"
+                  value={editData.phone ?? ''}
+                  onChange={(e) => handleEditChange('phone', e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-gradeLevel">{t('students.gradeLevel')}</Label>
+                  <Input
+                    id="edit-gradeLevel"
+                    value={editData.gradeLevel ?? ''}
+                    onChange={(e) => handleEditChange('gradeLevel', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">{t('students.status')}</Label>
+                  <Select
+                    value={editData.status ?? ''}
+                    onValueChange={(value) => handleEditChange('status', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-enrollmentDate">Enrollment Date</Label>
+                <Input
+                  id="edit-enrollmentDate"
+                  type="date"
+                  value={editData.enrollmentDate ?? ''}
+                  onChange={(e) => handleEditChange('enrollmentDate', e.target.value)}
+                />
+              </div>
+              {user?.role === 'superadmin' && (
+                <>
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Credentials (Superadmin only)</p>
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-email">Email</Label>
+                        <Input
+                          id="edit-email"
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-password">
+                          New Password <span className="text-muted-foreground text-xs">(leave blank to keep current)</span>
+                        </Label>
+                        <Input
+                          id="edit-password"
+                          type="password"
+                          placeholder="Enter new password"
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : t('common.save')}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Student</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove{' '}
+              <strong>{selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : 'this student'}</strong>?
+              Their account will be deactivated and hidden from the student list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isSubmitting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isSubmitting ? 'Removing...' : 'Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
