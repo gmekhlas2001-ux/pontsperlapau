@@ -218,16 +218,48 @@ export function Staff() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">{t('staff.firstName')}</Label>
-                    <Input id="firstName" />
+                    <Input id="firstName" required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">{t('staff.lastName')}</Label>
-                    <Input id="lastName" />
+                    <Input id="lastName" required />
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="fatherName">Father's Name</Label>
+                  <Input id="fatherName" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Input id="dateOfBirth" type="date" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="passportNumber">Passport/ID Number</Label>
+                  <Input id="passportNumber" />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="email">{t('staff.email')}</Label>
-                  <Input id="email" type="email" />
+                  <Input id="email" type="email" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" type="password" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">{t('staff.phone')}</Label>
@@ -236,7 +268,7 @@ export function Staff() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="position">{t('staff.position')}</Label>
-                    <Input id="position" />
+                    <Input id="position" required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="department">{t('staff.department')}</Label>
@@ -247,14 +279,19 @@ export function Staff() {
                   <Label htmlFor="role">{t('staff.role')}</Label>
                   <Select>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="superadmin">{t('roles.superadmin')}</SelectItem>
                       <SelectItem value="admin">{t('roles.admin')}</SelectItem>
                       <SelectItem value="teacher">{t('roles.teacher')}</SelectItem>
                       <SelectItem value="librarian">{t('roles.librarian')}</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dateJoined">Date Joined</Label>
+                  <Input id="dateJoined" type="date" required />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>

@@ -32,10 +32,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [notifications] = useState([
-    { id: '1', title: 'New student enrolled', message: 'Ahmed Hassan has enrolled', read: false },
-    { id: '2', title: 'Book overdue', message: 'Book is overdue for return', read: false },
-  ]);
+  const [notifications] = useState<Array<{id: string; title: string; message: string; read: boolean}>>([]);
 
   const currentLanguage = languages.find((l) => l.code === i18n.language) || languages[2];
   const unreadCount = notifications.filter((n) => !n.read).length;
