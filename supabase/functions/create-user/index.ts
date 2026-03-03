@@ -29,14 +29,14 @@ interface CreateUserRequest {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
-  }
-
   try {
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders,
+      });
+    }
+
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -59,14 +59,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: callerUser, error: userError } = await supabaseClient
+    const { data: callerUser, error: callerUserError } = await supabaseClient
       .from("users")
       .select("id, role, status")
       .eq("id", apiKey)
       .eq("status", "active")
       .maybeSingle();
 
-    if (userError || !callerUser) {
+    if (callerUserError || !callerUser) {
       return new Response(
         JSON.stringify({ error: "Unauthorized - Invalid API key" }),
         {
