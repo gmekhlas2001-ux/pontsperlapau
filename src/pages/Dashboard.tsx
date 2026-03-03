@@ -1,10 +1,11 @@
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatCard } from '@/components/ui-custom/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getDashboardStats, mockActivities, mockClasses, mockBookLoans } from '@/lib/mockData';
-import { formatDateTime } from '@/lib/utils';
+import { mockClasses, mockBookLoans } from '@/lib/mockData';
+import { fetchDashboardStats, type DashboardStats } from '@/services/dashboardService';
 import {
   Users,
   UserCheck,
@@ -29,10 +30,28 @@ import {
   Cell,
 } from 'recharts';
 
+const emptyStats: DashboardStats = {
+  totalStaff: 0,
+  activeStaff: 0,
+  inactiveStaff: 0,
+  totalStudents: 0,
+  activeStudents: 0,
+  inactiveStudents: 0,
+  totalClasses: 0,
+  totalBooks: 0,
+  availableBooks: 0,
+  borrowedBooks: 0,
+  overdueBooks: 0,
+};
+
 export function Dashboard() {
   const { t } = useTranslation();
   const { user, hasPermission } = useAuth();
-  const stats = getDashboardStats();
+  const [stats, setStats] = useState<DashboardStats>(emptyStats);
+
+  useEffect(() => {
+    fetchDashboardStats().then(setStats);
+  }, []);
 
   const staffData = [
     { name: t('dashboard.activeStaff'), value: stats.activeStaff },
@@ -159,19 +178,7 @@ export function Dashboard() {
             <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockActivities.slice(0, 5).map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-                  <div className="flex-1">
-                    <p className="text-sm">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {activity.userName} • {formatDateTime(activity.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="text-sm text-muted-foreground">{t('common.noData')}</p>
           </CardContent>
         </Card>
 
