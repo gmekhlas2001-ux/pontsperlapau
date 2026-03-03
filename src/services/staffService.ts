@@ -18,18 +18,18 @@ export interface CreateStaffData {
 
 export async function createStaff(data: CreateStaffData) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
       return { success: false, error: 'Not authenticated' };
     }
 
+    const user = JSON.parse(storedUser);
     const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${session.access_token}`,
+        'X-API-Key': user.id,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

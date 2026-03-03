@@ -48,10 +48,10 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    const apiKey = req.headers.get("X-API-Key");
+    if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
+        JSON.stringify({ error: "Missing API key" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,14 +59,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    const { data: callerUser, error: userError } = await supabaseClient
+      .from("users")
+      .select("id, role, status")
+      .eq("id", apiKey)
+      .eq("status", "active")
+      .maybeSingle();
 
-    if (authError || !user) {
+    if (userError || !callerUser) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Unauthorized - Invalid API key" }),
         {
           status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!["superadmin", "admin"].includes(callerUser.role)) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Insufficient permissions" }),
+        {
+          status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );

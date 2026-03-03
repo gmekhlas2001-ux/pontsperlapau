@@ -265,7 +265,9 @@ export function Staff() {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">{t('staff.firstName')}</Label>
+                    <Label htmlFor="firstName">
+                      {t('staff.firstName')} <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="firstName"
                       required
@@ -274,7 +276,9 @@ export function Staff() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">{t('staff.lastName')}</Label>
+                    <Label htmlFor="lastName">
+                      {t('staff.lastName')} <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="lastName"
                       required
@@ -284,7 +288,9 @@ export function Staff() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="fatherName">Father's Name</Label>
+                  <Label htmlFor="fatherName">
+                    Father's Name <span className="text-muted-foreground text-xs">(optional)</span>
+                  </Label>
                   <Input
                     id="fatherName"
                     value={formData.fatherName || ''}
@@ -293,7 +299,9 @@ export function Staff() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Label htmlFor="dateOfBirth">
+                      Date of Birth <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="dateOfBirth"
                       type="date"
@@ -303,7 +311,9 @@ export function Staff() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
+                    <Label htmlFor="gender">
+                      Gender <span className="text-red-500">*</span>
+                    </Label>
                     <Select
                       value={formData.gender}
                       onValueChange={(value) => handleInputChange('gender', value)}
@@ -321,7 +331,9 @@ export function Staff() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="passportNumber">Passport/ID Number</Label>
+                  <Label htmlFor="passportNumber">
+                    Passport/ID Number <span className="text-muted-foreground text-xs">(optional)</span>
+                  </Label>
                   <Input
                     id="passportNumber"
                     value={formData.passportNumber || ''}
@@ -329,7 +341,9 @@ export function Staff() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">{t('staff.email')}</Label>
+                  <Label htmlFor="email">
+                    {t('staff.email')} <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="email"
                     type="email"
@@ -339,7 +353,9 @@ export function Staff() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">
+                    Password <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="password"
                     type="password"
@@ -349,7 +365,9 @@ export function Staff() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">{t('staff.phone')}</Label>
+                  <Label htmlFor="phone">
+                    {t('staff.phone')} <span className="text-muted-foreground text-xs">(optional)</span>
+                  </Label>
                   <Input
                     id="phone"
                     value={formData.phone || ''}
@@ -358,7 +376,9 @@ export function Staff() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="position">{t('staff.position')}</Label>
+                    <Label htmlFor="position">
+                      {t('staff.position')} <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="position"
                       required
@@ -367,7 +387,9 @@ export function Staff() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="department">{t('staff.department')}</Label>
+                    <Label htmlFor="department">
+                      {t('staff.department')} <span className="text-muted-foreground text-xs">(optional)</span>
+                    </Label>
                     <Input
                       id="department"
                       value={formData.department || ''}
@@ -376,7 +398,9 @@ export function Staff() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="role">{t('staff.role')}</Label>
+                  <Label htmlFor="role">
+                    {t('staff.role')} <span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={formData.role}
                     onValueChange={(value) => handleInputChange('role', value)}
@@ -393,7 +417,9 @@ export function Staff() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dateJoined">Date Joined</Label>
+                  <Label htmlFor="dateJoined">
+                    Date Joined <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="dateJoined"
                     type="date"

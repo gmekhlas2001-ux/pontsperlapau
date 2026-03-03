@@ -290,7 +290,9 @@ export function Students() {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">{t('students.firstName')}</Label>
+                    <Label htmlFor="firstName">
+                      {t('students.firstName')} <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="firstName"
                       required
@@ -299,7 +301,9 @@ export function Students() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">{t('students.lastName')}</Label>
+                    <Label htmlFor="lastName">
+                      {t('students.lastName')} <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="lastName"
                       required
@@ -309,7 +313,9 @@ export function Students() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="fatherName">Father's Name</Label>
+                  <Label htmlFor="fatherName">
+                    Father's Name <span className="text-muted-foreground text-xs">(optional)</span>
+                  </Label>
                   <Input
                     id="fatherName"
                     value={formData.fatherName || ''}
@@ -318,7 +324,9 @@ export function Students() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Label htmlFor="dateOfBirth">
+                      Date of Birth <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="dateOfBirth"
                       type="date"
@@ -328,7 +336,9 @@ export function Students() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
+                    <Label htmlFor="gender">
+                      Gender <span className="text-red-500">*</span>
+                    </Label>
                     <Select
                       value={formData.gender}
                       onValueChange={(value) => handleInputChange('gender', value)}
@@ -346,7 +356,9 @@ export function Students() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="passportNumber">Passport/ID Number</Label>
+                  <Label htmlFor="passportNumber">
+                    Passport/ID Number <span className="text-muted-foreground text-xs">(optional)</span>
+                  </Label>
                   <Input
                     id="passportNumber"
                     value={formData.passportNumber || ''}
@@ -354,7 +366,9 @@ export function Students() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">{t('students.email')}</Label>
+                  <Label htmlFor="email">
+                    {t('students.email')} <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="email"
                     type="email"
@@ -364,7 +378,9 @@ export function Students() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">
+                    Password <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="password"
                     type="password"
@@ -374,7 +390,9 @@ export function Students() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">{t('students.phone')}</Label>
+                  <Label htmlFor="phone">
+                    {t('students.phone')} <span className="text-muted-foreground text-xs">(optional)</span>
+                  </Label>
                   <Input
                     id="phone"
                     value={formData.phone || ''}
@@ -382,7 +400,9 @@ export function Students() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gradeLevel">{t('students.gradeLevel')}</Label>
+                  <Label htmlFor="gradeLevel">
+                    {t('students.gradeLevel')} <span className="text-muted-foreground text-xs">(optional)</span>
+                  </Label>
                   <Input
                     id="gradeLevel"
                     value={formData.gradeLevel || ''}
@@ -390,7 +410,9 @@ export function Students() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="enrollmentDate">Enrollment Date</Label>
+                  <Label htmlFor="enrollmentDate">
+                    Enrollment Date <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="enrollmentDate"
                     type="date"
