@@ -4,7 +4,8 @@ import { useAuth, type UserRole } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import {
   LayoutDashboard,
   Users,
@@ -124,6 +125,10 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
       {/* Mobile Sidebar */}
       <Sheet open={isMobileOpen} onOpenChange={onMobileClose}>
         <SheetContent side="left" className="p-0 w-64">
+          <VisuallyHidden>
+            <SheetTitle>Navigation Menu</SheetTitle>
+            <SheetDescription>Navigate to different sections of the application</SheetDescription>
+          </VisuallyHidden>
           <div className="flex flex-col h-full">
             <NavContent />
           </div>
