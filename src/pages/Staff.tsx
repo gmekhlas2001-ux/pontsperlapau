@@ -6,7 +6,18 @@ import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { createStaff, getStaffList, updateStaff, type CreateStaffData, type UpdateStaffData } from '@/services/staffService';
+import { createStaff, getStaffList, updateStaff, deleteStaff, updateUserCredentials, type CreateStaffData, type UpdateStaffData } from '@/services/staffService';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -40,10 +51,12 @@ interface StaffRecord extends Staff {
 
 export function Staff() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffList, setStaffList] = useState<StaffRecord[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<StaffRecord | null>(null);
@@ -52,6 +65,8 @@ export function Staff() {
     role: 'teacher',
   });
   const [editData, setEditData] = useState<Partial<UpdateStaffData>>({});
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
 
   const fetchStaff = useCallback(async () => {
     const result = await getStaffList();
@@ -105,7 +120,34 @@ export function Staff() {
       status: staff.status as UpdateStaffData['status'],
       dateJoined: staff.dateJoined,
     });
+    setEditEmail(staff.email);
+    setEditPassword('');
     setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteStaff = (staff: StaffRecord) => {
+    setSelectedStaff(staff);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedStaff) return;
+    setIsSubmitting(true);
+    try {
+      const result = await deleteStaff(selectedStaff.id, selectedStaff.userId);
+      if (result.success) {
+        toast.success('Staff member removed successfully');
+        setIsDeleteDialogOpen(false);
+        setSelectedStaff(null);
+        await fetchStaff();
+      } else {
+        toast.error(result.error || 'Failed to remove staff member');
+      }
+    } catch {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -113,14 +155,29 @@ export function Staff() {
     setIsSubmitting(true);
     try {
       const result = await updateStaff(selectedStaff.id, selectedStaff.userId, editData);
-      if (result.success) {
-        toast.success('Staff member updated successfully');
-        setIsEditDialogOpen(false);
-        setSelectedStaff(null);
-        await fetchStaff();
-      } else {
+      if (!result.success) {
         toast.error(result.error || 'Failed to update staff member');
+        return;
       }
+
+      const emailChanged = editEmail && editEmail !== selectedStaff.email;
+      const passwordChanged = !!editPassword;
+      if ((emailChanged || passwordChanged) && user?.role === 'superadmin') {
+        const credResult = await updateUserCredentials(
+          selectedStaff.userId,
+          emailChanged ? editEmail : undefined,
+          passwordChanged ? editPassword : undefined
+        );
+        if (!credResult.success) {
+          toast.error(credResult.error || 'Profile updated but credentials failed to update');
+          return;
+        }
+      }
+
+      toast.success('Staff member updated successfully');
+      setIsEditDialogOpen(false);
+      setSelectedStaff(null);
+      await fetchStaff();
     } catch {
       toast.error('An unexpected error occurred');
     } finally {
@@ -234,7 +291,7 @@ export function Staff() {
               <Pencil className="mr-2 h-4 w-4" />
               {t('common.edit')}
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteStaff(staff)}>
               <Trash2 className="mr-2 h-4 w-4" />
               {t('common.delete')}
             </DropdownMenuItem>
@@ -296,6 +353,9 @@ export function Staff() {
               <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditStaff(staff)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 {t('common.edit')}
+              </Button>
+              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteStaff(staff)}>
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>
@@ -698,6 +758,34 @@ export function Staff() {
                   onChange={(e) => handleEditChange('dateJoined', e.target.value)}
                 />
               </div>
+              {user?.role === 'superadmin' && (
+                <>
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Credentials (Superadmin only)</p>
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-email">Email</Label>
+                        <Input
+                          id="edit-email"
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-password">New Password <span className="text-muted-foreground text-xs">(leave blank to keep current)</span></Label>
+                        <Input
+                          id="edit-password"
+                          type="password"
+                          placeholder="Enter new password"
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   {t('common.cancel')}
@@ -710,6 +798,30 @@ export function Staff() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Staff Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove{' '}
+              <strong>{selectedStaff ? `${selectedStaff.firstName} ${selectedStaff.lastName}` : 'this staff member'}</strong>?
+              Their account will be deactivated and hidden from the staff list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isSubmitting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isSubmitting ? 'Removing...' : 'Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

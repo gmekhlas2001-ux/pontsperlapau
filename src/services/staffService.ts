@@ -115,6 +115,50 @@ export async function updateStaff(staffId: string, userId: string, data: UpdateS
   }
 }
 
+export async function updateUserCredentials(targetUserId: string, email?: string, newPassword?: string) {
+  try {
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) return { success: false, error: 'Not authenticated' };
+    const caller = JSON.parse(storedUser);
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'X-User-Id': caller.id,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ targetUserId, email, newPassword }),
+    });
+    const result = await response.json();
+    if (!response.ok) return { success: false, error: result.error || 'Failed to update credentials' };
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update credentials' };
+  }
+}
+
+export async function deleteStaff(staffId: string, userId: string) {
+  try {
+    const { error: staffError } = await supabase
+      .from('staff')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', staffId);
+    if (staffError) throw staffError;
+
+    const { error: userError } = await supabase
+      .from('users')
+      .update({ status: 'inactive' })
+      .eq('id', userId);
+    if (userError) throw userError;
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting staff:', error);
+    return { success: false, error: error.message || 'Failed to delete staff member' };
+  }
+}
+
 export async function getStaffList() {
   try {
     const { data, error } = await supabase
