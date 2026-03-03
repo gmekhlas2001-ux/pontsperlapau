@@ -9,10 +9,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -197,6 +199,9 @@ export function Library() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{t('library.addBook')}</DialogTitle>
+              <VisuallyHidden>
+                <DialogDescription>Add a new book to the library</DialogDescription>
+              </VisuallyHidden>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
@@ -294,6 +299,9 @@ export function Library() {
           {selectedBook && (
             <>
               <DialogHeader>
+                <VisuallyHidden>
+                  <DialogDescription>Book details</DialogDescription>
+                </VisuallyHidden>
                 <DialogTitle>{selectedBook.title}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -385,6 +393,9 @@ export function Library() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('library.lendBook')}</DialogTitle>
+            <VisuallyHidden>
+              <DialogDescription>Lend a book to a student</DialogDescription>
+            </VisuallyHidden>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div>

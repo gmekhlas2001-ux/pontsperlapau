@@ -4,8 +4,8 @@ import { hash } from "npm:bcryptjs@2.4.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
 interface CreateUserRequest {
@@ -29,14 +29,14 @@ interface CreateUserRequest {
 }
 
 Deno.serve(async (req: Request) => {
-  try {
-    if (req.method === "OPTIONS") {
-      return new Response(null, {
-        status: 200,
-        headers: corsHeaders,
-      });
-    }
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
+    });
+  }
 
+  try {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -48,10 +48,10 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    const apiKey = req.headers.get("X-API-Key");
-    if (!apiKey) {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing API key" }),
+        JSON.stringify({ error: "Missing Authorization header" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,16 +59,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const token = authHeader.replace("Bearer ", "");
+
     const { data: callerUser, error: callerUserError } = await supabaseClient
       .from("users")
       .select("id, role, status")
-      .eq("id", apiKey)
+      .eq("id", token)
       .eq("status", "active")
       .maybeSingle();
 
     if (callerUserError || !callerUser) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized - Invalid API key" }),
+        JSON.stringify({ error: "Unauthorized - Invalid token" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

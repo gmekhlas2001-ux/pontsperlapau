@@ -7,10 +7,12 @@ import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,6 +77,9 @@ export function Classes() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{t('classes.addClass')}</DialogTitle>
+              <VisuallyHidden>
+                <DialogDescription>Add a new class to the system</DialogDescription>
+              </VisuallyHidden>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
@@ -197,6 +202,9 @@ export function Classes() {
           {selectedClass && (
             <>
               <DialogHeader>
+                <VisuallyHidden>
+                  <DialogDescription>Class details</DialogDescription>
+                </VisuallyHidden>
                 <DialogTitle>{selectedClass.name}</DialogTitle>
               </DialogHeader>
               
