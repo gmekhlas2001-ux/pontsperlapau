@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabase';
-import * as bcrypt from 'bcryptjs';
 
 export interface CreateStudentData {
   firstName: string;
@@ -17,39 +16,45 @@ export interface CreateStudentData {
 
 export async function createStudent(data: CreateStudentData) {
   try {
-    const passwordHash = await bcrypt.hash(data.password, 10);
+    const { data: { session } } = await supabase.auth.getSession();
 
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .insert({
+    if (!session) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         email: data.email,
-        password_hash: passwordHash,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        phone_number: data.phone,
-        date_of_birth: data.dateOfBirth,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phoneNumber: data.phone,
+        dateOfBirth: data.dateOfBirth,
         gender: data.gender,
         role: 'student',
-        status: 'active',
-      })
-      .select()
-      .single();
+        fatherName: data.fatherName,
+        passportNumber: data.passportNumber,
+        additionalData: {
+          gradeLevel: data.gradeLevel,
+          enrollmentDate: data.enrollmentDate,
+        },
+      }),
+    });
 
-    if (userError) throw userError;
+    const result = await response.json();
 
-    const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .insert({
-        user_id: userData.id,
-        grade_level: data.gradeLevel,
-        enrollment_date: data.enrollmentDate,
-      })
-      .select()
-      .single();
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Failed to create student' };
+    }
 
-    if (studentError) throw studentError;
-
-    return { success: true, data: studentData };
+    return { success: true, data: result.roleData };
   } catch (error: any) {
     console.error('Error creating student:', error);
     return { success: false, error: error.message || 'Failed to create student' };

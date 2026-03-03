@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabase';
-import * as bcrypt from 'bcryptjs';
 
 export interface CreateStaffData {
   firstName: string;
@@ -19,40 +18,46 @@ export interface CreateStaffData {
 
 export async function createStaff(data: CreateStaffData) {
   try {
-    const passwordHash = await bcrypt.hash(data.password, 10);
+    const { data: { session } } = await supabase.auth.getSession();
 
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .insert({
+    if (!session) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         email: data.email,
-        password_hash: passwordHash,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        phone_number: data.phone,
-        date_of_birth: data.dateOfBirth,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phoneNumber: data.phone,
+        dateOfBirth: data.dateOfBirth,
         gender: data.gender,
         role: data.role,
-        status: 'active',
-      })
-      .select()
-      .single();
+        fatherName: data.fatherName,
+        passportNumber: data.passportNumber,
+        additionalData: {
+          position: data.position,
+          department: data.department,
+          dateJoined: data.dateJoined,
+        },
+      }),
+    });
 
-    if (userError) throw userError;
+    const result = await response.json();
 
-    const { data: staffData, error: staffError } = await supabase
-      .from('staff')
-      .insert({
-        user_id: userData.id,
-        position: data.position,
-        department: data.department,
-        date_joined: data.dateJoined,
-      })
-      .select()
-      .single();
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Failed to create staff member' };
+    }
 
-    if (staffError) throw staffError;
-
-    return { success: true, data: staffData };
+    return { success: true, data: result.roleData };
   } catch (error: any) {
     console.error('Error creating staff:', error);
     return { success: false, error: error.message || 'Failed to create staff member' };
