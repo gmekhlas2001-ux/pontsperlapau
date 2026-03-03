@@ -6,7 +6,7 @@ import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { createStaff, getStaffList, type CreateStaffData } from '@/services/staffService';
+import { createStaff, getStaffList, updateStaff, type CreateStaffData, type UpdateStaffData } from '@/services/staffService';
 import {
   Dialog,
   DialogContent,
@@ -30,33 +30,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List } from 'lucide-react';
+import { Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List, Eye, Calendar, Briefcase, Building2 } from 'lucide-react';
 import { formatDate, getFullName } from '@/lib/utils';
 import type { Staff } from '@/types';
+
+interface StaffRecord extends Staff {
+  userId: string;
+}
 
 export function Staff() {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [staffList, setStaffList] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<StaffRecord[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<StaffRecord | null>(null);
   const [formData, setFormData] = useState<Partial<CreateStaffData>>({
     gender: 'male',
     role: 'teacher',
   });
+  const [editData, setEditData] = useState<Partial<UpdateStaffData>>({});
 
   const fetchStaff = useCallback(async () => {
     const result = await getStaffList();
     if (result.success && result.data) {
-      const mapped = result.data.map((s: any) => ({
+      const mapped: StaffRecord[] = (result.data as any[]).map((s) => ({
         id: s.id,
+        userId: s.user_id ?? s.user?.id ?? '',
         firstName: s.user?.first_name ?? '',
         lastName: s.user?.last_name ?? '',
         email: s.user?.email ?? '',
         phone: s.user?.phone_number ?? undefined,
         avatar: s.user?.profile_picture_url ?? undefined,
-        role: s.user?.role ?? 'teacher',
-        status: s.user?.status ?? 'active',
+        role: (s.user?.role ?? 'teacher') as StaffRecord['role'],
+        status: (s.user?.status ?? 'active') as StaffRecord['status'],
         position: s.position ?? '',
         department: s.department ?? undefined,
         dateJoined: s.date_joined ?? '',
@@ -73,6 +82,50 @@ export function Staff() {
 
   const handleInputChange = (field: keyof CreateStaffData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditChange = (field: keyof UpdateStaffData, value: string) => {
+    setEditData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleViewStaff = (staff: StaffRecord) => {
+    setSelectedStaff(staff);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditStaff = (staff: StaffRecord) => {
+    setSelectedStaff(staff);
+    setEditData({
+      firstName: staff.firstName,
+      lastName: staff.lastName,
+      phone: staff.phone ?? '',
+      position: staff.position,
+      department: staff.department ?? '',
+      role: staff.role as UpdateStaffData['role'],
+      status: staff.status as UpdateStaffData['status'],
+      dateJoined: staff.dateJoined,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedStaff) return;
+    setIsSubmitting(true);
+    try {
+      const result = await updateStaff(selectedStaff.id, selectedStaff.userId, editData);
+      if (result.success) {
+        toast.success('Staff member updated successfully');
+        setIsEditDialogOpen(false);
+        setSelectedStaff(null);
+        await fetchStaff();
+      } else {
+        toast.error(result.error || 'Failed to update staff member');
+      }
+    } catch {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSaveStaff = async () => {
@@ -94,7 +147,6 @@ export function Staff() {
     setIsSubmitting(true);
     try {
       const result = await createStaff(formData as CreateStaffData);
-
       if (result.success) {
         toast.success('Staff member created successfully');
         setIsAddDialogOpen(false);
@@ -103,7 +155,7 @@ export function Staff() {
       } else {
         toast.error(result.error || 'Failed to create staff member');
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred');
     } finally {
       setIsSubmitting(false);
@@ -114,7 +166,7 @@ export function Staff() {
     {
       key: 'name',
       header: t('staff.fullName'),
-      cell: (staff: Staff) => (
+      cell: (staff: StaffRecord) => (
         <div className="flex items-center gap-3">
           <AvatarWithFallback
             src={staff.avatar}
@@ -130,13 +182,13 @@ export function Staff() {
     {
       key: 'position',
       header: t('staff.position'),
-      cell: (staff: Staff) => staff.position,
+      cell: (staff: StaffRecord) => staff.position,
       sortable: true,
     },
     {
       key: 'role',
       header: t('staff.role'),
-      cell: (staff: Staff) => (
+      cell: (staff: StaffRecord) => (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
           {t(`roles.${staff.role}`)}
         </span>
@@ -146,7 +198,7 @@ export function Staff() {
     {
       key: 'email',
       header: t('staff.email'),
-      cell: (staff: Staff) => (
+      cell: (staff: StaffRecord) => (
         <a href={`mailto:${staff.email}`} className="text-primary hover:underline">
           {staff.email}
         </a>
@@ -155,18 +207,18 @@ export function Staff() {
     {
       key: 'phone',
       header: t('staff.phone'),
-      cell: (staff: Staff) => staff.phone || '-',
+      cell: (staff: StaffRecord) => staff.phone || '-',
     },
     {
       key: 'status',
       header: t('staff.status'),
-      cell: (staff: Staff) => <StatusBadge status={staff.status} />,
+      cell: (staff: StaffRecord) => <StatusBadge status={staff.status} />,
       sortable: true,
     },
     {
       key: 'actions',
       header: t('common.actions'),
-      cell: (_staff: Staff) => (
+      cell: (staff: StaffRecord) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -174,11 +226,11 @@ export function Staff() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <Mail className="mr-2 h-4 w-4" />
+            <DropdownMenuItem onClick={() => handleViewStaff(staff)}>
+              <Eye className="mr-2 h-4 w-4" />
               {t('common.view')}
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEditStaff(staff)}>
               <Pencil className="mr-2 h-4 w-4" />
               {t('common.edit')}
             </DropdownMenuItem>
@@ -215,7 +267,7 @@ export function Staff() {
               </div>
               <StatusBadge status={staff.status} />
             </div>
-            
+
             <div className="mt-4 space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <Mail className="h-4 w-4 text-muted-foreground" />
@@ -235,15 +287,15 @@ export function Staff() {
                 {t('staff.dateJoined')}: {formatDate(staff.dateJoined)}
               </div>
             </div>
-            
+
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewStaff(staff)}>
+                <Eye className="mr-2 h-4 w-4" />
+                {t('common.view')}
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditStaff(staff)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 {t('common.edit')}
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1 text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('common.delete')}
               </Button>
             </div>
           </CardContent>
@@ -478,6 +530,186 @@ export function Staff() {
       ) : (
         renderCardView()
       )}
+
+      {/* View Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Staff Profile</DialogTitle>
+            <DialogDescription>Full details for this staff member</DialogDescription>
+          </DialogHeader>
+          {selectedStaff && (
+            <div className="space-y-6 py-2">
+              <div className="flex items-center gap-4">
+                <AvatarWithFallback
+                  src={selectedStaff.avatar}
+                  firstName={selectedStaff.firstName}
+                  lastName={selectedStaff.lastName}
+                  className="h-16 w-16 text-lg"
+                />
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {getFullName(selectedStaff.firstName, selectedStaff.lastName)}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{selectedStaff.position}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                      {t(`roles.${selectedStaff.role}`)}
+                    </span>
+                    <StatusBadge status={selectedStaff.status} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{selectedStaff.email}</span>
+                </div>
+                {selectedStaff.phone && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span>{selectedStaff.phone}</span>
+                  </div>
+                )}
+                {selectedStaff.department && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span>{selectedStaff.department}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 text-sm">
+                  <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{selectedStaff.position}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{t('staff.dateJoined')}: {formatDate(selectedStaff.dateJoined)}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                  {t('common.close')}
+                </Button>
+                <Button onClick={() => { setIsViewDialogOpen(false); handleEditStaff(selectedStaff); }}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  {t('common.edit')}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Staff Member</DialogTitle>
+            <DialogDescription>Update the details for this staff member</DialogDescription>
+          </DialogHeader>
+          {selectedStaff && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-firstName">{t('staff.firstName')}</Label>
+                  <Input
+                    id="edit-firstName"
+                    value={editData.firstName ?? ''}
+                    onChange={(e) => handleEditChange('firstName', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lastName">{t('staff.lastName')}</Label>
+                  <Input
+                    id="edit-lastName"
+                    value={editData.lastName ?? ''}
+                    onChange={(e) => handleEditChange('lastName', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">{t('staff.phone')}</Label>
+                <Input
+                  id="edit-phone"
+                  value={editData.phone ?? ''}
+                  onChange={(e) => handleEditChange('phone', e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-position">{t('staff.position')}</Label>
+                  <Input
+                    id="edit-position"
+                    value={editData.position ?? ''}
+                    onChange={(e) => handleEditChange('position', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-department">{t('staff.department')}</Label>
+                  <Input
+                    id="edit-department"
+                    value={editData.department ?? ''}
+                    onChange={(e) => handleEditChange('department', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">{t('staff.role')}</Label>
+                  <Select
+                    value={editData.role ?? ''}
+                    onValueChange={(value) => handleEditChange('role', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="superadmin">{t('roles.superadmin')}</SelectItem>
+                      <SelectItem value="admin">{t('roles.admin')}</SelectItem>
+                      <SelectItem value="teacher">{t('roles.teacher')}</SelectItem>
+                      <SelectItem value="librarian">{t('roles.librarian')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">{t('staff.status')}</Label>
+                  <Select
+                    value={editData.status ?? ''}
+                    onValueChange={(value) => handleEditChange('status', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-dateJoined">Date Joined</Label>
+                <Input
+                  id="edit-dateJoined"
+                  type="date"
+                  value={editData.dateJoined ?? ''}
+                  onChange={(e) => handleEditChange('dateJoined', e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : t('common.save')}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

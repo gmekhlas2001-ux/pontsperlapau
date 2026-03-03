@@ -65,6 +65,56 @@ export async function createStaff(data: CreateStaffData) {
   }
 }
 
+export interface UpdateStaffData {
+  firstName?: string;
+  lastName?: string;
+  fatherName?: string;
+  phone?: string;
+  position?: string;
+  department?: string;
+  role?: 'superadmin' | 'admin' | 'teacher' | 'librarian';
+  status?: 'active' | 'inactive';
+  dateJoined?: string;
+}
+
+export async function updateStaff(staffId: string, userId: string, data: UpdateStaffData) {
+  try {
+    const userUpdates: Record<string, string> = {};
+    if (data.firstName !== undefined) userUpdates.first_name = data.firstName;
+    if (data.lastName !== undefined) userUpdates.last_name = data.lastName;
+    if (data.fatherName !== undefined) userUpdates.father_name = data.fatherName;
+    if (data.phone !== undefined) userUpdates.phone_number = data.phone;
+    if (data.role !== undefined) userUpdates.role = data.role;
+    if (data.status !== undefined) userUpdates.status = data.status;
+
+    if (Object.keys(userUpdates).length > 0) {
+      const { error: userError } = await supabase
+        .from('users')
+        .update(userUpdates)
+        .eq('id', userId);
+      if (userError) throw userError;
+    }
+
+    const staffUpdates: Record<string, string> = {};
+    if (data.position !== undefined) staffUpdates.position = data.position;
+    if (data.department !== undefined) staffUpdates.department = data.department;
+    if (data.dateJoined !== undefined) staffUpdates.date_joined = data.dateJoined;
+
+    if (Object.keys(staffUpdates).length > 0) {
+      const { error: staffError } = await supabase
+        .from('staff')
+        .update(staffUpdates)
+        .eq('id', staffId);
+      if (staffError) throw staffError;
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating staff:', error);
+    return { success: false, error: error.message || 'Failed to update staff member' };
+  }
+}
+
 export async function getStaffList() {
   try {
     const { data, error } = await supabase
