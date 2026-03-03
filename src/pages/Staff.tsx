@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mockStaff } from '@/lib/mockData';
 import { DataTable } from '@/components/ui-custom/DataTable';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { createStaff, type CreateStaffData } from '@/services/staffService';
+import { createStaff, getStaffList, type CreateStaffData } from '@/services/staffService';
 import {
   Dialog,
   DialogContent,
@@ -40,10 +39,37 @@ export function Staff() {
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [staffList, setStaffList] = useState<any[]>([]);
   const [formData, setFormData] = useState<Partial<CreateStaffData>>({
     gender: 'male',
     role: 'teacher',
   });
+
+  const fetchStaff = useCallback(async () => {
+    const result = await getStaffList();
+    if (result.success && result.data) {
+      const mapped = result.data.map((s: any) => ({
+        id: s.id,
+        firstName: s.user?.first_name ?? '',
+        lastName: s.user?.last_name ?? '',
+        email: s.user?.email ?? '',
+        phone: s.user?.phone_number ?? undefined,
+        avatar: s.user?.profile_picture_url ?? undefined,
+        role: s.user?.role ?? 'teacher',
+        status: s.user?.status ?? 'active',
+        position: s.position ?? '',
+        department: s.department ?? undefined,
+        dateJoined: s.date_joined ?? '',
+        createdAt: s.created_at ?? '',
+        updatedAt: s.updated_at ?? '',
+      }));
+      setStaffList(mapped);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
 
   const handleInputChange = (field: keyof CreateStaffData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -73,7 +99,7 @@ export function Staff() {
         toast.success('Staff member created successfully');
         setIsAddDialogOpen(false);
         setFormData({ gender: 'male', role: 'teacher' });
-        window.location.reload();
+        await fetchStaff();
       } else {
         toast.error(result.error || 'Failed to create staff member');
       }
@@ -168,7 +194,7 @@ export function Staff() {
 
   const renderCardView = () => (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {mockStaff.map((staff) => (
+      {staffList.map((staff) => (
         <Card key={staff.id}>
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
@@ -444,7 +470,7 @@ export function Staff() {
 
       {viewMode === 'list' ? (
         <DataTable
-          data={mockStaff}
+          data={staffList}
           columns={columns}
           keyExtractor={(staff) => staff.id}
           searchKeys={['firstName', 'lastName', 'email', 'position']}

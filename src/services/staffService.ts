@@ -29,7 +29,8 @@ export async function createStaff(data: CreateStaffData) {
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'X-API-Key': user.id,
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'X-User-Id': user.id,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

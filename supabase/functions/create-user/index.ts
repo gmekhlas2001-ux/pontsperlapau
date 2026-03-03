@@ -5,7 +5,7 @@ import { hash } from "npm:bcryptjs@2.4.3";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-User-Id",
 };
 
 interface CreateUserRequest {
@@ -48,10 +48,10 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const callerId = req.headers.get("X-User-Id");
+    if (!callerId) {
       return new Response(
-        JSON.stringify({ error: "Missing Authorization header" }),
+        JSON.stringify({ error: "Missing X-User-Id header" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,18 +59,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const token = authHeader.replace("Bearer ", "");
-
     const { data: callerUser, error: callerUserError } = await supabaseClient
       .from("users")
       .select("id, role, status")
-      .eq("id", token)
+      .eq("id", callerId)
       .eq("status", "active")
       .maybeSingle();
 
     if (callerUserError || !callerUser) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized - Invalid token" }),
+        JSON.stringify({ error: "Unauthorized - User not found or inactive" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
