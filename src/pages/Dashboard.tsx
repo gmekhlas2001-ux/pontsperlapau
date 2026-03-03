@@ -6,17 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { mockClasses, mockBookLoans } from '@/lib/mockData';
 import { fetchDashboardStats, type DashboardStats } from '@/services/dashboardService';
-import {
-  Users,
-  UserCheck,
-  GraduationCap,
-  BookOpen,
-  Library,
-  Plus,
-  Calendar,
-  Clock,
-  AlertCircle,
-} from 'lucide-react';
+import { Users, UserCheck, GraduationCap, BookOpen, Library, Plus, Calendar, Clock, CircleAlert as AlertCircle } from 'lucide-react';
 import {
   BarChart,
   Bar,
