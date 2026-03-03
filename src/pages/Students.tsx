@@ -6,6 +6,8 @@ import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { createStudent, type CreateStudentData } from '@/services/studentService';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,47 @@ export function Students() {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<Partial<CreateStudentData>>({
+    gender: 'male',
+  });
+
+  const handleInputChange = (field: keyof CreateStudentData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveStudent = async () => {
+    if (
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.email ||
+      !formData.password ||
+      !formData.dateOfBirth ||
+      !formData.gender ||
+      !formData.enrollmentDate
+    ) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await createStudent(formData as CreateStudentData);
+
+      if (result.success) {
+        toast.success('Student created successfully');
+        setIsAddDialogOpen(false);
+        setFormData({ gender: 'male' });
+        window.location.reload();
+      } else {
+        toast.error(result.error || 'Failed to create student');
+      }
+    } catch (error) {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const columns = [
     {
@@ -248,25 +291,48 @@ export function Students() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">{t('students.firstName')}</Label>
-                    <Input id="firstName" required />
+                    <Input
+                      id="firstName"
+                      required
+                      value={formData.firstName || ''}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">{t('students.lastName')}</Label>
-                    <Input id="lastName" required />
+                    <Input
+                      id="lastName"
+                      required
+                      value={formData.lastName || ''}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="fatherName">Father's Name</Label>
-                  <Input id="fatherName" />
+                  <Input
+                    id="fatherName"
+                    value={formData.fatherName || ''}
+                    onChange={(e) => handleInputChange('fatherName', e.target.value)}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                    <Input id="dateOfBirth" type="date" required />
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      required
+                      value={formData.dateOfBirth || ''}
+                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="gender">Gender</Label>
-                    <Select>
+                    <Select
+                      value={formData.gender}
+                      onValueChange={(value) => handleInputChange('gender', value)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
@@ -281,33 +347,65 @@ export function Students() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="passportNumber">Passport/ID Number</Label>
-                  <Input id="passportNumber" />
+                  <Input
+                    id="passportNumber"
+                    value={formData.passportNumber || ''}
+                    onChange={(e) => handleInputChange('passportNumber', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">{t('students.email')}</Label>
-                  <Input id="email" type="email" required />
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={formData.email || ''}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required />
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={formData.password || ''}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">{t('students.phone')}</Label>
-                  <Input id="phone" />
+                  <Input
+                    id="phone"
+                    value={formData.phone || ''}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gradeLevel">{t('students.gradeLevel')}</Label>
-                  <Input id="gradeLevel" />
+                  <Input
+                    id="gradeLevel"
+                    value={formData.gradeLevel || ''}
+                    onChange={(e) => handleInputChange('gradeLevel', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="enrollmentDate">Enrollment Date</Label>
-                  <Input id="enrollmentDate" type="date" required />
+                  <Input
+                    id="enrollmentDate"
+                    type="date"
+                    required
+                    value={formData.enrollmentDate || ''}
+                    onChange={(e) => handleInputChange('enrollmentDate', e.target.value)}
+                  />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     {t('common.cancel')}
                   </Button>
-                  <Button>{t('common.save')}</Button>
+                  <Button onClick={handleSaveStudent} disabled={isSubmitting}>
+                    {isSubmitting ? 'Saving...' : t('common.save')}
+                  </Button>
                 </div>
               </div>
             </DialogContent>

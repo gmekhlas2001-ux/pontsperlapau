@@ -6,6 +6,8 @@ import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { createStaff, type CreateStaffData } from '@/services/staffService';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,50 @@ export function Staff() {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<Partial<CreateStaffData>>({
+    gender: 'male',
+    role: 'teacher',
+  });
+
+  const handleInputChange = (field: keyof CreateStaffData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveStaff = async () => {
+    if (
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.email ||
+      !formData.password ||
+      !formData.position ||
+      !formData.dateOfBirth ||
+      !formData.gender ||
+      !formData.role ||
+      !formData.dateJoined
+    ) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await createStaff(formData as CreateStaffData);
+
+      if (result.success) {
+        toast.success('Staff member created successfully');
+        setIsAddDialogOpen(false);
+        setFormData({ gender: 'male', role: 'teacher' });
+        window.location.reload();
+      } else {
+        toast.error(result.error || 'Failed to create staff member');
+      }
+    } catch (error) {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const columns = [
     {
@@ -220,25 +266,48 @@ export function Staff() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">{t('staff.firstName')}</Label>
-                    <Input id="firstName" required />
+                    <Input
+                      id="firstName"
+                      required
+                      value={formData.firstName || ''}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">{t('staff.lastName')}</Label>
-                    <Input id="lastName" required />
+                    <Input
+                      id="lastName"
+                      required
+                      value={formData.lastName || ''}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="fatherName">Father's Name</Label>
-                  <Input id="fatherName" />
+                  <Input
+                    id="fatherName"
+                    value={formData.fatherName || ''}
+                    onChange={(e) => handleInputChange('fatherName', e.target.value)}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                    <Input id="dateOfBirth" type="date" required />
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      required
+                      value={formData.dateOfBirth || ''}
+                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="gender">Gender</Label>
-                    <Select>
+                    <Select
+                      value={formData.gender}
+                      onValueChange={(value) => handleInputChange('gender', value)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
@@ -253,33 +322,65 @@ export function Staff() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="passportNumber">Passport/ID Number</Label>
-                  <Input id="passportNumber" />
+                  <Input
+                    id="passportNumber"
+                    value={formData.passportNumber || ''}
+                    onChange={(e) => handleInputChange('passportNumber', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">{t('staff.email')}</Label>
-                  <Input id="email" type="email" required />
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={formData.email || ''}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required />
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={formData.password || ''}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">{t('staff.phone')}</Label>
-                  <Input id="phone" />
+                  <Input
+                    id="phone"
+                    value={formData.phone || ''}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="position">{t('staff.position')}</Label>
-                    <Input id="position" required />
+                    <Input
+                      id="position"
+                      required
+                      value={formData.position || ''}
+                      onChange={(e) => handleInputChange('position', e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="department">{t('staff.department')}</Label>
-                    <Input id="department" />
+                    <Input
+                      id="department"
+                      value={formData.department || ''}
+                      onChange={(e) => handleInputChange('department', e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">{t('staff.role')}</Label>
-                  <Select>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) => handleInputChange('role', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
@@ -293,13 +394,21 @@ export function Staff() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dateJoined">Date Joined</Label>
-                  <Input id="dateJoined" type="date" required />
+                  <Input
+                    id="dateJoined"
+                    type="date"
+                    required
+                    value={formData.dateJoined || ''}
+                    onChange={(e) => handleInputChange('dateJoined', e.target.value)}
+                  />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     {t('common.cancel')}
                   </Button>
-                  <Button>{t('common.save')}</Button>
+                  <Button onClick={handleSaveStaff} disabled={isSubmitting}>
+                    {isSubmitting ? 'Saving...' : t('common.save')}
+                  </Button>
                 </div>
               </div>
             </DialogContent>
