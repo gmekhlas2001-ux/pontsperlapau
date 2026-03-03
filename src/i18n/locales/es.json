@@ -179,13 +179,15 @@
     "sunday": "Domingo"
   },
   "library": {
-    "title": "Gestión de Biblioteca",
+    "management": "Gestión de Biblioteca",
     "addBook": "Añadir Libro",
     "editBook": "Editar Libro",
     "bookList": "Lista de Libros",
     "bookDetails": "Detalles del Libro",
     "lendBook": "Prestar Libro",
     "returnBook": "Devolver Libro",
+    "borrowedBooks": "Libros Prestados",
+    "status": "Estado",
     "title": "Título",
     "author": "Autor",
     "isbn": "ISBN",

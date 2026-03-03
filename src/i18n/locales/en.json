@@ -179,13 +179,15 @@
     "sunday": "Sunday"
   },
   "library": {
-    "title": "Library Management",
+    "management": "Library Management",
     "addBook": "Add Book",
     "editBook": "Edit Book",
     "bookList": "Book List",
     "bookDetails": "Book Details",
     "lendBook": "Lend Book",
     "returnBook": "Return Book",
+    "borrowedBooks": "Borrowed Books",
+    "status": "Status",
     "title": "Title",
     "author": "Author",
     "isbn": "ISBN",

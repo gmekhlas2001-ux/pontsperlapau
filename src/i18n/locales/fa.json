@@ -179,13 +179,15 @@
     "sunday": "یکشنبه"
   },
   "library": {
-    "title": "مدیریت کتابخانه",
+    "management": "مدیریت کتابخانه",
     "addBook": "اضافه کردن کتاب",
     "editBook": "ویرایش کتاب",
     "bookList": "لیست کتاب‌ها",
     "bookDetails": "جزئیات کتاب",
     "lendBook": "قرض دادن کتاب",
     "returnBook": "برگرداندن کتاب",
+    "borrowedBooks": "کتاب‌های قرض داده شده",
+    "status": "وضعیت",
     "title": "عنوان",
     "author": "نویسنده",
     "isbn": "شابک",

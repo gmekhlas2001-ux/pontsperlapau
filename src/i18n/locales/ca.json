@@ -179,13 +179,15 @@
     "sunday": "Diumenge"
   },
   "library": {
-    "title": "Gestió de Biblioteca",
+    "management": "Gestió de Biblioteca",
     "addBook": "Afegir Llibre",
     "editBook": "Editar Llibre",
     "bookList": "Llista de Llibres",
     "bookDetails": "Detalls del Llibre",
     "lendBook": "Prestar Llibre",
     "returnBook": "Retornar Llibre",
+    "borrowedBooks": "Llibres Prestats",
+    "status": "Estat",
     "title": "Títol",
     "author": "Autor",
     "isbn": "ISBN",

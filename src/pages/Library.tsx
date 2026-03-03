@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mockBooks, mockBookLoans, mockStudents } from '@/lib/mockData';
 import { DataTable } from '@/components/ui-custom/DataTable';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { StatCard } from '@/components/ui-custom/StatCard';
@@ -12,8 +11,17 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import {
   DropdownMenu,
@@ -23,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -31,32 +40,145 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, MoveHorizontal as MoreHorizontal, BookOpen, Users, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Pencil, Trash2, Clock, User } from 'lucide-react';
-import type { Book, BookLoan } from '@/types';
+import { Plus, MoveHorizontal as MoreHorizontal, BookOpen, Users, CircleCheck as CheckCircle, Pencil, Trash2, Clock } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  getBooks,
+  createBook,
+  updateBook,
+  deleteBook,
+  type BookRow,
+  type CreateBookData,
+  type UpdateBookData,
+} from '@/services/libraryService';
+
+const EMPTY_FORM: CreateBookData = {
+  title: '',
+  author: '',
+  isbn: '',
+  publisher: '',
+  publication_year: undefined,
+  category: '',
+  description: '',
+  language: 'English',
+  total_copies: 1,
+  location_shelf: '',
+};
 
 export function Library() {
   const { t } = useTranslation();
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [books, setBooks] = useState<BookRow[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const [selectedBook, setSelectedBook] = useState<BookRow | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isLendDialogOpen, setIsLendDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [bookToDelete, setBookToDelete] = useState<BookRow | null>(null);
 
-  const totalBooks = mockBooks.reduce((sum, b) => sum + b.totalCopies, 0);
-  const availableBooks = mockBooks.reduce((sum, b) => sum + b.availableCopies, 0);
+  const [addForm, setAddForm] = useState<CreateBookData>(EMPTY_FORM);
+  const [editForm, setEditForm] = useState<UpdateBookData>({});
+
+  const fetchBooks = useCallback(async () => {
+    const result = await getBooks();
+    if (result.success && result.data) {
+      setBooks(result.data);
+    } else {
+      toast.error(result.error || t('common.error'));
+    }
+  }, [t]);
+
+  useEffect(() => {
+    fetchBooks();
+  }, [fetchBooks]);
+
+  const totalBooks = books.reduce((sum, b) => sum + b.total_copies, 0);
+  const availableBooks = books.reduce((sum, b) => sum + b.available_copies, 0);
   const borrowedBooks = totalBooks - availableBooks;
-  const overdueBooks = mockBookLoans.filter((l) => l.status === 'overdue').length;
 
-  const getBookLoans = (bookId: string) => {
-    return mockBookLoans.filter((loan) => loan.bookId === bookId);
+  const handleAddSubmit = async () => {
+    if (!addForm.title.trim() || !addForm.author.trim()) {
+      toast.error(t('validation.required'));
+      return;
+    }
+    setSaving(true);
+    const result = await createBook(addForm);
+    setSaving(false);
+    if (result.success) {
+      toast.success(t('common.success'));
+      setIsAddDialogOpen(false);
+      setAddForm(EMPTY_FORM);
+      fetchBooks();
+    } else {
+      toast.error(result.error || t('common.error'));
+    }
+  };
+
+  const handleEditOpen = (book: BookRow) => {
+    setSelectedBook(book);
+    setEditForm({
+      title: book.title,
+      author: book.author,
+      isbn: book.isbn || '',
+      publisher: book.publisher || '',
+      publication_year: book.publication_year || undefined,
+      category: book.category || '',
+      description: book.description || '',
+      language: book.language || 'English',
+      total_copies: book.total_copies,
+      available_copies: book.available_copies,
+      location_shelf: book.location_shelf || '',
+      physical_condition: book.physical_condition || 'good',
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!selectedBook) return;
+    if (!editForm.title?.trim() || !editForm.author?.trim()) {
+      toast.error(t('validation.required'));
+      return;
+    }
+    setSaving(true);
+    const result = await updateBook(selectedBook.id, editForm);
+    setSaving(false);
+    if (result.success) {
+      toast.success(t('common.success'));
+      setIsEditDialogOpen(false);
+      setSelectedBook(null);
+      fetchBooks();
+    } else {
+      toast.error(result.error || t('common.error'));
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!bookToDelete) return;
+    const result = await deleteBook(bookToDelete.id);
+    if (result.success) {
+      toast.success(t('common.success'));
+      fetchBooks();
+    } else {
+      toast.error(result.error || t('common.error'));
+    }
+    setIsDeleteDialogOpen(false);
+    setBookToDelete(null);
+  };
+
+  const getBookStatus = (book: BookRow): 'active' | 'inactive' | 'pending' => {
+    if (book.available_copies === 0) return 'inactive';
+    if (book.available_copies < book.total_copies) return 'pending';
+    return 'active';
   };
 
   const columns = [
     {
       key: 'title',
       header: t('library.title'),
-      cell: (book: Book) => (
+      cell: (book: BookRow) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-14 bg-muted rounded flex items-center justify-center">
+          <div className="w-10 h-14 bg-muted rounded flex items-center justify-center flex-shrink-0">
             <BookOpen className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
@@ -70,33 +192,33 @@ export function Library() {
     {
       key: 'isbn',
       header: t('library.isbn'),
-      cell: (book: Book) => book.isbn,
+      cell: (book: BookRow) => book.isbn || '-',
     },
     {
       key: 'category',
       header: t('library.category'),
-      cell: (book: Book) => book.category || '-',
+      cell: (book: BookRow) => book.category || '-',
       sortable: true,
     },
     {
       key: 'copies',
       header: t('library.copies'),
-      cell: (book: Book) => (
+      cell: (book: BookRow) => (
         <span>
-          {book.availableCopies} / {book.totalCopies}
+          {book.available_copies} / {book.total_copies}
         </span>
       ),
     },
     {
       key: 'status',
       header: t('library.status'),
-      cell: (book: Book) => <StatusBadge status={book.status} />,
+      cell: (book: BookRow) => <StatusBadge status={getBookStatus(book)} />,
       sortable: true,
     },
     {
       key: 'actions',
       header: t('common.actions'),
-      cell: (book: Book) => (
+      cell: (book: BookRow) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -108,17 +230,14 @@ export function Library() {
               <BookOpen className="mr-2 h-4 w-4" />
               {t('common.view')}
             </DropdownMenuItem>
-            {book.availableCopies > 0 && (
-              <DropdownMenuItem onClick={() => { setSelectedBook(book); setIsLendDialogOpen(true); }}>
-                <User className="mr-2 h-4 w-4" />
-                {t('library.lendBook')}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEditOpen(book)}>
               <Pencil className="mr-2 h-4 w-4" />
               {t('common.edit')}
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={() => { setBookToDelete(book); setIsDeleteDialogOpen(true); }}
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               {t('common.delete')}
             </DropdownMenuItem>
@@ -128,110 +247,20 @@ export function Library() {
     },
   ];
 
-  const loanColumns = [
-    {
-      key: 'book',
-      header: t('library.title'),
-      cell: (loan: BookLoan) => loan.bookTitle,
-    },
-    {
-      key: 'borrower',
-      header: t('library.borrower'),
-      cell: (loan: BookLoan) => loan.borrowerName,
-    },
-    {
-      key: 'lendingDate',
-      header: t('library.lendingDate'),
-      cell: (loan: BookLoan) => loan.lendingDate,
-    },
-    {
-      key: 'dueDate',
-      header: t('library.dueDate'),
-      cell: (loan: BookLoan) => (
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          {loan.dueDate}
-        </div>
-      ),
-    },
-    {
-      key: 'status',
-      header: t('library.status'),
-      cell: (loan: BookLoan) => <StatusBadge status={loan.status} />,
-    },
-    {
-      key: 'actions',
-      header: t('common.actions'),
-      cell: (_loan: BookLoan) => (
-        <Button variant="outline" size="sm">
-          <CheckCircle className="mr-2 h-4 w-4" />
-          {t('library.returnBook')}
-        </Button>
-      ),
-    },
-  ];
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('library.title')}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('library.management')}</h1>
           <p className="text-muted-foreground">{t('library.bookList')}</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('library.addBook')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{t('library.addBook')}</DialogTitle>
-              <VisuallyHidden>
-                <DialogDescription>Add a new book to the library</DialogDescription>
-              </VisuallyHidden>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">{t('library.title')}</Label>
-                <Input id="title" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="author">{t('library.author')}</Label>
-                <Input id="author" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="isbn">{t('library.isbn')}</Label>
-                <Input id="isbn" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="publisher">{t('library.publisher')}</Label>
-                  <Input id="publisher" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">{t('library.category')}</Label>
-                  <Input id="category" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="copies">{t('library.totalCopies')}</Label>
-                <Input id="copies" type="number" />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  {t('common.cancel')}
-                </Button>
-                <Button>{t('common.save')}</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => { setAddForm(EMPTY_FORM); setIsAddDialogOpen(true); }}>
+          <Plus className="mr-2 h-4 w-4" />
+          {t('library.addBook')}
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title={t('dashboard.totalBooks')}
           value={totalBooks}
@@ -249,12 +278,6 @@ export function Library() {
           icon={Users}
           iconClassName="bg-blue-100"
         />
-        <StatCard
-          title={t('dashboard.overdueBooks')}
-          value={overdueBooks}
-          icon={AlertCircle}
-          iconClassName="bg-red-100"
-        />
       </div>
 
       <Tabs defaultValue="books">
@@ -262,25 +285,68 @@ export function Library() {
           <TabsTrigger value="books">{t('library.bookList')}</TabsTrigger>
           <TabsTrigger value="borrowed">{t('library.borrowedBooks')}</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="books">
           <DataTable
-            data={mockBooks}
+            data={books}
             columns={columns}
             keyExtractor={(book) => book.id}
             searchKeys={['title', 'author', 'isbn', 'category']}
           />
         </TabsContent>
-        
+
         <TabsContent value="borrowed">
-          <DataTable
-            data={mockBookLoans}
-            columns={loanColumns}
-            keyExtractor={(loan) => loan.id}
-            searchKeys={['bookTitle', 'borrowerName']}
-          />
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
+            <div className="text-center space-y-2">
+              <Clock className="h-10 w-10 mx-auto opacity-40" />
+              <p>{t('common.noData')}</p>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
+
+      {/* Add Book Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('library.addBook')}</DialogTitle>
+            <VisuallyHidden>
+              <DialogDescription>Add a new book to the library</DialogDescription>
+            </VisuallyHidden>
+          </DialogHeader>
+          <BookForm
+            form={addForm}
+            onChange={(k, v) => setAddForm((prev) => ({ ...prev, [k]: v }))}
+            onSubmit={handleAddSubmit}
+            onCancel={() => setIsAddDialogOpen(false)}
+            saving={saving}
+            t={t}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Book Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('library.editBook')}</DialogTitle>
+            <VisuallyHidden>
+              <DialogDescription>Edit book details</DialogDescription>
+            </VisuallyHidden>
+          </DialogHeader>
+          <BookForm
+            form={editForm as CreateBookData}
+            onChange={(k, v) => setEditForm((prev) => ({ ...prev, [k]: v }))}
+            onSubmit={handleEditSubmit}
+            onCancel={() => setIsEditDialogOpen(false)}
+            saving={saving}
+            t={t}
+            showCondition
+            condition={editForm.physical_condition}
+            onConditionChange={(v) => setEditForm((prev) => ({ ...prev, physical_condition: v as 'excellent' | 'good' | 'fair' | 'poor' }))}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Book Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
@@ -303,122 +369,224 @@ export function Library() {
                       <Label className="text-muted-foreground">{t('library.author')}</Label>
                       <p className="font-medium">{selectedBook.author}</p>
                     </div>
-                    <div>
-                      <Label className="text-muted-foreground">{t('library.isbn')}</Label>
-                      <p>{selectedBook.isbn}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">{t('library.category')}</Label>
-                      <p>{selectedBook.category}</p>
-                    </div>
+                    {selectedBook.isbn && (
+                      <div>
+                        <Label className="text-muted-foreground">{t('library.isbn')}</Label>
+                        <p>{selectedBook.isbn}</p>
+                      </div>
+                    )}
+                    {selectedBook.category && (
+                      <div>
+                        <Label className="text-muted-foreground">{t('library.category')}</Label>
+                        <p>{selectedBook.category}</p>
+                      </div>
+                    )}
+                    {selectedBook.publisher && (
+                      <div>
+                        <Label className="text-muted-foreground">{t('library.publisher')}</Label>
+                        <p>{selectedBook.publisher}</p>
+                      </div>
+                    )}
                     <div>
                       <Label className="text-muted-foreground">{t('library.status')}</Label>
                       <div className="mt-1">
-                        <StatusBadge status={selectedBook.status} />
+                        <StatusBadge status={getBookStatus(selectedBook)} />
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-3 gap-4">
                   <Card>
                     <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-bold">{selectedBook.totalCopies}</p>
+                      <p className="text-2xl font-bold">{selectedBook.total_copies}</p>
                       <p className="text-sm text-muted-foreground">{t('library.totalCopies')}</p>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-bold">{selectedBook.availableCopies}</p>
+                      <p className="text-2xl font-bold">{selectedBook.available_copies}</p>
                       <p className="text-sm text-muted-foreground">{t('library.availableCopies')}</p>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="p-4 text-center">
                       <p className="text-2xl font-bold">
-                        {selectedBook.totalCopies - selectedBook.availableCopies}
+                        {selectedBook.total_copies - selectedBook.available_copies}
                       </p>
                       <p className="text-sm text-muted-foreground">{t('library.borrowedCopies')}</p>
                     </CardContent>
                   </Card>
                 </div>
-                
+
                 {selectedBook.description && (
                   <div>
                     <Label className="text-muted-foreground">{t('library.description')}</Label>
                     <p className="mt-1">{selectedBook.description}</p>
                   </div>
                 )}
-                
-                <div>
-                  <Label className="text-muted-foreground">{t('library.lendingHistory')}</Label>
-                  <div className="mt-2 space-y-2">
-                    {getBookLoans(selectedBook.id).map((loan) => (
-                      <div key={loan.id} className="flex items-center justify-between p-2 border rounded">
-                        <div>
-                          <p className="font-medium">{loan.borrowerName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {loan.lendingDate} - {loan.dueDate}
-                          </p>
-                        </div>
-                        <StatusBadge status={loan.status} />
-                      </div>
-                    ))}
-                    {getBookLoans(selectedBook.id).length === 0 && (
-                      <p className="text-muted-foreground text-center py-4">
-                        {t('common.noData')}
-                      </p>
-                    )}
+
+                {selectedBook.location_shelf && (
+                  <div>
+                    <Label className="text-muted-foreground">{t('library.location')}</Label>
+                    <p className="mt-1">{selectedBook.location_shelf}</p>
                   </div>
-                </div>
+                )}
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Lend Book Dialog */}
-      <Dialog open={isLendDialogOpen} onOpenChange={setIsLendDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('library.lendBook')}</DialogTitle>
-            <VisuallyHidden>
-              <DialogDescription>Lend a book to a student</DialogDescription>
-            </VisuallyHidden>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label className="text-muted-foreground">{t('library.title')}</Label>
-              <p className="font-medium">{selectedBook?.title}</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="borrower">{t('library.borrower')}</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select borrower" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockStudents.map((student) => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {student.firstName} {student.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">{t('library.dueDate')}</Label>
-              <Input id="dueDate" type="date" />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsLendDialogOpen(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button>{t('common.confirm')}</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Delete Confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('common.confirm')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {bookToDelete?.title}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+interface BookFormProps {
+  form: CreateBookData;
+  onChange: (key: string, value: string | number) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  saving: boolean;
+  t: (key: string) => string;
+  showCondition?: boolean;
+  condition?: string;
+  onConditionChange?: (value: string) => void;
+}
+
+function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition, condition, onConditionChange }: BookFormProps) {
+  return (
+    <div className="grid gap-4 py-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="title">{t('library.title')} *</Label>
+          <Input
+            id="title"
+            value={form.title || ''}
+            onChange={(e) => onChange('title', e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="author">{t('library.author')} *</Label>
+          <Input
+            id="author"
+            value={form.author || ''}
+            onChange={(e) => onChange('author', e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="isbn">{t('library.isbn')}</Label>
+          <Input
+            id="isbn"
+            value={form.isbn || ''}
+            onChange={(e) => onChange('isbn', e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="publisher">{t('library.publisher')}</Label>
+          <Input
+            id="publisher"
+            value={form.publisher || ''}
+            onChange={(e) => onChange('publisher', e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="category">{t('library.category')}</Label>
+          <Input
+            id="category"
+            value={form.category || ''}
+            onChange={(e) => onChange('category', e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="publication_year">Publication Year</Label>
+          <Input
+            id="publication_year"
+            type="number"
+            value={form.publication_year || ''}
+            onChange={(e) => onChange('publication_year', parseInt(e.target.value) || 0)}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="total_copies">{t('library.totalCopies')} *</Label>
+          <Input
+            id="total_copies"
+            type="number"
+            min={1}
+            value={form.total_copies || 1}
+            onChange={(e) => onChange('total_copies', parseInt(e.target.value) || 1)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="location_shelf">{t('library.location')}</Label>
+          <Input
+            id="location_shelf"
+            value={form.location_shelf || ''}
+            onChange={(e) => onChange('location_shelf', e.target.value)}
+          />
+        </div>
+      </div>
+      {showCondition && onConditionChange && (
+        <div className="space-y-2">
+          <Label>{t('library.condition')}</Label>
+          <Select value={condition || 'good'} onValueChange={onConditionChange}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="excellent">Excellent</SelectItem>
+              <SelectItem value="good">{t('library.good')}</SelectItem>
+              <SelectItem value="fair">Fair</SelectItem>
+              <SelectItem value="poor">Poor</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="space-y-2">
+        <Label htmlFor="description">{t('library.description')}</Label>
+        <Textarea
+          id="description"
+          rows={3}
+          value={form.description || ''}
+          onChange={(e) => onChange('description', e.target.value)}
+        />
+      </div>
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="outline" onClick={onCancel} disabled={saving}>
+          {t('common.cancel')}
+        </Button>
+        <Button onClick={onSubmit} disabled={saving}>
+          {saving ? t('common.loading') : t('common.save')}
+        </Button>
+      </div>
     </div>
   );
 }
