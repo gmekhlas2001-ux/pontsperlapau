@@ -1,12 +1,26 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { hash } from "npm:bcryptjs@2.4.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-User-Id",
 };
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const encoder = new TextEncoder();
+  const passwordData = encoder.encode(password);
+  const saltedPassword = new Uint8Array(salt.length + passwordData.length);
+  saltedPassword.set(salt);
+  saltedPassword.set(passwordData, salt.length);
+
+  const hashBuffer = await crypto.subtle.digest("SHA-256", saltedPassword);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const saltHex = Array.from(salt).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `sha256:${saltHex}:${hashHex}`;
+}
 
 interface CreateUserRequest {
   email: string;
@@ -88,7 +102,7 @@ Deno.serve(async (req: Request) => {
 
     const requestData: CreateUserRequest = await req.json();
 
-    const passwordHash = await hash(requestData.password, 10);
+    const passwordHash = await hashPassword(requestData.password);
 
     const { data: userData, error: userError } = await supabaseClient
       .from("users")
