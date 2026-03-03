@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3X3, List } from 'lucide-react';
+import { Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List } from 'lucide-react';
 import { formatDate, getFullName } from '@/lib/utils';
 import type { Staff } from '@/types';
 
