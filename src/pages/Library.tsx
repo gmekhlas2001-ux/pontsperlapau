@@ -31,18 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Plus,
-  MoreHorizontal,
-  BookOpen,
-  Users,
-  CheckCircle,
-  AlertCircle,
-  Pencil,
-  Trash2,
-  Clock,
-  User,
-} from 'lucide-react';
+import { Plus, MoveHorizontal as MoreHorizontal, BookOpen, Users, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Pencil, Trash2, Clock, User } from 'lucide-react';
 import type { Book, BookLoan } from '@/types';
 
 export function Library() {

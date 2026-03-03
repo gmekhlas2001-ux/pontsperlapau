@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, MoreHorizontal, Users, Clock, MapPin, Pencil, Trash2, Calendar, BookOpen } from 'lucide-react';
+import { Plus, MoveHorizontal as MoreHorizontal, Users, Clock, MapPin, Pencil, Trash2, Calendar, BookOpen } from 'lucide-react';
 import type { Class } from '@/types';
 
 export function Classes() {
