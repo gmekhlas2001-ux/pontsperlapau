@@ -29,14 +29,13 @@ interface CreateUserRequest {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
-  }
-
   try {
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders,
+      });
+    }
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
