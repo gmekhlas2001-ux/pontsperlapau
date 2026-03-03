@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, MoveHorizontal as MoreHorizontal, BookOpen, Users, CircleCheck as CheckCircle, Pencil, Trash2, Clock } from 'lucide-react';
+import { Plus, MoveHorizontal as MoreHorizontal, BookOpen, Users, CircleCheck as CheckCircle, Pencil, Trash2, Clock, BookMarked } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getBooks,
@@ -79,6 +79,10 @@ export function Library() {
 
   const [addForm, setAddForm] = useState<CreateBookData>(EMPTY_FORM);
   const [editForm, setEditForm] = useState<UpdateBookData>({});
+
+  const [isBorrowDialogOpen, setIsBorrowDialogOpen] = useState(false);
+  const [borrowBook, setBorrowBook] = useState<BookRow | null>(null);
+  const [borrowedCount, setBorrowedCount] = useState(0);
 
   const fetchBooks = useCallback(async () => {
     const result = await getBooks();
@@ -147,6 +151,29 @@ export function Library() {
       toast.success(t('common.success'));
       setIsEditDialogOpen(false);
       setSelectedBook(null);
+      fetchBooks();
+    } else {
+      toast.error(result.error || t('common.error'));
+    }
+  };
+
+  const handleBorrowOpen = (book: BookRow) => {
+    setBorrowBook(book);
+    setBorrowedCount(book.total_copies - book.available_copies);
+    setIsBorrowDialogOpen(true);
+  };
+
+  const handleBorrowSubmit = async () => {
+    if (!borrowBook) return;
+    const newBorrowed = Math.max(0, Math.min(borrowedCount, borrowBook.total_copies));
+    const newAvailable = borrowBook.total_copies - newBorrowed;
+    setSaving(true);
+    const result = await updateBook(borrowBook.id, { available_copies: newAvailable });
+    setSaving(false);
+    if (result.success) {
+      toast.success(t('common.success'));
+      setIsBorrowDialogOpen(false);
+      setBorrowBook(null);
       fetchBooks();
     } else {
       toast.error(result.error || t('common.error'));
@@ -233,6 +260,10 @@ export function Library() {
             <DropdownMenuItem onClick={() => handleEditOpen(book)}>
               <Pencil className="mr-2 h-4 w-4" />
               {t('common.edit')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleBorrowOpen(book)}>
+              <BookMarked className="mr-2 h-4 w-4" />
+              Update Borrowed Copies
             </DropdownMenuItem>
             <DropdownMenuItem
               className="text-red-600"
@@ -434,6 +465,65 @@ export function Library() {
                 )}
               </div>
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Borrow Copies Dialog */}
+      <Dialog open={isBorrowDialogOpen} onOpenChange={setIsBorrowDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Update Borrowed Copies</DialogTitle>
+            <VisuallyHidden>
+              <DialogDescription>Set how many copies of this book are currently borrowed</DialogDescription>
+            </VisuallyHidden>
+          </DialogHeader>
+          {borrowBook && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-1">
+                <p className="font-medium">{borrowBook.title}</p>
+                <p className="text-sm text-muted-foreground">{borrowBook.author}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-center text-sm">
+                <div className="rounded-lg border p-3">
+                  <p className="text-lg font-bold">{borrowBook.total_copies}</p>
+                  <p className="text-muted-foreground">Total</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-lg font-bold text-amber-600">{borrowedCount}</p>
+                  <p className="text-muted-foreground">Borrowed</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-lg font-bold text-green-600">{borrowBook.total_copies - borrowedCount}</p>
+                  <p className="text-muted-foreground">Available</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="borrowed_count">Number of Borrowed Copies</Label>
+                <Input
+                  id="borrowed_count"
+                  type="number"
+                  min={0}
+                  max={borrowBook.total_copies}
+                  value={borrowedCount}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    setBorrowedCount(Math.max(0, Math.min(val, borrowBook.total_copies)));
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Max {borrowBook.total_copies} (total copies)
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setIsBorrowDialogOpen(false)} disabled={saving}>
+                  {t('common.cancel')}
+                </Button>
+                <Button onClick={handleBorrowSubmit} disabled={saving}>
+                  {saving ? t('common.loading') : t('common.save')}
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
