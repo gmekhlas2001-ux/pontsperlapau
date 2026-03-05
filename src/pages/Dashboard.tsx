@@ -5,8 +5,8 @@ import { StatCard } from '@/components/ui-custom/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { mockClasses, mockBookLoans } from '@/lib/mockData';
-import { fetchDashboardStats, type DashboardStats } from '@/services/dashboardService';
-import { Users, UserCheck, GraduationCap, BookOpen, Library, Plus, Calendar, Clock, CircleAlert as AlertCircle } from 'lucide-react';
+import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
+import { Users, UserCheck, GraduationCap, BookOpen, Library, Plus, Calendar, Clock, CircleAlert as AlertCircle, MapPin } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -32,15 +32,18 @@ const emptyStats: DashboardStats = {
   availableBooks: 0,
   borrowedBooks: 0,
   overdueBooks: 0,
+  totalBranches: 0,
 };
 
 export function Dashboard() {
   const { t } = useTranslation();
   const { user, hasPermission } = useAuth();
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
+  const [branchStats, setBranchStats] = useState<BranchStat[]>([]);
 
   useEffect(() => {
     fetchDashboardStats().then(setStats);
+    fetchBranchStats().then(setBranchStats);
   }, []);
 
   const staffData = [
@@ -160,6 +163,37 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Branch Overview */}
+      {branchStats.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Branches Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {branchStats.map((branch) => (
+                <div
+                  key={branch.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{branch.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{branch.province}</p>
+                  </div>
+                  <div className="text-right ml-3 flex-shrink-0">
+                    <p className="font-semibold text-sm">{branch.memberCount}</p>
+                    <p className="text-xs text-muted-foreground">members</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Activity & Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2">

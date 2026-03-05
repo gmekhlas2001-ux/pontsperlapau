@@ -12,10 +12,20 @@ export interface DashboardStats {
   availableBooks: number;
   borrowedBooks: number;
   overdueBooks: number;
+  totalBranches: number;
+}
+
+export interface BranchStat {
+  id: string;
+  name: string;
+  province: string;
+  memberCount: number;
+  staffCount: number;
+  studentCount: number;
 }
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
-  const [staffResult, studentsResult, classesResult, booksResult] = await Promise.all([
+  const [staffResult, studentsResult, classesResult, booksResult, branchesResult] = await Promise.all([
     supabase
       .from('staff')
       .select('id, user:users!inner(status)')
@@ -30,6 +40,9 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     supabase
       .from('books')
       .select('id, total_copies, available_copies'),
+    supabase
+      .from('branches')
+      .select('id', { count: 'exact', head: true }),
   ]);
 
   const staffRows = (staffResult.data ?? []) as unknown as Array<{ user: { status: string } | null }>;
@@ -55,5 +68,31 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     availableBooks,
     borrowedBooks,
     overdueBooks: 0,
+    totalBranches: branchesResult.count ?? 0,
   };
+}
+
+export async function fetchBranchStats(): Promise<BranchStat[]> {
+  const [branchResult, staffResult, studentResult] = await Promise.all([
+    supabase.from('branches').select('id, name, province').eq('status', 'active').order('name'),
+    supabase.from('staff').select('id, branch_id'),
+    supabase.from('students').select('id, branch_id'),
+  ]);
+
+  const branches = (branchResult.data ?? []) as Array<{ id: string; name: string; province: string }>;
+  const staffRows = (staffResult.data ?? []) as Array<{ id: string; branch_id: string | null }>;
+  const studentRows = (studentResult.data ?? []) as Array<{ id: string; branch_id: string | null }>;
+
+  return branches.map((branch) => {
+    const staffCount = staffRows.filter((s) => s.branch_id === branch.id).length;
+    const studentCount = studentRows.filter((s) => s.branch_id === branch.id).length;
+    return {
+      id: branch.id,
+      name: branch.name,
+      province: branch.province,
+      staffCount,
+      studentCount,
+      memberCount: staffCount + studentCount,
+    };
+  });
 }

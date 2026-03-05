@@ -12,6 +12,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Login } from '@/pages/Login';
 import { Dashboard } from '@/pages/Dashboard';
 import { Staff } from '@/pages/Staff';
+import { Branches } from '@/pages/Branches';
 import { Students } from '@/pages/Students';
 import { Classes } from '@/pages/Classes';
 import { Library } from '@/pages/Library';
@@ -57,6 +58,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
               <Staff />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="branches"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
+              <Branches />
             </ProtectedRoute>
           }
         />

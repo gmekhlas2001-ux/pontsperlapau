@@ -24,6 +24,7 @@ interface CreateUserRequest {
     dateJoined?: string;
     gradeLevel?: string;
     enrollmentDate?: string;
+    branchId?: string;
   };
 }
 
@@ -142,6 +143,7 @@ Deno.serve(async (req: Request) => {
           user_id: userData.id,
           grade_level: requestData.additionalData.gradeLevel,
           enrollment_date: requestData.additionalData.enrollmentDate,
+          branch_id: requestData.additionalData.branchId || null,
         })
         .select()
         .single();
@@ -159,6 +161,7 @@ Deno.serve(async (req: Request) => {
           position: requestData.additionalData.position,
           department: requestData.additionalData.department,
           date_joined: requestData.additionalData.dateJoined,
+          branch_id: requestData.additionalData.branchId || null,
         })
         .select()
         .single();

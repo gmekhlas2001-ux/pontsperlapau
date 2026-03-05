@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { createStaff, getStaffList, updateStaff, deleteStaff, updateUserCredentials, type CreateStaffData, type UpdateStaffData } from '@/services/staffService';
+import { getBranches, type Branch } from '@/services/branchService';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   AlertDialog,
@@ -47,6 +48,7 @@ import type { Staff } from '@/types';
 
 interface StaffRecord extends Staff {
   userId: string;
+  branchId?: string;
 }
 
 export function Staff() {
@@ -67,6 +69,7 @@ export function Staff() {
   const [editData, setEditData] = useState<Partial<UpdateStaffData>>({});
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   const fetchStaff = useCallback(async () => {
     const result = await getStaffList();
@@ -84,6 +87,7 @@ export function Staff() {
         position: s.position ?? '',
         department: s.department ?? undefined,
         dateJoined: s.date_joined ?? '',
+        branchId: s.branch_id ?? undefined,
         createdAt: s.created_at ?? '',
         updatedAt: s.updated_at ?? '',
       }));
@@ -93,6 +97,7 @@ export function Staff() {
 
   useEffect(() => {
     fetchStaff();
+    getBranches().then((r) => { if (r.success && r.data) setBranches(r.data); });
   }, [fetchStaff]);
 
   const handleInputChange = (field: keyof CreateStaffData, value: string) => {
@@ -119,6 +124,7 @@ export function Staff() {
       role: staff.role as UpdateStaffData['role'],
       status: staff.status as UpdateStaffData['status'],
       dateJoined: staff.dateJoined,
+      branchId: staff.branchId ?? '',
     });
     setEditEmail(staff.email);
     setEditPassword('');
@@ -195,9 +201,10 @@ export function Staff() {
       !formData.dateOfBirth ||
       !formData.gender ||
       !formData.role ||
-      !formData.dateJoined
+      !formData.dateJoined ||
+      !formData.branchId
     ) {
-      toast.error('Please fill in all required fields');
+      toast.error('Please fill in all required fields including branch');
       return;
     }
 
@@ -265,6 +272,18 @@ export function Staff() {
       key: 'phone',
       header: t('staff.phone'),
       cell: (staff: StaffRecord) => staff.phone || '-',
+    },
+    {
+      key: 'branch',
+      header: 'Branch',
+      cell: (staff: StaffRecord) => {
+        const branch = branches.find((b) => b.id === staff.branchId);
+        return branch ? (
+          <span className="text-xs font-medium">{branch.name}</span>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        );
+      },
     },
     {
       key: 'status',
@@ -566,6 +585,24 @@ export function Staff() {
                     onChange={(e) => handleInputChange('dateJoined', e.target.value)}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="branch">
+                    Branch <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.branchId || ''}
+                    onValueChange={(value) => handleInputChange('branchId', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     {t('common.cancel')}
@@ -757,6 +794,22 @@ export function Staff() {
                   value={editData.dateJoined ?? ''}
                   onChange={(e) => handleEditChange('dateJoined', e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-branch">Branch <span className="text-red-500">*</span></Label>
+                <Select
+                  value={editData.branchId ?? ''}
+                  onValueChange={(value) => handleEditChange('branchId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {user?.role === 'superadmin' && (
                 <>

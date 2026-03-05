@@ -14,6 +14,7 @@ export interface CreateStaffData {
   department?: string;
   role: 'superadmin' | 'admin' | 'teacher' | 'librarian';
   dateJoined: string;
+  branchId?: string;
 }
 
 export async function createStaff(data: CreateStaffData) {
@@ -48,6 +49,7 @@ export async function createStaff(data: CreateStaffData) {
           position: data.position,
           department: data.department,
           dateJoined: data.dateJoined,
+          branchId: data.branchId,
         },
       }),
     });
@@ -75,6 +77,7 @@ export interface UpdateStaffData {
   role?: 'superadmin' | 'admin' | 'teacher' | 'librarian';
   status?: 'active' | 'inactive';
   dateJoined?: string;
+  branchId?: string;
 }
 
 export async function updateStaff(staffId: string, userId: string, data: UpdateStaffData) {
@@ -95,10 +98,11 @@ export async function updateStaff(staffId: string, userId: string, data: UpdateS
       if (userError) throw userError;
     }
 
-    const staffUpdates: Record<string, string> = {};
+    const staffUpdates: Record<string, any> = {};
     if (data.position !== undefined) staffUpdates.position = data.position;
     if (data.department !== undefined) staffUpdates.department = data.department;
     if (data.dateJoined !== undefined) staffUpdates.date_joined = data.dateJoined;
+    if (data.branchId !== undefined) staffUpdates.branch_id = data.branchId || null;
 
     if (Object.keys(staffUpdates).length > 0) {
       const { error: staffError } = await supabase

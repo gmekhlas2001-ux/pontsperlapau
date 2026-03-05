@@ -12,6 +12,7 @@ export interface CreateStudentData {
   phone?: string;
   gradeLevel?: string;
   enrollmentDate: string;
+  branchId?: string;
 }
 
 export interface UpdateStudentData {
@@ -22,6 +23,7 @@ export interface UpdateStudentData {
   gradeLevel?: string;
   enrollmentDate?: string;
   status?: 'active' | 'inactive';
+  branchId?: string;
 }
 
 export async function createStudent(data: CreateStudentData) {
@@ -55,6 +57,7 @@ export async function createStudent(data: CreateStudentData) {
         additionalData: {
           gradeLevel: data.gradeLevel,
           enrollmentDate: data.enrollmentDate,
+          branchId: data.branchId,
         },
       }),
     });
@@ -89,9 +92,10 @@ export async function updateStudent(studentId: string, userId: string, data: Upd
       if (userError) throw userError;
     }
 
-    const studentUpdates: Record<string, string> = {};
+    const studentUpdates: Record<string, any> = {};
     if (data.gradeLevel !== undefined) studentUpdates.grade_level = data.gradeLevel;
     if (data.enrollmentDate !== undefined) studentUpdates.enrollment_date = data.enrollmentDate;
+    if (data.branchId !== undefined) studentUpdates.branch_id = data.branchId || null;
 
     if (Object.keys(studentUpdates).length > 0) {
       const { error: studentError } = await supabase

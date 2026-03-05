@@ -15,6 +15,7 @@ import {
   type CreateStudentData,
   type UpdateStudentData,
 } from '@/services/studentService';
+import { getBranches, type Branch } from '@/services/branchService';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   AlertDialog,
@@ -77,6 +78,8 @@ interface StudentRecord {
   status: 'active' | 'inactive';
   classes: string[];
   attendanceRate?: number;
+  branchId?: string;
+  branchName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -98,6 +101,7 @@ export function Students() {
   const [editData, setEditData] = useState<Partial<UpdateStudentData>>({});
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   const fetchStudents = useCallback(async () => {
     const result = await getStudentsList();
@@ -115,6 +119,7 @@ export function Students() {
         status: (s.user?.status ?? 'active') as 'active' | 'inactive',
         classes: [],
         attendanceRate: s.attendance_rate ?? undefined,
+        branchId: s.branch_id ?? undefined,
         createdAt: s.created_at ?? '',
         updatedAt: s.updated_at ?? '',
       }));
@@ -124,6 +129,7 @@ export function Students() {
 
   useEffect(() => {
     fetchStudents();
+    getBranches().then((r) => { if (r.success && r.data) setBranches(r.data); });
   }, [fetchStudents]);
 
   const handleInputChange = (field: keyof CreateStudentData, value: string) => {
@@ -148,6 +154,7 @@ export function Students() {
       gradeLevel: student.gradeLevel ?? '',
       enrollmentDate: student.enrollmentDate,
       status: student.status,
+      branchId: student.branchId ?? '',
     });
     setEditEmail(student.email);
     setEditPassword('');
@@ -222,9 +229,10 @@ export function Students() {
       !formData.password ||
       !formData.dateOfBirth ||
       !formData.gender ||
-      !formData.enrollmentDate
+      !formData.enrollmentDate ||
+      !formData.branchId
     ) {
-      toast.error('Please fill in all required fields');
+      toast.error('Please fill in all required fields including branch');
       return;
     }
 
@@ -288,6 +296,20 @@ export function Students() {
       header: t('students.enrollmentDate'),
       cell: (student: StudentRecord) => formatDate(student.enrollmentDate),
       sortable: true,
+    },
+    {
+      key: 'branch',
+      header: 'Branch',
+      cell: (student: StudentRecord) => {
+        const branch = branches.find((b) => b.id === student.branchId);
+        return branch ? (
+          <span className="inline-flex items-center gap-1 text-xs font-medium">
+            <span>{branch.name}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        );
+      },
     },
     {
       key: 'status',
@@ -554,6 +576,24 @@ export function Students() {
                     onChange={(e) => handleInputChange('enrollmentDate', e.target.value)}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="branch">
+                    Branch <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.branchId || ''}
+                    onValueChange={(value) => handleInputChange('branchId', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     {t('common.cancel')}
@@ -707,6 +747,22 @@ export function Students() {
                   value={editData.enrollmentDate ?? ''}
                   onChange={(e) => handleEditChange('enrollmentDate', e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-branch">Branch <span className="text-red-500">*</span></Label>
+                <Select
+                  value={editData.branchId ?? ''}
+                  onValueChange={(value) => handleEditChange('branchId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {user?.role === 'superadmin' && (
                 <>

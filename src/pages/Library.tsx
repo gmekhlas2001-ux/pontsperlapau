@@ -51,6 +51,7 @@ import {
   type CreateBookData,
   type UpdateBookData,
 } from '@/services/libraryService';
+import { getBranches, type Branch } from '@/services/branchService';
 
 const EMPTY_FORM: CreateBookData = {
   title: '',
@@ -83,6 +84,7 @@ export function Library() {
   const [isBorrowDialogOpen, setIsBorrowDialogOpen] = useState(false);
   const [borrowBook, setBorrowBook] = useState<BookRow | null>(null);
   const [borrowedCount, setBorrowedCount] = useState(0);
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   const fetchBooks = useCallback(async () => {
     const result = await getBooks();
@@ -95,6 +97,7 @@ export function Library() {
 
   useEffect(() => {
     fetchBooks();
+    getBranches().then((r) => { if (r.success && r.data) setBranches(r.data); });
   }, [fetchBooks]);
 
   const totalBooks = books.reduce((sum, b) => sum + b.total_copies, 0);
@@ -134,6 +137,7 @@ export function Library() {
       available_copies: book.available_copies,
       location_shelf: book.location_shelf || '',
       physical_condition: book.physical_condition || 'good',
+      branch_id: book.branch_id || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -352,6 +356,7 @@ export function Library() {
             onCancel={() => setIsAddDialogOpen(false)}
             saving={saving}
             t={t}
+            branches={branches}
           />
         </DialogContent>
       </Dialog>
@@ -375,6 +380,7 @@ export function Library() {
             showCondition
             condition={editForm.physical_condition}
             onConditionChange={(v) => setEditForm((prev) => ({ ...prev, physical_condition: v as 'excellent' | 'good' | 'fair' | 'poor' }))}
+            branches={branches}
           />
         </DialogContent>
       </Dialog>
@@ -564,9 +570,10 @@ interface BookFormProps {
   showCondition?: boolean;
   condition?: string;
   onConditionChange?: (value: string) => void;
+  branches?: Branch[];
 }
 
-function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition, condition, onConditionChange }: BookFormProps) {
+function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition, condition, onConditionChange, branches = [] }: BookFormProps) {
   return (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-2 gap-4">
@@ -656,6 +663,24 @@ function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition
               <SelectItem value="good">{t('library.good')}</SelectItem>
               <SelectItem value="fair">Fair</SelectItem>
               <SelectItem value="poor">Poor</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {branches.length > 0 && (
+        <div className="space-y-2">
+          <Label>Branch <span className="text-red-500">*</span></Label>
+          <Select
+            value={(form as any).branch_id || ''}
+            onValueChange={(v) => onChange('branch_id', v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select branch" />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((branch) => (
+                <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
