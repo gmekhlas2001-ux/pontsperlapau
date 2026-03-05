@@ -136,7 +136,7 @@ export function Staff() {
     try {
       const result = await deleteStaff(selectedStaff.id, selectedStaff.userId);
       if (result.success) {
-        toast.success('Staff member removed successfully');
+        toast.success('Staff member deleted successfully');
         setIsDeleteDialogOpen(false);
         setSelectedStaff(null);
         await fetchStaff();
@@ -803,11 +803,11 @@ export function Staff() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Staff Member</AlertDialogTitle>
+            <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove{' '}
+              Are you sure you want to permanently delete{' '}
               <strong>{selectedStaff ? `${selectedStaff.firstName} ${selectedStaff.lastName}` : 'this staff member'}</strong>?
-              Their account will be deactivated and hidden from the staff list.
+              This will remove their record completely from the database and cannot be undone. To keep the staff member but disable their access, use the Inactive status in the edit form instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -817,7 +817,7 @@ export function Staff() {
               disabled={isSubmitting}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {isSubmitting ? 'Removing...' : 'Remove'}
+              {isSubmitting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

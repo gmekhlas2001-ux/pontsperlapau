@@ -165,7 +165,7 @@ export function Students() {
     try {
       const result = await deleteStudent(selectedStudent.id, selectedStudent.userId);
       if (result.success) {
-        toast.success('Student removed successfully');
+        toast.success('Student deleted successfully');
         setIsDeleteDialogOpen(false);
         setSelectedStudent(null);
         await fetchStudents();
@@ -755,11 +755,11 @@ export function Students() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Student</AlertDialogTitle>
+            <AlertDialogTitle>Delete Student</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove{' '}
+              Are you sure you want to permanently delete{' '}
               <strong>{selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : 'this student'}</strong>?
-              Their account will be deactivated and hidden from the student list.
+              This will remove their record completely from the database and cannot be undone. To keep the student but disable their access, use the Inactive status in the edit form instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -769,7 +769,7 @@ export function Students() {
               disabled={isSubmitting}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {isSubmitting ? 'Removing...' : 'Remove'}
+              {isSubmitting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

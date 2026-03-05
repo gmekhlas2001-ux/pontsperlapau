@@ -142,13 +142,13 @@ export async function deleteStaff(staffId: string, userId: string) {
   try {
     const { error: staffError } = await supabase
       .from('staff')
-      .update({ deleted_at: new Date().toISOString() })
+      .delete()
       .eq('id', staffId);
     if (staffError) throw staffError;
 
     const { error: userError } = await supabase
       .from('users')
-      .update({ status: 'inactive' })
+      .delete()
       .eq('id', userId);
     if (userError) throw userError;
 

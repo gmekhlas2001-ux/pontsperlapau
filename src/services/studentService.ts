@@ -112,13 +112,13 @@ export async function deleteStudent(studentId: string, userId: string) {
   try {
     const { error: studentError } = await supabase
       .from('students')
-      .update({ deleted_at: new Date().toISOString() })
+      .delete()
       .eq('id', studentId);
     if (studentError) throw studentError;
 
     const { error: userError } = await supabase
       .from('users')
-      .update({ status: 'inactive' })
+      .delete()
       .eq('id', userId);
     if (userError) throw userError;
 
