@@ -6,20 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
-import {
-  LayoutDashboard,
-  Users,
-  GraduationCap,
-  BookOpen,
-  Library,
-  Settings,
-  LogOut,
-  Menu,
-  ChevronLeft,
-  ChevronRight,
-  MapPin,
-  BarChart2,
-} from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, BookOpen, Library, Settings, LogOut, Menu, ChevronLeft, ChevronRight, MapPin, ChartBar as BarChart2 } from 'lucide-react';
 
 interface NavItem {
   path: string;

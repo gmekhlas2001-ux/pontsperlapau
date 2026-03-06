@@ -16,10 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import {
-  Plus, Search, ArrowRight, Clock, CheckCircle2,
-  DollarSign, Filter, RefreshCw, ReceiptText,
-} from 'lucide-react';
+import { Plus, Search, ArrowRight, Clock, CircleCheck as CheckCircle2, DollarSign, ListFilter as Filter, RefreshCw, ReceiptText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const STATUS_CONFIG: Record<TransactionStatus, { label: string; className: string }> = {

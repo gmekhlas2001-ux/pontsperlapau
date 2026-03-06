@@ -14,10 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import {
-  CheckCircle2, XCircle, AlertTriangle, Trash2, Loader2,
-  Building2, User, Calendar, CreditCard, Hash,
-} from 'lucide-react';
+import { CircleCheck as CheckCircle2, Circle as XCircle, TriangleAlert as AlertTriangle, Trash2, Loader as Loader2, Building2, User, Calendar, CreditCard, Hash } from 'lucide-react';
 
 const STATUS_CONFIG: Record<TransactionStatus, { label: string; color: string; bg: string }> = {
   pending:   { label: 'Pending',   color: 'text-amber-700 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800' },

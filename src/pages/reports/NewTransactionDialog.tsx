@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { Loader as Loader2 } from 'lucide-react';
 
 export const TRANSFER_METHOD_LABELS: Record<TransferMethod, string> = {
   moneygram: 'MoneyGram',
