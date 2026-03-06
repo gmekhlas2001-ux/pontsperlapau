@@ -1,307 +1,156 @@
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '@/contexts/ThemeContext';
-import { languages, type LanguageCode } from '@/i18n';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
+import { getOrgSettings, type OrgSettings } from '@/services/settingsService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Save, Globe, Moon, Sun, Bell, Shield, Database, Users } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { GeneralSettings } from './settings/GeneralSettings';
+import { NotificationSettings } from './settings/NotificationSettings';
+import { SecuritySettings } from './settings/SecuritySettings';
+import { SystemSettings } from './settings/SystemSettings';
+import { Globe, Bell, Shield, Database, Settings2 } from 'lucide-react';
+
+const ROLE_BADGE_COLORS: Record<string, string> = {
+  superadmin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  admin: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  teacher: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  librarian: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  student: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+};
+
+const DEFAULT_SETTINGS: OrgSettings = {
+  org_name: 'My Organization',
+  org_email: '',
+  org_phone: '',
+  timezone: 'Europe/Madrid',
+  date_format: 'DD/MM/YYYY',
+  academic_year: '',
+  attendance_low_threshold: '80',
+  library_lending_period_days: '14',
+  max_book_renewal_count: '2',
+  max_books_per_user: '3',
+  overdue_fine_per_day: '0.50',
+  enable_email_notifications: 'true',
+  notifications_push: 'true',
+  notifications_enrollment: 'true',
+  notifications_book_due: 'true',
+  notifications_overdue: 'true',
+  notifications_low_attendance: 'true',
+  session_timeout_minutes: '60',
+};
 
 export function Settings() {
-  const { t, i18n } = useTranslation();
-  const { theme, setTheme } = useTheme();
-  const { toast } = useToast();
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const [settings, setSettings] = useState<OrgSettings>(DEFAULT_SETTINGS);
+  const [loading, setLoading] = useState(true);
 
-  const currentLanguage = languages.find((l) => l.code === i18n.language) || languages[2];
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
-  const handleLanguageChange = (code: LanguageCode) => {
-    i18n.changeLanguage(code);
-    document.documentElement.dir = languages.find((l) => l.code === code)?.dir || 'ltr';
+  const loadSettings = async () => {
+    setLoading(true);
+    const res = await getOrgSettings();
+    setLoading(false);
+    if (res.success && res.data) {
+      setSettings(res.data);
+    }
   };
 
-  const handleSave = () => {
-    toast({
-      title: t('settings.settingsSaved'),
-    });
+  const handleSettingsChange = (updated: Partial<OrgSettings>) => {
+    setSettings((prev) => ({ ...prev, ...updated }));
   };
+
+  const initials = user
+    ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
+    : '??';
+
+  const TABS = [
+    { value: 'general', label: t('settings.general'), icon: Globe },
+    { value: 'notifications', label: t('settings.notifications'), icon: Bell },
+    { value: 'security', label: t('settings.privacy'), icon: Shield },
+    { value: 'system', label: t('settings.backup'), icon: Database },
+  ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('settings.title')}</h1>
-        <p className="text-muted-foreground">{t('settings.general')}</p>
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <Settings2 className="h-8 w-8 text-muted-foreground" />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t('settings.title')}</h1>
+          <p className="text-muted-foreground">Manage your organization and account preferences</p>
+        </div>
       </div>
 
-      <Tabs defaultValue="general">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto">
-          <TabsTrigger value="general">
-            <Globe className="mr-2 h-4 w-4" />
-            {t('settings.general')}
-          </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="mr-2 h-4 w-4" />
-            {t('settings.notifications')}
-          </TabsTrigger>
-          <TabsTrigger value="security">
-            <Shield className="mr-2 h-4 w-4" />
-            {t('settings.privacy')}
-          </TabsTrigger>
-          <TabsTrigger value="system">
-            <Database className="mr-2 h-4 w-4" />
-            {t('settings.backup')}
-          </TabsTrigger>
-        </TabsList>
+      {/* Current User Profile Strip */}
+      {user && (
+        <div className="flex items-center gap-4 p-4 rounded-xl border bg-muted/30">
+          <Avatar className="h-12 w-12">
+            {user.avatar ? (
+              <img src={user.avatar} alt={user.firstName} />
+            ) : (
+              <AvatarFallback className="text-sm font-semibold">{initials}</AvatarFallback>
+            )}
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold">
+              {user.firstName} {user.lastName}
+            </p>
+            <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+          </div>
+          <span
+            className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${
+              ROLE_BADGE_COLORS[user.role] ?? 'bg-muted text-muted-foreground'
+            }`}
+          >
+            {user.role}
+          </span>
+        </div>
+      )}
 
-        <TabsContent value="general" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.organization')}</CardTitle>
-              <CardDescription>Manage your organization details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="orgName">{t('settings.organizationName')}</Label>
-                <Input id="orgName" defaultValue="Ponts per la Pau" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">{t('settings.timezone')}</Label>
-                  <Select defaultValue="Europe/Madrid">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Europe/Madrid">Europe/Madrid</SelectItem>
-                      <SelectItem value="Europe/London">Europe/London</SelectItem>
-                      <SelectItem value="America/New_York">America/New_York</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dateFormat">{t('settings.dateFormat')}</Label>
-                  <Select defaultValue="DD/MM/YYYY">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                      <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Tabs */}
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full max-w-lg" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      ) : (
+        <Tabs defaultValue="general">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.language')}</CardTitle>
-              <CardDescription>Choose your preferred language</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="language">{t('settings.language')}</Label>
-                <Select
-                  value={currentLanguage.code}
-                  onValueChange={(value) => handleLanguageChange(value as LanguageCode)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {languages.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        <span className="mr-2">{lang.flag}</span>
-                        <span>{lang.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mt-6">
+            <TabsContent value="general">
+              <GeneralSettings settings={settings} onSettingsChange={handleSettingsChange} />
+            </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.theme')}</CardTitle>
-              <CardDescription>Customize your visual experience</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {theme === 'dark' ? (
-                      <Moon className="h-5 w-5" />
-                    ) : (
-                      <Sun className="h-5 w-5" />
-                    )}
-                    <div>
-                      <p className="font-medium">{t('settings.theme')}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Current: {t(`settings.${theme}`)}
-                      </p>
-                    </div>
-                  </div>
-                  <Select value={theme} onValueChange={(value) => setTheme(value as 'light' | 'dark' | 'auto')}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">{t('settings.light')}</SelectItem>
-                      <SelectItem value="dark">{t('settings.dark')}</SelectItem>
-                      <SelectItem value="auto">{t('settings.auto')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <TabsContent value="notifications">
+              <NotificationSettings settings={settings} onSettingsChange={handleSettingsChange} />
+            </TabsContent>
 
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.notifications')}</CardTitle>
-              <CardDescription>Configure your notification preferences</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Email Notifications</p>
-                  <p className="text-sm text-muted-foreground">Receive updates via email</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Push Notifications</p>
-                  <p className="text-sm text-muted-foreground">Receive push notifications</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Student Enrollment</p>
-                  <p className="text-sm text-muted-foreground">Notify when new students enroll</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Book Due Dates</p>
-                  <p className="text-sm text-muted-foreground">Notify about upcoming due dates</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <TabsContent value="security">
+              <SecuritySettings settings={settings} onSettingsChange={handleSettingsChange} />
+            </TabsContent>
 
-        <TabsContent value="security" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.privacy')}</CardTitle>
-              <CardDescription>Manage privacy and security settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-                </div>
-                <Switch />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Session Timeout</p>
-                  <p className="text-sm text-muted-foreground">Automatically log out after inactivity</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.rolesPermissions')}</CardTitle>
-              <CardDescription>Manage user roles and permissions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Role Management</p>
-                      <p className="text-sm text-muted-foreground">Configure role permissions</p>
-                    </div>
-                  </div>
-                  <Button variant="outline">Manage</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="system" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.backup')}</CardTitle>
-              <CardDescription>Manage system backups and data export</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{t('settings.lastBackup')}</p>
-                  <p className="text-sm text-muted-foreground">January 15, 2024 at 02:00 AM</p>
-                </div>
-                <Button variant="outline">{t('settings.manualBackup')}</Button>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{t('settings.exportData')}</p>
-                  <p className="text-sm text-muted-foreground">Download all system data</p>
-                </div>
-                <Button variant="outline">Export</Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.systemLogs')}</CardTitle>
-              <CardDescription>View system activity logs</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">View Logs</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave}>
-          <Save className="mr-2 h-4 w-4" />
-          {t('settings.saveSettings')}
-        </Button>
-      </div>
+            <TabsContent value="system">
+              <SystemSettings settings={settings} onSettingsChange={handleSettingsChange} />
+            </TabsContent>
+          </div>
+        </Tabs>
+      )}
     </div>
   );
 }
