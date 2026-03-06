@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { getTransactions, getTransactionStats } from '@/services/transactionService';
 import { getBranches } from '@/services/branchService';
@@ -19,11 +20,11 @@ import {
 import { Plus, Search, ArrowRight, Clock, CircleCheck as CheckCircle2, DollarSign, ListFilter as Filter, RefreshCw, ReceiptText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const STATUS_CONFIG: Record<TransactionStatus, { label: string; className: string }> = {
-  pending:   { label: 'Pending',   className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-700' },
-  completed: { label: 'Completed', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700' },
-  cancelled: { label: 'Cancelled', className: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-600' },
-  failed:    { label: 'Failed',    className: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-700' },
+const STATUS_CLASSNAMES: Record<TransactionStatus, string> = {
+  pending:   'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-700',
+  completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700',
+  cancelled: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-600',
+  failed:    'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-700',
 };
 
 function StatCard({
@@ -56,6 +57,7 @@ function StaffName(staff?: Transaction['sender_staff']) {
 }
 
 export function Reports() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stats, setStats] = useState<TransactionStats | null>(null);
@@ -87,16 +89,16 @@ export function Reports() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const filtered = transactions.filter((t) => {
+  const filtered = transactions.filter((tx) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
-      t.reference_number?.toLowerCase().includes(q) ||
-      t.external_reference?.toLowerCase().includes(q) ||
-      t.sender_branch?.name?.toLowerCase().includes(q) ||
-      t.receiver_branch?.name?.toLowerCase().includes(q) ||
-      StaffName(t.sender_staff).toLowerCase().includes(q) ||
-      StaffName(t.receiver_staff).toLowerCase().includes(q)
+      tx.reference_number?.toLowerCase().includes(q) ||
+      tx.external_reference?.toLowerCase().includes(q) ||
+      tx.sender_branch?.name?.toLowerCase().includes(q) ||
+      tx.receiver_branch?.name?.toLowerCase().includes(q) ||
+      StaffName(tx.sender_staff).toLowerCase().includes(q) ||
+      StaffName(tx.receiver_staff).toLowerCase().includes(q)
     );
   });
 
@@ -111,16 +113,16 @@ export function Reports() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-6 pb-4 border-b">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Inter-branch transaction management</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t('reports.title')}</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">{t('reports.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={loadData} title="Refresh">
+          <Button variant="outline" size="icon" onClick={loadData} title={t('common.refresh')}>
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Button onClick={() => setNewDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Transaction
+            {t('reports.newTransaction')}
           </Button>
         </div>
       </div>
@@ -140,30 +142,30 @@ export function Reports() {
             <>
               <StatCard
                 icon={ReceiptText}
-                label="Total Transactions"
+                label={t('reports.totalTransactions')}
                 value={stats?.total ?? 0}
-                sub={`${stats?.pending ?? 0} pending`}
+                sub={t('reports.pendingSub', { count: stats?.pending ?? 0 })}
                 iconClass="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
               />
               <StatCard
                 icon={CheckCircle2}
-                label="Completed"
+                label={t('reports.completedStat')}
                 value={stats?.completed ?? 0}
-                sub={`${completedAmountFormatted} transferred`}
+                sub={t('reports.transferredSub', { amount: completedAmountFormatted })}
                 iconClass="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
               />
               <StatCard
                 icon={Clock}
-                label="Pending"
+                label={t('reports.pendingStat')}
                 value={stats?.pending ?? 0}
-                sub={`${stats?.failed ?? 0} failed`}
+                sub={t('reports.failedSub', { count: stats?.failed ?? 0 })}
                 iconClass="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
               />
               <StatCard
                 icon={DollarSign}
-                label="Total Volume"
+                label={t('reports.totalVolume')}
                 value={totalAmountFormatted}
-                sub="All-time combined"
+                sub={t('reports.allTimeCombined')}
                 iconClass="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
               />
             </>
@@ -175,7 +177,7 @@ export function Reports() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Search by reference, branch, staff..."
+              placeholder={t('reports.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -184,23 +186,23 @@ export function Reports() {
             <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-36">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={t('common.status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="all">{t('reports.allStatuses')}</SelectItem>
+                <SelectItem value="pending">{t('common.pending')}</SelectItem>
+                <SelectItem value="completed">{t('common.completed')}</SelectItem>
+                <SelectItem value="cancelled">{t('common.cancelled')}</SelectItem>
+                <SelectItem value="failed">{t('common.failed')}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={filterMethod} onValueChange={setFilterMethod}>
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="Method" />
+                <SelectValue placeholder={t('common.method')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Methods</SelectItem>
+                <SelectItem value="all">{t('reports.allMethods')}</SelectItem>
                 {(Object.entries(TRANSFER_METHOD_LABELS) as [TransferMethod, string][]).map(([k, label]) => (
                   <SelectItem key={k} value={k}>{label}</SelectItem>
                 ))}
@@ -209,10 +211,10 @@ export function Reports() {
 
             <Select value={filterBranch} onValueChange={setFilterBranch}>
               <SelectTrigger className="w-44">
-                <SelectValue placeholder="Branch" />
+                <SelectValue placeholder={t('common.branch')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Branches</SelectItem>
+                <SelectItem value="all">{t('reports.allBranches')}</SelectItem>
                 {branches.map((b) => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
@@ -226,13 +228,13 @@ export function Reports() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead className="font-semibold">Reference</TableHead>
-                  <TableHead className="font-semibold">Route</TableHead>
-                  <TableHead className="font-semibold">Staff</TableHead>
-                  <TableHead className="font-semibold">Amount</TableHead>
-                  <TableHead className="font-semibold">Method</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Date</TableHead>
+                  <TableHead className="font-semibold">{t('reports.tableReference')}</TableHead>
+                  <TableHead className="font-semibold">{t('reports.tableRoute')}</TableHead>
+                  <TableHead className="font-semibold">{t('nav.staff')}</TableHead>
+                  <TableHead className="font-semibold">{t('reports.tableAmount')}</TableHead>
+                  <TableHead className="font-semibold">{t('reports.tableMethod')}</TableHead>
+                  <TableHead className="font-semibold">{t('common.status')}</TableHead>
+                  <TableHead className="font-semibold">{t('reports.tableDate')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -248,74 +250,71 @@ export function Reports() {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
                       <ReceiptText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                      <p className="font-medium">No transactions found</p>
+                      <p className="font-medium">{t('reports.emptyTitle')}</p>
                       <p className="text-sm mt-1">
                         {search || filterStatus !== 'all' || filterMethod !== 'all' || filterBranch !== 'all'
-                          ? 'Try adjusting your filters'
-                          : 'Create your first transaction to get started'}
+                          ? t('reports.adjustFilters')
+                          : t('reports.getStarted')}
                       </p>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((tx) => {
-                    const sc = STATUS_CONFIG[tx.status];
-                    return (
-                      <TableRow
-                        key={tx.id}
-                        className="cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => setDetailTx(tx)}
-                      >
-                        <TableCell>
-                          <div>
-                            <p className="font-mono text-sm font-semibold">{tx.reference_number}</p>
-                            {tx.external_reference && (
-                              <p className="text-xs text-muted-foreground">{tx.external_reference}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5 text-sm">
-                            <span className="font-medium truncate max-w-[90px]">{tx.sender_branch?.name ?? '—'}</span>
-                            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                            <span className="font-medium truncate max-w-[90px]">{tx.receiver_branch?.name ?? '—'}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5 text-sm">
-                            <span className="text-muted-foreground truncate max-w-[80px]">{StaffName(tx.sender_staff)}</span>
-                            <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            <span className="text-muted-foreground truncate max-w-[80px]">{StaffName(tx.receiver_staff)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold tabular-nums">
-                            {Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </span>
-                          <span className="text-xs text-muted-foreground ml-1">{tx.currency}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{TRANSFER_METHOD_LABELS[tx.transfer_method] ?? tx.transfer_method}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn('text-xs font-medium border', sc.className)}>
-                            {sc.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-muted-foreground">
-                            {format(new Date(tx.created_at), 'MMM d, yyyy')}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
+                  filtered.map((tx) => (
+                    <TableRow
+                      key={tx.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => setDetailTx(tx)}
+                    >
+                      <TableCell>
+                        <div>
+                          <p className="font-mono text-sm font-semibold">{tx.reference_number}</p>
+                          {tx.external_reference && (
+                            <p className="text-xs text-muted-foreground">{tx.external_reference}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <span className="font-medium truncate max-w-[90px]">{tx.sender_branch?.name ?? '—'}</span>
+                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="font-medium truncate max-w-[90px]">{tx.receiver_branch?.name ?? '—'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <span className="text-muted-foreground truncate max-w-[80px]">{StaffName(tx.sender_staff)}</span>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground truncate max-w-[80px]">{StaffName(tx.receiver_staff)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold tabular-nums">
+                          {Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-1">{tx.currency}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{TRANSFER_METHOD_LABELS[tx.transfer_method] ?? tx.transfer_method}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn('text-xs font-medium border', STATUS_CLASSNAMES[tx.status])}>
+                          {t(`common.${tx.status}`)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(tx.created_at), 'MMM d, yyyy')}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
           </div>
           {filtered.length > 0 && !loading && (
             <div className="px-4 py-3 border-t text-sm text-muted-foreground">
-              Showing {filtered.length} of {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+              {t('reports.showing', { filtered: filtered.length, total: transactions.length })}
             </div>
           )}
         </Card>

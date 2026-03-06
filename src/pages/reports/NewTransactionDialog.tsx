@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { createTransaction } from '@/services/transactionService';
@@ -52,6 +53,7 @@ const EMPTY_FORM: CreateTransactionData = {
 };
 
 export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }: Props) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<CreateTransactionData>(EMPTY_FORM);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [staffList, setStaffList] = useState<StaffOption[]>([]);
@@ -93,16 +95,16 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
 
   async function handleSubmit() {
     if (!form.sender_branch_id || !form.receiver_branch_id) {
-      toast.error('Please select both branches'); return;
+      toast.error(t('transactions.selectBranches')); return;
     }
     if (!form.sender_staff_id || !form.receiver_staff_id) {
-      toast.error('Please select both staff members'); return;
+      toast.error(t('transactions.selectBothStaff')); return;
     }
     if (form.sender_branch_id === form.receiver_branch_id) {
-      toast.error('Sender and receiver branches must be different'); return;
+      toast.error(t('transactions.sameBranch')); return;
     }
     if (!form.amount || form.amount <= 0) {
-      toast.error('Please enter a valid amount'); return;
+      toast.error(t('transactions.invalidAmount')); return;
     }
 
     setSaving(true);
@@ -110,12 +112,12 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
     setSaving(false);
 
     if (res.success) {
-      toast.success('Transaction created successfully');
+      toast.success(t('transactions.createSuccess'));
       setForm(EMPTY_FORM);
       onCreated();
       onClose();
     } else {
-      toast.error(res.error ?? 'Failed to create transaction');
+      toast.error(res.error ?? t('transactions.createFailed'));
     }
   }
 
@@ -123,15 +125,15 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">New Transaction</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">{t('transactions.newTransaction')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Sender Branch <span className="text-destructive">*</span></Label>
+              <Label>{t('transactions.senderBranch')} <span className="text-destructive">*</span></Label>
               <Select value={form.sender_branch_id} onValueChange={(v) => { set('sender_branch_id', v); set('sender_staff_id', ''); }}>
-                <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('transactions.selectBranch')} /></SelectTrigger>
                 <SelectContent>
                   {branches.filter((b) => b.status === 'active').map((b) => (
                     <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
@@ -141,9 +143,9 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
             </div>
 
             <div className="space-y-2">
-              <Label>Receiver Branch <span className="text-destructive">*</span></Label>
+              <Label>{t('transactions.receiverBranch')} <span className="text-destructive">*</span></Label>
               <Select value={form.receiver_branch_id} onValueChange={(v) => { set('receiver_branch_id', v); set('receiver_staff_id', ''); }}>
-                <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('transactions.selectBranch')} /></SelectTrigger>
                 <SelectContent>
                   {branches.filter((b) => b.status === 'active').map((b) => (
                     <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
@@ -155,9 +157,9 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Sender Staff <span className="text-destructive">*</span></Label>
+              <Label>{t('transactions.senderStaff')} <span className="text-destructive">*</span></Label>
               <Select value={form.sender_staff_id} onValueChange={(v) => set('sender_staff_id', v)}>
-                <SelectTrigger><SelectValue placeholder="Select staff member" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('transactions.selectStaff')} /></SelectTrigger>
                 <SelectContent>
                   {senderStaff().map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -167,9 +169,9 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
             </div>
 
             <div className="space-y-2">
-              <Label>Receiver Staff <span className="text-destructive">*</span></Label>
+              <Label>{t('transactions.receiverStaff')} <span className="text-destructive">*</span></Label>
               <Select value={form.receiver_staff_id} onValueChange={(v) => set('receiver_staff_id', v)}>
-                <SelectTrigger><SelectValue placeholder="Select staff member" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('transactions.selectStaff')} /></SelectTrigger>
                 <SelectContent>
                   {receiverStaff().map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -181,7 +183,7 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2 md:col-span-1">
-              <Label>Amount <span className="text-destructive">*</span></Label>
+              <Label>{t('common.amount')} <span className="text-destructive">*</span></Label>
               <Input
                 type="number"
                 min="0.01"
@@ -193,7 +195,7 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
             </div>
 
             <div className="space-y-2">
-              <Label>Currency <span className="text-destructive">*</span></Label>
+              <Label>{t('common.currency')} <span className="text-destructive">*</span></Label>
               <Select value={form.currency} onValueChange={(v) => set('currency', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -205,7 +207,7 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
             </div>
 
             <div className="space-y-2">
-              <Label>Transfer Method <span className="text-destructive">*</span></Label>
+              <Label>{t('common.method')} <span className="text-destructive">*</span></Label>
               <Select value={form.transfer_method} onValueChange={(v) => set('transfer_method', v as TransferMethod)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -218,19 +220,19 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
           </div>
 
           <div className="space-y-2">
-            <Label>External Reference</Label>
+            <Label>{t('transactions.externalReference')}</Label>
             <Input
-              placeholder="MoneyGram / WU tracking number..."
+              placeholder={t('transactions.referencePlaceholder')}
               value={form.external_reference ?? ''}
               onChange={(e) => set('external_reference', e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Notes</Label>
+            <Label>{t('common.notes')}</Label>
             <Textarea
               rows={3}
-              placeholder="Additional remarks..."
+              placeholder={t('transactions.remarksPlaceholder')}
               value={form.notes ?? ''}
               onChange={(e) => set('notes', e.target.value)}
             />
@@ -238,10 +240,10 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Create Transaction
+            {t('transactions.createButton')}
           </Button>
         </DialogFooter>
       </DialogContent>

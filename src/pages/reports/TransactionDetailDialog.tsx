@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { updateTransactionStatus, deleteTransaction } from '@/services/transactionService';
@@ -16,11 +17,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CircleCheck as CheckCircle2, Circle as XCircle, TriangleAlert as AlertTriangle, Trash2, Loader as Loader2, Building2, User, Calendar, CreditCard, Hash } from 'lucide-react';
 
-const STATUS_CONFIG: Record<TransactionStatus, { label: string; color: string; bg: string }> = {
-  pending:   { label: 'Pending',   color: 'text-amber-700 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800' },
-  completed: { label: 'Completed', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800' },
-  cancelled: { label: 'Cancelled', color: 'text-slate-600 dark:text-slate-400',  bg: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700' },
-  failed:    { label: 'Failed',    color: 'text-red-700 dark:text-red-400',      bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800' },
+const STATUS_CONFIG: Record<TransactionStatus, { color: string; bg: string }> = {
+  pending:   { color: 'text-amber-700 dark:text-amber-400',   bg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800' },
+  completed: { color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800' },
+  cancelled: { color: 'text-slate-600 dark:text-slate-400',   bg: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700' },
+  failed:    { color: 'text-red-700 dark:text-red-400',       bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800' },
 };
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: string | null }) {
@@ -43,6 +44,7 @@ interface Props {
 }
 
 export function TransactionDetailDialog({ transaction, open, onClose, onUpdated }: Props) {
+  const { t } = useTranslation();
   const [updating, setUpdating] = useState<TransactionStatus | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -63,11 +65,11 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
     const res = await updateTransactionStatus(transaction!.id, newStatus);
     setUpdating(null);
     if (res.success) {
-      toast.success(`Transaction marked as ${newStatus}`);
+      toast.success(t('transactions.statusUpdated', { status: t(`common.${newStatus}`) }));
       onUpdated();
       onClose();
     } else {
-      toast.error(res.error ?? 'Failed to update status');
+      toast.error(res.error ?? t('transactions.updateFailed'));
     }
   }
 
@@ -77,11 +79,11 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
     setDeleting(false);
     setConfirmDelete(false);
     if (res.success) {
-      toast.success('Transaction deleted');
+      toast.success(t('transactions.deleteSuccess'));
       onUpdated();
       onClose();
     } else {
-      toast.error(res.error ?? 'Failed to delete transaction');
+      toast.error(res.error ?? t('transactions.deleteFailed'));
     }
   }
 
@@ -93,7 +95,7 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
             <DialogTitle className="flex items-center gap-3">
               <span className="font-mono text-base">{transaction.reference_number}</span>
               <Badge className={`text-xs font-medium border ${status.bg} ${status.color}`} variant="outline">
-                {status.label}
+                {t(`common.${transaction.status}`)}
               </Badge>
             </DialogTitle>
           </DialogHeader>
@@ -106,36 +108,36 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
                   <span className="text-lg ml-1.5 font-semibold opacity-70">{transaction.currency}</span>
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  via {TRANSFER_METHOD_LABELS[transaction.transfer_method] ?? transaction.transfer_method}
+                  {t('transactions.via', { method: TRANSFER_METHOD_LABELS[transaction.transfer_method] ?? transaction.transfer_method })}
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-3 p-3 rounded-lg bg-muted/40 border">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">From</p>
-                <InfoRow icon={Building2} label="Branch" value={transaction.sender_branch?.name} />
-                <InfoRow icon={User} label="Staff" value={senderName} />
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('transactions.from')}</p>
+                <InfoRow icon={Building2} label={t('common.branch')} value={transaction.sender_branch?.name} />
+                <InfoRow icon={User} label={t('nav.staff')} value={senderName} />
               </div>
 
               <div className="space-y-3 p-3 rounded-lg bg-muted/40 border">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">To</p>
-                <InfoRow icon={Building2} label="Branch" value={transaction.receiver_branch?.name} />
-                <InfoRow icon={User} label="Staff" value={receiverName} />
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('transactions.to')}</p>
+                <InfoRow icon={Building2} label={t('common.branch')} value={transaction.receiver_branch?.name} />
+                <InfoRow icon={User} label={t('nav.staff')} value={receiverName} />
               </div>
             </div>
 
             <div className="space-y-3">
-              <InfoRow icon={Hash} label="External Reference" value={transaction.external_reference} />
-              <InfoRow icon={Calendar} label="Created" value={format(new Date(transaction.created_at), 'PPP p')} />
+              <InfoRow icon={Hash} label={t('transactions.externalReference')} value={transaction.external_reference} />
+              <InfoRow icon={Calendar} label={t('transactions.created')} value={format(new Date(transaction.created_at), 'PPP p')} />
               {transaction.completed_at && (
-                <InfoRow icon={CheckCircle2} label="Completed" value={format(new Date(transaction.completed_at), 'PPP p')} />
+                <InfoRow icon={CheckCircle2} label={t('common.completed')} value={format(new Date(transaction.completed_at), 'PPP p')} />
               )}
               {transaction.cancelled_at && (
-                <InfoRow icon={XCircle} label="Cancelled" value={format(new Date(transaction.cancelled_at), 'PPP p')} />
+                <InfoRow icon={XCircle} label={t('common.cancelled')} value={format(new Date(transaction.cancelled_at), 'PPP p')} />
               )}
               {transaction.notes && (
-                <InfoRow icon={CreditCard} label="Notes" value={transaction.notes} />
+                <InfoRow icon={CreditCard} label={t('common.notes')} value={transaction.notes} />
               )}
             </div>
 
@@ -143,7 +145,7 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
               <>
                 <Separator />
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Update Status</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('transactions.updateStatus')}</p>
                   <div className="flex gap-2">
                     <Button
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -151,7 +153,7 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
                       disabled={!!updating}
                     >
                       {updating === 'completed' ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
-                      Complete
+                      {t('transactions.complete')}
                     </Button>
                     <Button
                       variant="outline"
@@ -160,7 +162,7 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
                       disabled={!!updating}
                     >
                       {updating === 'cancelled' ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <XCircle className="h-4 w-4 mr-1" />}
-                      Cancel
+                      {t('transactions.cancel')}
                     </Button>
                     <Button
                       variant="outline"
@@ -169,7 +171,7 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
                       disabled={!!updating}
                     >
                       {updating === 'failed' ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <AlertTriangle className="h-4 w-4 mr-1" />}
-                      Failed
+                      {t('transactions.markFailed')}
                     </Button>
                   </div>
                 </div>
@@ -185,7 +187,7 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
                 onClick={() => setConfirmDelete(true)}
               >
                 <Trash2 className="h-4 w-4 mr-1" />
-                Delete Transaction
+                {t('transactions.deleteButton')}
               </Button>
             </div>
           </div>
@@ -195,20 +197,20 @@ export function TransactionDetailDialog({ transaction, open, onClose, onUpdated 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
+            <AlertDialogTitle>{t('transactions.deleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete transaction {transaction.reference_number}. This action cannot be undone.
+              {t('transactions.deleteDescription', { ref: transaction.reference_number })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDelete}
               disabled={deleting}
             >
               {deleting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-              Delete
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
