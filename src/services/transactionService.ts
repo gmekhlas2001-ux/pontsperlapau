@@ -7,8 +7,8 @@ const TRANSACTION_SELECT = `
   *,
   sender_branch:branches!sender_branch_id(id, name),
   receiver_branch:branches!receiver_branch_id(id, name),
-  sender_staff:staff!sender_staff_id(id, user:users!staff_user_id(first_name, last_name)),
-  receiver_staff:staff!receiver_staff_id(id, user:users!staff_user_id(first_name, last_name)),
+  sender_staff:staff!sender_staff_id(id, user:users!user_id(first_name, last_name)),
+  receiver_staff:staff!receiver_staff_id(id, user:users!user_id(first_name, last_name)),
   creator:users!created_by(first_name, last_name)
 `;
 

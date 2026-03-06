@@ -62,7 +62,7 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
     getBranches().then((r) => { if (r.success && r.data) setBranches(r.data); });
     supabase
       .from('staff')
-      .select('id, branch_id, user:users!staff_user_id(first_name, last_name)')
+      .select('id, branch_id, user:users!user_id(first_name, last_name)')
       .is('deleted_at', null)
       .then(({ data }) => {
         if (data) {
