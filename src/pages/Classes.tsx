@@ -52,20 +52,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Plus,
-  MoreHorizontal,
-  Users,
-  Clock,
-  MapPin,
-  Pencil,
-  Trash2,
-  Calendar,
-  BookOpen,
-  GraduationCap,
-  Building2,
-  Search,
-} from 'lucide-react';
+import { Plus, MoveHorizontal as MoreHorizontal, Users, Clock, MapPin, Pencil, Trash2, Calendar, BookOpen, GraduationCap, Building2, Search } from 'lucide-react';
 
 const DAYS = [
   { value: 'monday', label: 'Mon' },
