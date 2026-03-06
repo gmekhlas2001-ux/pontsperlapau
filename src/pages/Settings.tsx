@@ -76,16 +76,14 @@ export function Settings() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center gap-3">
         <Settings2 className="h-8 w-8 text-muted-foreground" />
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('settings.title')}</h1>
-          <p className="text-muted-foreground">Manage your organization and account preferences</p>
+          <p className="text-muted-foreground">{t('settings.subtitle')}</p>
         </div>
       </div>
 
-      {/* Current User Profile Strip */}
       {user && (
         <div className="flex items-center gap-4 p-4 rounded-xl border bg-muted/30">
           <Avatar className="h-12 w-12">
@@ -106,12 +104,11 @@ export function Settings() {
               ROLE_BADGE_COLORS[user.role] ?? 'bg-muted text-muted-foreground'
             }`}
           >
-            {user.role}
+            {t(`roles.${user.role}`, { defaultValue: user.role })}
           </span>
         </div>
       )}
 
-      {/* Tabs */}
       {loading ? (
         <div className="space-y-4">
           <Skeleton className="h-10 w-full max-w-lg" />

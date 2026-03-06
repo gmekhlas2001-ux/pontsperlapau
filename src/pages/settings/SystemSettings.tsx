@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
   exportTableAsCSV,
@@ -30,19 +31,21 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-const EXPORT_TABLES = [
-  { id: 'users', label: 'Users', icon: Users, description: 'All user accounts and roles' },
-  { id: 'staff', label: 'Staff', icon: School, description: 'Staff records and employment details' },
-  { id: 'students', label: 'Students', icon: GraduationCap, description: 'Student enrollment data' },
-  { id: 'classes', label: 'Classes', icon: BookCopy, description: 'Class schedules and information' },
-  { id: 'books', label: 'Books', icon: Library, description: 'Library catalog' },
-] as const;
+type TableId = 'users' | 'staff' | 'students' | 'classes' | 'books';
+
+const EXPORT_TABLES: Array<{ id: TableId; labelKey: string; descriptionKey: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: 'users', labelKey: 'nav.staff', descriptionKey: 'settings.usersDataDescription', icon: Users },
+  { id: 'staff', labelKey: 'staff.title', descriptionKey: 'settings.staffDataDescription', icon: School },
+  { id: 'students', labelKey: 'students.title', descriptionKey: 'settings.studentsDataDescription', icon: GraduationCap },
+  { id: 'classes', labelKey: 'classes.title', descriptionKey: 'settings.classesDataDescription', icon: BookCopy },
+  { id: 'books', labelKey: 'library.management', descriptionKey: 'settings.booksDataDescription', icon: Library },
+];
 
 const ACTION_TYPE_COLORS: Record<string, string> = {
   INSERT: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   UPDATE: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   DELETE: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  LOGIN: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  LOGIN: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
   LOGOUT: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
 };
 
@@ -52,6 +55,7 @@ interface Props {
 }
 
 export function SystemSettings({ settings, onSettingsChange }: Props) {
+  const { t } = useTranslation();
   const [exporting, setExporting] = useState<string | null>(null);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -74,22 +78,22 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
     if (res.success) {
       setLogs(res.data ?? []);
     } else {
-      toast.error('Failed to load activity logs');
+      toast.error(t('settings.activityLogsLoadFailed'));
     }
   };
 
-  const handleExport = async (tableId: typeof EXPORT_TABLES[number]['id']) => {
+  const handleExport = async (tableId: TableId, tableLabel: string) => {
     setExporting(tableId);
     const res = await exportTableAsCSV(tableId);
     setExporting(null);
 
     if (!res.success) {
-      toast.error(res.error || 'Failed to export data');
+      toast.error(res.error || t('common.error'));
       return;
     }
 
     if (!res.csv) {
-      toast.info('No data to export for ' + tableId);
+      toast.info(`${tableLabel}: ${t('common.noData')}`);
       return;
     }
 
@@ -102,7 +106,7 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success(`${tableId} data exported successfully`);
+    toast.success(`${tableLabel} ${t('settings.dataExportSuccess')}`);
   };
 
   const handleSaveLibrary = async () => {
@@ -115,15 +119,22 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
     });
     setSavingLibrary(false);
     if (res.success) {
-      toast.success('Library settings saved');
+      toast.success(t('settings.librarySettingsSaved'));
     } else {
-      toast.error(res.error || 'Failed to save');
+      toast.error(res.error || t('common.error'));
     }
+  };
+
+  const STAT_LABELS: Record<string, string> = {
+    users: t('nav.staff'),
+    staff: t('staff.title'),
+    students: t('students.title'),
+    classes: t('classes.title'),
+    books: t('library.management'),
   };
 
   return (
     <div className="space-y-6">
-      {/* Database Stats */}
       {stats && (
         <Card>
           <CardHeader>
@@ -131,8 +142,8 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle>Database Overview</CardTitle>
-                  <CardDescription>Current record counts across the system</CardDescription>
+                  <CardTitle>{t('settings.databaseOverview')}</CardTitle>
+                  <CardDescription>{t('settings.databaseOverviewDescription')}</CardDescription>
                 </div>
               </div>
               <Button variant="ghost" size="icon" onClick={loadStats}>
@@ -142,13 +153,13 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {EXPORT_TABLES.map((t) => {
-                const Icon = t.icon;
+              {EXPORT_TABLES.map((tbl) => {
+                const Icon = tbl.icon;
                 return (
-                  <div key={t.id} className="flex flex-col items-center gap-1 p-3 rounded-lg bg-muted/50 border">
+                  <div key={tbl.id} className="flex flex-col items-center gap-1 p-3 rounded-lg bg-muted/50 border">
                     <Icon className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-2xl font-bold tabular-nums">{stats[t.id] ?? 0}</span>
-                    <span className="text-xs text-muted-foreground">{t.label}</span>
+                    <span className="text-2xl font-bold tabular-nums">{stats[tbl.id] ?? 0}</span>
+                    <span className="text-xs text-muted-foreground text-center">{STAT_LABELS[tbl.id]}</span>
                   </div>
                 );
               })}
@@ -157,21 +168,20 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
         </Card>
       )}
 
-      {/* Library Settings */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Library className="h-5 w-5 text-muted-foreground" />
             <div>
-              <CardTitle>Library Configuration</CardTitle>
-              <CardDescription>Rules governing how books are borrowed and returned</CardDescription>
+              <CardTitle>{t('settings.libraryConfiguration')}</CardTitle>
+              <CardDescription>{t('settings.libraryConfigurationDescription')}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="lendingPeriod">Lending Period (days)</Label>
+              <Label htmlFor="lendingPeriod">{t('settings.lendingPeriod')}</Label>
               <Input
                 id="lendingPeriod"
                 type="number"
@@ -181,7 +191,7 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="maxBooksPerUser">Max Books Per User</Label>
+              <Label htmlFor="maxBooksPerUser">{t('settings.maxBooksPerUser')}</Label>
               <Input
                 id="maxBooksPerUser"
                 type="number"
@@ -191,7 +201,7 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="maxRenewals">Max Renewals</Label>
+              <Label htmlFor="maxRenewals">{t('settings.maxRenewals')}</Label>
               <Input
                 id="maxRenewals"
                 type="number"
@@ -201,7 +211,7 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="overdueFine">Overdue Fine Per Day ($)</Label>
+              <Label htmlFor="overdueFine">{t('settings.overdueFinePerDay')}</Label>
               <Input
                 id="overdueFine"
                 type="number"
@@ -215,20 +225,19 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
           <div className="flex justify-end">
             <Button onClick={handleSaveLibrary} disabled={savingLibrary}>
               <Save className="mr-2 h-4 w-4" />
-              {savingLibrary ? 'Saving...' : 'Save Library Settings'}
+              {savingLibrary ? t('settings.saving') : t('settings.saveLibrarySettings')}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Data Export */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Download className="h-5 w-5 text-muted-foreground" />
             <div>
-              <CardTitle>Export Data</CardTitle>
-              <CardDescription>Download your data as CSV files for backup or analysis</CardDescription>
+              <CardTitle>{t('settings.exportData')}</CardTitle>
+              <CardDescription>{t('settings.exportDataDescription')}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -236,20 +245,21 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
           {EXPORT_TABLES.map((table, i) => {
             const Icon = table.icon;
             const isExporting = exporting === table.id;
+            const label = STAT_LABELS[table.id];
             return (
               <div key={table.id}>
                 <div className="flex items-center justify-between py-2.5">
                   <div className="flex items-center gap-3">
                     <Icon className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="font-medium text-sm">{table.label}</p>
-                      <p className="text-xs text-muted-foreground">{table.description}</p>
+                      <p className="font-medium text-sm">{label}</p>
+                      <p className="text-xs text-muted-foreground">{t(table.descriptionKey)}</p>
                     </div>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleExport(table.id)}
+                    onClick={() => handleExport(table.id, label)}
                     disabled={!!exporting}
                   >
                     {isExporting ? (
@@ -257,7 +267,7 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
                     ) : (
                       <Download className="mr-1.5 h-3.5 w-3.5" />
                     )}
-                    {isExporting ? 'Exporting...' : 'Export CSV'}
+                    {isExporting ? t('settings.exporting') : t('settings.exportCsv')}
                   </Button>
                 </div>
                 {i < EXPORT_TABLES.length - 1 && <Separator />}
@@ -267,15 +277,14 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
         </CardContent>
       </Card>
 
-      {/* Activity Logs */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-muted-foreground" />
               <div>
-                <CardTitle>Activity Logs</CardTitle>
-                <CardDescription>Recent system events and user actions</CardDescription>
+                <CardTitle>{t('settings.activityLogs')}</CardTitle>
+                <CardDescription>{t('settings.activityLogsDescription')}</CardDescription>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={loadLogs} disabled={logsLoading}>
@@ -284,7 +293,7 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
               ) : (
                 <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
               )}
-              {logs.length === 0 ? 'Load Logs' : 'Refresh'}
+              {logs.length === 0 ? t('settings.loadLogs') : t('settings.refresh')}
             </Button>
           </div>
         </CardHeader>
@@ -298,7 +307,7 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
           ) : logs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <FileText className="h-8 w-8 text-muted-foreground/40 mb-2" />
-              <p className="text-sm text-muted-foreground">Click "Load Logs" to view recent activity</p>
+              <p className="text-sm text-muted-foreground">{t('settings.loadLogsPrompt')}</p>
             </div>
           ) : (
             <div className="space-y-1 max-h-80 overflow-y-auto">

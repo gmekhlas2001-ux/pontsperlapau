@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { saveOrgSettings, type OrgSettings } from '@/services/settingsService';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,8 @@ import { Save, Mail, Smartphone, UserPlus, BookOpen, TriangleAlert as AlertTrian
 
 interface NotifItem {
   key: keyof OrgSettings;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   icon: React.ComponentType<{ className?: string }>;
   category: 'channels' | 'events';
 }
@@ -20,43 +21,43 @@ interface NotifItem {
 const NOTIF_ITEMS: NotifItem[] = [
   {
     key: 'enable_email_notifications',
-    label: 'Email Notifications',
-    description: 'Receive system alerts and reports by email',
+    labelKey: 'settings.emailNotifications',
+    descriptionKey: 'settings.emailNotificationsDescription',
     icon: Mail,
     category: 'channels',
   },
   {
     key: 'notifications_push',
-    label: 'Push Notifications',
-    description: 'In-app notifications and browser alerts',
+    labelKey: 'settings.pushNotifications',
+    descriptionKey: 'settings.pushNotificationsDescription',
     icon: Smartphone,
     category: 'channels',
   },
   {
     key: 'notifications_enrollment',
-    label: 'Student Enrollment',
-    description: 'Alert when a new student is enrolled',
+    labelKey: 'settings.studentEnrollmentAlert',
+    descriptionKey: 'settings.studentEnrollmentAlertDescription',
     icon: UserPlus,
     category: 'events',
   },
   {
     key: 'notifications_book_due',
-    label: 'Book Due Dates',
-    description: 'Reminder 2 days before a book is due',
+    labelKey: 'settings.bookDueDates',
+    descriptionKey: 'settings.bookDueDatesDescription',
     icon: BookOpen,
     category: 'events',
   },
   {
     key: 'notifications_overdue',
-    label: 'Overdue Books',
-    description: 'Alert when a borrowed book becomes overdue',
+    labelKey: 'settings.overdueBooksAlert',
+    descriptionKey: 'settings.overdueBooksAlertDescription',
     icon: AlertTriangle,
     category: 'events',
   },
   {
     key: 'notifications_low_attendance',
-    label: 'Low Attendance',
-    description: 'Alert when a student falls below the attendance threshold',
+    labelKey: 'settings.lowAttendanceAlert',
+    descriptionKey: 'settings.lowAttendanceAlertDescription',
     icon: TrendingDown,
     category: 'events',
   },
@@ -68,6 +69,7 @@ interface Props {
 }
 
 export function NotificationSettings({ settings, onSettingsChange }: Props) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
 
   const channels = NOTIF_ITEMS.filter((i) => i.category === 'channels');
@@ -92,95 +94,73 @@ export function NotificationSettings({ settings, onSettingsChange }: Props) {
     });
     setSaving(false);
     if (res.success) {
-      toast.success('Notification preferences saved');
+      toast.success(t('settings.notificationsSaved'));
     } else {
-      toast.error(res.error || 'Failed to save');
+      toast.error(res.error || t('common.error'));
     }
   };
 
+  const renderItems = (items: NotifItem[]) =>
+    items.map((item, i) => {
+      const Icon = item.icon;
+      return (
+        <div key={item.key}>
+          <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">{t(item.labelKey)}</p>
+                <p className="text-xs text-muted-foreground">{t(item.descriptionKey)}</p>
+              </div>
+            </div>
+            <Switch
+              checked={isEnabled(item.key)}
+              onCheckedChange={() => toggle(item.key)}
+            />
+          </div>
+          {i < items.length - 1 && <Separator />}
+        </div>
+      );
+    });
+
   return (
     <div className="space-y-6">
-      {/* Channels */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-muted-foreground" />
             <div>
-              <CardTitle>Delivery Channels</CardTitle>
-              <CardDescription>Choose how you receive notifications</CardDescription>
+              <CardTitle>{t('settings.deliveryChannels')}</CardTitle>
+              <CardDescription>{t('settings.deliveryChannelsDescription')}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-1">
-          {channels.map((item, i) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.key}>
-                <div className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{item.label}</p>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={isEnabled(item.key)}
-                    onCheckedChange={() => toggle(item.key)}
-                  />
-                </div>
-                {i < channels.length - 1 && <Separator />}
-              </div>
-            );
-          })}
+          {renderItems(channels)}
         </CardContent>
       </Card>
 
-      {/* Event triggers */}
       <Card>
         <CardHeader>
-          <CardTitle>Event Triggers</CardTitle>
-          <CardDescription>Choose which events generate notifications</CardDescription>
+          <CardTitle>{t('settings.eventTriggers')}</CardTitle>
+          <CardDescription>{t('settings.eventTriggersDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-1">
-          {events.map((item, i) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.key}>
-                <div className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{item.label}</p>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={isEnabled(item.key)}
-                    onCheckedChange={() => toggle(item.key)}
-                  />
-                </div>
-                {i < events.length - 1 && <Separator />}
-              </div>
-            );
-          })}
+          {renderItems(events)}
         </CardContent>
       </Card>
 
-      {/* Thresholds */}
       <Card>
         <CardHeader>
-          <CardTitle>Alert Thresholds</CardTitle>
-          <CardDescription>Configure when alerts are triggered</CardDescription>
+          <CardTitle>{t('settings.alertThresholds')}</CardTitle>
+          <CardDescription>{t('settings.alertThresholdsDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-1.5">
             <Label htmlFor="attendanceThreshold">
-              Low Attendance Threshold (%)
+              {t('settings.lowAttendanceThreshold')}
             </Label>
             <div className="flex items-center gap-3">
               <Input
@@ -193,7 +173,7 @@ export function NotificationSettings({ settings, onSettingsChange }: Props) {
                 className="w-32"
               />
               <p className="text-sm text-muted-foreground">
-                Notify when a student's attendance drops below this percentage
+                {t('settings.attendanceThresholdHelp')}
               </p>
             </div>
           </div>
@@ -203,7 +183,7 @@ export function NotificationSettings({ settings, onSettingsChange }: Props) {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           <Save className="mr-2 h-4 w-4" />
-          {saving ? 'Saving...' : 'Save Notifications'}
+          {saving ? t('settings.saving') : t('settings.notifications')}
         </Button>
       </div>
     </div>

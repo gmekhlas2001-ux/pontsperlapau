@@ -34,13 +34,6 @@ const TIMEZONES = [
   'Pacific/Auckland',
 ];
 
-const DATE_FORMATS = [
-  { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY (31/12/2024)' },
-  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY (12/31/2024)' },
-  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (2024-12-31)' },
-  { value: 'D MMMM YYYY', label: 'D MMMM YYYY (31 December 2024)' },
-];
-
 interface Props {
   settings: OrgSettings;
   onSettingsChange: (updated: Partial<OrgSettings>) => void;
@@ -52,6 +45,13 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
   const [saving, setSaving] = useState(false);
 
   const currentLanguage = languages.find((l) => l.code === i18n.language) || languages[0];
+
+  const DATE_FORMATS = [
+    { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY (31/12/2024)' },
+    { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY (12/31/2024)' },
+    { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (2024-12-31)' },
+    { value: 'D MMMM YYYY', label: 'D MMMM YYYY (31 December 2024)' },
+  ];
 
   const handleLanguageChange = (code: LanguageCode) => {
     i18n.changeLanguage(code);
@@ -70,9 +70,9 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
     });
     setSaving(false);
     if (res.success) {
-      toast.success('Organization settings saved');
+      toast.success(t('settings.orgSettingsSaved'));
     } else {
-      toast.error(res.error || 'Failed to save settings');
+      toast.error(res.error || t('common.error'));
     }
   };
 
@@ -84,14 +84,13 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Organization */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-muted-foreground" />
             <div>
               <CardTitle>{t('settings.organization')}</CardTitle>
-              <CardDescription>Your organization's public profile and configuration</CardDescription>
+              <CardDescription>{t('settings.organizationDescription')}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -107,7 +106,7 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="orgEmail">Contact Email</Label>
+              <Label htmlFor="orgEmail">{t('settings.contactEmail')}</Label>
               <Input
                 id="orgEmail"
                 type="email"
@@ -117,7 +116,7 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="orgPhone">Contact Phone</Label>
+              <Label htmlFor="orgPhone">{t('settings.contactPhone')}</Label>
               <Input
                 id="orgPhone"
                 value={settings.org_phone}
@@ -126,7 +125,7 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="academicYear">Academic Year</Label>
+              <Label htmlFor="academicYear">{t('settings.academicYear')}</Label>
               <Input
                 id="academicYear"
                 value={settings.academic_year}
@@ -176,20 +175,19 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
           <div className="flex justify-end">
             <Button onClick={handleSaveOrg} disabled={saving}>
               <Save className="mr-2 h-4 w-4" />
-              {saving ? 'Saving...' : 'Save Organization'}
+              {saving ? t('settings.saving') : t('settings.saveOrganization')}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Language */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-muted-foreground" />
             <div>
               <CardTitle>{t('settings.language')}</CardTitle>
-              <CardDescription>Interface language — changes apply immediately</CardDescription>
+              <CardDescription>{t('settings.languageDescription')}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -213,14 +211,13 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
         </CardContent>
       </Card>
 
-      {/* Theme */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Palette className="h-5 w-5 text-muted-foreground" />
             <div>
               <CardTitle>{t('settings.theme')}</CardTitle>
-              <CardDescription>Choose how the interface looks</CardDescription>
+              <CardDescription>{t('settings.themeDescription')}</CardDescription>
             </div>
           </div>
         </CardHeader>
