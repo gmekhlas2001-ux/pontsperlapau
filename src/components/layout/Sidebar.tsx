@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
+  BarChart2,
 } from 'lucide-react';
 
 interface NavItem {
@@ -46,6 +47,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
     { path: '/students', label: t('nav.students'), icon: GraduationCap, roles: ['superadmin', 'admin', 'teacher'] },
     { path: '/classes', label: t('nav.classes'), icon: BookOpen, roles: ['superadmin', 'admin', 'teacher', 'student'] },
     { path: '/library', label: t('nav.library'), icon: Library, roles: ['superadmin', 'admin', 'librarian', 'student'] },
+    { path: '/reports', label: 'Reports', icon: BarChart2, roles: ['superadmin', 'admin'] },
     { path: '/settings', label: t('nav.settings'), icon: Settings, roles: ['superadmin', 'admin'] },
   ];
 

@@ -129,6 +129,56 @@ export interface DashboardStats {
   overdueBooks: number;
 }
 
+export type TransferMethod = 'moneygram' | 'western_union' | 'bank_transfer' | 'hawala' | 'cash' | 'paypal' | 'wise' | 'other';
+export type TransactionStatus = 'pending' | 'completed' | 'cancelled' | 'failed';
+
+export interface Transaction {
+  id: string;
+  reference_number: string;
+  external_reference?: string;
+  sender_branch_id?: string;
+  receiver_branch_id?: string;
+  sender_staff_id?: string;
+  receiver_staff_id?: string;
+  amount: number;
+  currency: string;
+  transfer_method: TransferMethod;
+  status: TransactionStatus;
+  notes?: string;
+  created_by?: string;
+  completed_at?: string;
+  cancelled_at?: string;
+  created_at: string;
+  updated_at: string;
+  sender_branch?: { id: string; name: string };
+  receiver_branch?: { id: string; name: string };
+  sender_staff?: { id: string; user: { first_name: string; last_name: string } };
+  receiver_staff?: { id: string; user: { first_name: string; last_name: string } };
+  creator?: { first_name: string; last_name: string };
+}
+
+export interface CreateTransactionData {
+  sender_branch_id: string;
+  receiver_branch_id: string;
+  sender_staff_id: string;
+  receiver_staff_id: string;
+  amount: number;
+  currency: string;
+  transfer_method: TransferMethod;
+  external_reference?: string;
+  notes?: string;
+}
+
+export interface TransactionStats {
+  total: number;
+  pending: number;
+  completed: number;
+  cancelled: number;
+  failed: number;
+  totalAmount: number;
+  totalAmountCompleted: number;
+}
+
 export interface Notification {
   id: string;
   title: string;
