@@ -30,11 +30,11 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
   const navItems: NavItem[] = [
     { path: '/', label: t('nav.dashboard'), icon: LayoutDashboard, roles: ['superadmin', 'admin', 'teacher', 'librarian', 'student'] },
     { path: '/staff', label: t('nav.staff'), icon: Users, roles: ['superadmin', 'admin'] },
-    { path: '/branches', label: 'Branches', icon: MapPin, roles: ['superadmin', 'admin'] },
+    { path: '/branches', label: t('nav.branches'), icon: MapPin, roles: ['superadmin', 'admin'] },
     { path: '/students', label: t('nav.students'), icon: GraduationCap, roles: ['superadmin', 'admin', 'teacher'] },
     { path: '/classes', label: t('nav.classes'), icon: BookOpen, roles: ['superadmin', 'admin', 'teacher', 'student'] },
     { path: '/library', label: t('nav.library'), icon: Library, roles: ['superadmin', 'admin', 'librarian', 'student'] },
-    { path: '/reports', label: 'Reports', icon: BarChart2, roles: ['superadmin', 'admin'] },
+    { path: '/reports', label: t('nav.reports'), icon: BarChart2, roles: ['superadmin', 'admin'] },
     { path: '/settings', label: t('nav.settings'), icon: Settings, roles: ['superadmin', 'admin'] },
   ];
 
