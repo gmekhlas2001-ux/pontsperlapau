@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, Mail, Smartphone, UserPlus, BookOpen, AlertTriangle, TrendingDown, Bell } from 'lucide-react';
+import { Save, Mail, Smartphone, UserPlus, BookOpen, TriangleAlert as AlertTriangle, TrendingDown, Bell } from 'lucide-react';
 
 interface NotifItem {
   key: keyof OrgSettings;

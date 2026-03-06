@@ -22,18 +22,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import {
-  KeyRound,
-  Shield,
-  Lock,
-  Eye,
-  EyeOff,
-  ChevronDown,
-  Users,
-  CheckCircle,
-  Clock,
-  Save,
-} from 'lucide-react';
+import { KeyRound, Shield, Lock, Eye, EyeOff, ChevronDown, Users, CircleCheck as CheckCircle, Clock, Save } from 'lucide-react';
 
 const ROLE_COLORS: Record<string, string> = {
   superadmin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
