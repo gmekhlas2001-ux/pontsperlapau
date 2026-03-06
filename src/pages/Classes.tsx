@@ -1,6 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { mockClasses, mockStudents } from '@/lib/mockData';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import {
+  getClassesList,
+  createClass,
+  updateClass,
+  deleteClass,
+  getTeachers,
+  getClassEnrollments,
+  type ClassRecord,
+  type ClassTeacher,
+} from '@/services/classService';
+import { getBranches, type Branch } from '@/services/branchService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
@@ -10,9 +22,17 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import { VisuallyHidden } from '@/components/ui/visually-hidden';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +41,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -29,261 +50,743 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, MoveHorizontal as MoreHorizontal, Users, Clock, MapPin, Pencil, Trash2, Calendar, BookOpen } from 'lucide-react';
-import type { Class } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Plus,
+  MoreHorizontal,
+  Users,
+  Clock,
+  MapPin,
+  Pencil,
+  Trash2,
+  Calendar,
+  BookOpen,
+  GraduationCap,
+  Building2,
+  Search,
+} from 'lucide-react';
+
+const DAYS = [
+  { value: 'monday', label: 'Mon' },
+  { value: 'tuesday', label: 'Tue' },
+  { value: 'wednesday', label: 'Wed' },
+  { value: 'thursday', label: 'Thu' },
+  { value: 'friday', label: 'Fri' },
+  { value: 'saturday', label: 'Sat' },
+  { value: 'sunday', label: 'Sun' },
+];
+
+const SEMESTERS = [
+  { value: 'fall', label: 'Fall' },
+  { value: 'spring', label: 'Spring' },
+  { value: 'summer', label: 'Summer' },
+];
+
+interface ClassFormData {
+  name: string;
+  description: string;
+  teacherId: string;
+  branchId: string;
+  location: string;
+  maxCapacity: string;
+  scheduleDays: string[];
+  scheduleTime: string;
+  scheduleEndTime: string;
+  academicYear: string;
+  semester: string;
+}
+
+const emptyForm: ClassFormData = {
+  name: '',
+  description: '',
+  teacherId: '',
+  branchId: '',
+  location: '',
+  maxCapacity: '30',
+  scheduleDays: [],
+  scheduleTime: '',
+  scheduleEndTime: '',
+  academicYear: '',
+  semester: '',
+};
 
 export function Classes() {
   const { t } = useTranslation();
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const { user } = useAuth();
 
-  const getEnrolledStudents = (classId: string) => {
-    return mockStudents.filter((student) => student.classes.includes(classId));
+  const [classes, setClasses] = useState<ClassRecord[]>([]);
+  const [teachers, setTeachers] = useState<ClassTeacher[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [editingClass, setEditingClass] = useState<ClassRecord | null>(null);
+  const [selectedClass, setSelectedClass] = useState<ClassRecord | null>(null);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [classToDelete, setClassToDelete] = useState<ClassRecord | null>(null);
+
+  const [form, setForm] = useState<ClassFormData>(emptyForm);
+  const [saving, setSaving] = useState(false);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const [classRes, teacherRes, branchRes] = await Promise.all([
+      getClassesList(),
+      getTeachers(),
+      getBranches(),
+    ]);
+    if (classRes.success) setClasses(classRes.data ?? []);
+    if (teacherRes.success) setTeachers(teacherRes.data ?? []);
+    if (branchRes.success) setBranches(branchRes.data ?? []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const openAddDialog = () => {
+    setEditingClass(null);
+    setForm(emptyForm);
+    setIsFormOpen(true);
+  };
+
+  const openEditDialog = (cls: ClassRecord) => {
+    setEditingClass(cls);
+    setForm({
+      name: cls.name,
+      description: cls.description ?? '',
+      teacherId: cls.teacherId,
+      branchId: cls.branchId ?? '',
+      location: cls.location ?? '',
+      maxCapacity: String(cls.maxCapacity),
+      scheduleDays: cls.scheduleDays,
+      scheduleTime: cls.scheduleTime ?? '',
+      scheduleEndTime: cls.scheduleEndTime ?? '',
+      academicYear: cls.academicYear ?? '',
+      semester: cls.semester ?? '',
+    });
+    setIsFormOpen(true);
+  };
+
+  const openDetailDialog = async (cls: ClassRecord) => {
+    setSelectedClass(cls);
+    setIsDetailOpen(true);
+    const res = await getClassEnrollments(cls.id);
+    if (res.success) setEnrollments(res.data ?? []);
+  };
+
+  const confirmDelete = (cls: ClassRecord) => {
+    setClassToDelete(cls);
+    setIsDeleteOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!classToDelete) return;
+    const res = await deleteClass(classToDelete.id);
+    if (res.success) {
+      toast.success('Class deleted successfully');
+      setClasses((prev) => prev.filter((c) => c.id !== classToDelete.id));
+    } else {
+      toast.error(res.error || 'Failed to delete class');
+    }
+    setIsDeleteOpen(false);
+    setClassToDelete(null);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast.error('Class name is required');
+      return;
+    }
+    if (!form.teacherId) {
+      toast.error('Please select a teacher');
+      return;
+    }
+
+    setSaving(true);
+
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim() || undefined,
+      teacherId: form.teacherId,
+      branchId: (form.branchId && form.branchId !== 'none') ? form.branchId : null,
+      location: form.location.trim() || undefined,
+      maxCapacity: parseInt(form.maxCapacity) || 30,
+      scheduleDays: form.scheduleDays,
+      scheduleTime: form.scheduleTime || undefined,
+      scheduleEndTime: form.scheduleEndTime || undefined,
+      academicYear: form.academicYear.trim() || undefined,
+      semester: (form.semester as 'fall' | 'spring' | 'summer') || undefined,
+      createdBy: user?.id,
+    };
+
+    let res;
+    if (editingClass) {
+      res = await updateClass(editingClass.id, payload);
+    } else {
+      res = await createClass(payload);
+    }
+
+    setSaving(false);
+
+    if (res.success) {
+      toast.success(editingClass ? 'Class updated successfully' : 'Class created successfully');
+      setIsFormOpen(false);
+      loadData();
+    } else {
+      toast.error(res.error || 'Failed to save class');
+    }
+  };
+
+  const toggleDay = (day: string) => {
+    setForm((prev) => ({
+      ...prev,
+      scheduleDays: prev.scheduleDays.includes(day)
+        ? prev.scheduleDays.filter((d) => d !== day)
+        : [...prev.scheduleDays, day],
+    }));
   };
 
   const getDayLabel = (day: string) => {
-    const days: Record<string, string> = {
-      monday: t('classes.monday'),
-      tuesday: t('classes.tuesday'),
-      wednesday: t('classes.wednesday'),
-      thursday: t('classes.thursday'),
-      friday: t('classes.friday'),
-      saturday: t('classes.saturday'),
-      sunday: t('classes.sunday'),
-    };
-    return days[day] || day;
+    const found = DAYS.find((d) => d.value === day);
+    return found?.label ?? day;
   };
 
-  const handleViewDetails = (cls: Class) => {
-    setSelectedClass(cls);
-    setIsDetailOpen(true);
+  const formatTime = (time: string | null) => {
+    if (!time) return '';
+    return time.slice(0, 5);
   };
+
+  const filteredClasses = classes.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    `${c.teacherFirstName} ${c.teacherLastName}`.toLowerCase().includes(search.toLowerCase()) ||
+    (c.branchName ?? '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectedTeacher = teachers.find((t) => t.id === form.teacherId);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('classes.title')}</h1>
           <p className="text-muted-foreground">{t('classes.classList')}</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
+        <Button onClick={openAddDialog}>
+          <Plus className="mr-2 h-4 w-4" />
+          {t('classes.addClass')}
+        </Button>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search classes, teachers, branches..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* Classes Grid */}
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2 mt-1" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3 mb-2" />
+                <Skeleton className="h-8 w-full mt-4" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredClasses.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <GraduationCap className="h-12 w-12 text-muted-foreground/40 mb-4" />
+          <p className="text-lg font-medium text-muted-foreground">
+            {search ? 'No classes match your search' : 'No classes yet'}
+          </p>
+          {!search && (
+            <Button className="mt-4" onClick={openAddDialog}>
               <Plus className="mr-2 h-4 w-4" />
-              {t('classes.addClass')}
+              Add your first class
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{t('classes.addClass')}</DialogTitle>
-              <VisuallyHidden>
-                <DialogDescription>Add a new class to the system</DialogDescription>
-              </VisuallyHidden>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">{t('classes.className')}</Label>
-                <Input id="name" />
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredClasses.map((cls) => (
+            <Card key={cls.id} className="hover:shadow-md transition-shadow group">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg truncate">{cls.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {cls.teacherFirstName} {cls.teacherLastName}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 ml-2 shrink-0">
+                    <StatusBadge status={cls.status} />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditDialog(cls)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          {t('common.edit')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onClick={() => confirmDelete(cls)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {t('common.delete')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {cls.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">{cls.description}</p>
+                )}
+
+                <div className="space-y-1.5">
+                  {cls.scheduleDays.length > 0 && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-muted-foreground">
+                        {cls.scheduleDays.map(getDayLabel).join(' · ')}
+                        {cls.scheduleTime && ` · ${formatTime(cls.scheduleTime)}`}
+                        {cls.scheduleEndTime && `–${formatTime(cls.scheduleEndTime)}`}
+                      </span>
+                    </div>
+                  )}
+                  {cls.location && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-muted-foreground">{cls.location}</span>
+                    </div>
+                  )}
+                  {cls.branchName && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-muted-foreground">{cls.branchName}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-muted-foreground">
+                      Capacity: {cls.maxCapacity}
+                    </span>
+                  </div>
+                </div>
+
+                {(cls.academicYear || cls.semester) && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {cls.academicYear && (
+                      <Badge variant="secondary" className="text-xs">
+                        {cls.academicYear}
+                      </Badge>
+                    )}
+                    {cls.semester && (
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {cls.semester}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-1"
+                  onClick={() => openDetailDialog(cls)}
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  {t('common.view')} Details
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Add / Edit Dialog */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingClass ? t('common.edit') + ' Class' : t('classes.addClass')}
+            </DialogTitle>
+            <DialogDescription>
+              {editingClass ? 'Update class details below.' : 'Fill in the details to create a new class.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            {/* Name & Description */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">
+                  {t('classes.className')} <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="e.g. Mathematics 101"
+                />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="description">{t('classes.description')}</Label>
-                <Input id="description" />
+                <Textarea
+                  id="description"
+                  value={form.description}
+                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                  placeholder="Brief description of the class..."
+                  rows={2}
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="teacher">{t('classes.teacher')}</Label>
-                <Select>
+            </div>
+
+            {/* Teacher */}
+            <div className="space-y-1.5">
+              <Label>
+                {t('classes.teacher')} <span className="text-red-500">*</span>
+              </Label>
+              {teachers.length === 0 ? (
+                <p className="text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">
+                  No teachers found. Add a staff member with the teacher role first.
+                </p>
+              ) : (
+                <Select
+                  value={form.teacherId}
+                  onValueChange={(v) => {
+                    const t = teachers.find((x) => x.id === v);
+                    setForm((p) => ({
+                      ...p,
+                      teacherId: v,
+                      branchId: t?.branchId ?? p.branchId,
+                    }));
+                  }}
+                >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select a teacher..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="3">Maria Garcia</SelectItem>
-                    <SelectItem value="5">Anna Martinez</SelectItem>
+                    {teachers.map((teacher) => (
+                      <SelectItem key={teacher.id} value={teacher.id}>
+                        <div className="flex flex-col">
+                          <span>
+                            {teacher.firstName} {teacher.lastName}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {teacher.position}
+                            {teacher.branchName && ` · ${teacher.branchName}`}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {selectedTeacher?.branchName && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Building2 className="h-3 w-3" />
+                  Teacher is from <strong>{selectedTeacher.branchName}</strong>
+                </p>
+              )}
+            </div>
+
+            {/* Branch */}
+            <div className="space-y-1.5">
+              <Label>Branch</Label>
+              <Select
+                value={form.branchId}
+                onValueChange={(v) => setForm((p) => ({ ...p, branchId: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a branch..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No branch</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name} — {b.province}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Location & Capacity */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="location">{t('classes.room')}</Label>
+                <Input
+                  id="location"
+                  value={form.location}
+                  onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+                  placeholder="e.g. Room 204"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="maxCapacity">{t('classes.maxCapacity')}</Label>
+                <Input
+                  id="maxCapacity"
+                  type="number"
+                  min="1"
+                  value={form.maxCapacity}
+                  onChange={(e) => setForm((p) => ({ ...p, maxCapacity: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Schedule Days */}
+            <div className="space-y-2">
+              <Label>Schedule Days</Label>
+              <div className="flex flex-wrap gap-2">
+                {DAYS.map((day) => (
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => toggleDay(day.value)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors border ${
+                      form.scheduleDays.includes(day.value)
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
+                    }`}
+                  >
+                    {day.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="startTime">Start Time</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={form.scheduleTime}
+                  onChange={(e) => setForm((p) => ({ ...p, scheduleTime: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="endTime">End Time</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={form.scheduleEndTime}
+                  onChange={(e) => setForm((p) => ({ ...p, scheduleEndTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Academic Year & Semester */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="academicYear">Academic Year</Label>
+                <Input
+                  id="academicYear"
+                  value={form.academicYear}
+                  onChange={(e) => setForm((p) => ({ ...p, academicYear: e.target.value }))}
+                  placeholder="e.g. 2024-2025"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Semester</Label>
+                <Select
+                  value={form.semester}
+                  onValueChange={(v) => setForm((p) => ({ ...p, semester: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SEMESTERS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="room">{t('classes.room')}</Label>
-                  <Input id="room" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxCapacity">{t('classes.maxCapacity')}</Label>
-                  <Input id="maxCapacity" type="number" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  {t('common.cancel')}
-                </Button>
-                <Button>{t('common.save')}</Button>
-              </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {mockClasses.map((cls) => {
-          const enrolledCount = getEnrolledStudents(cls.id).length;
-          
-          return (
-            <Card key={cls.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{cls.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{cls.teacherName}</p>
-                  </div>
-                  <StatusBadge status={cls.status} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                  {cls.description}
-                </p>
-                
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      {cls.schedule.map((s) => getDayLabel(s.day)).join(', ')}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{cls.room}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      {enrolledCount} / {cls.maxCapacity} {t('classes.studentsEnrolled')}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleViewDetails(cls)}
-                  >
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    {t('common.view')}
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        {t('common.edit')}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {t('common.delete')}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setIsFormOpen(false)} disabled={saving}>
+                {t('common.cancel')}
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : t('common.save')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Class Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {selectedClass && (
             <>
               <DialogHeader>
-                <VisuallyHidden>
-                  <DialogDescription>Class details</DialogDescription>
-                </VisuallyHidden>
                 <DialogTitle>{selectedClass.name}</DialogTitle>
+                <DialogDescription>
+                  {selectedClass.teacherFirstName} {selectedClass.teacherLastName}
+                  {selectedClass.branchName && ` · ${selectedClass.branchName}`}
+                </DialogDescription>
               </DialogHeader>
-              
-              <Tabs defaultValue="info" className="mt-4">
+
+              <Tabs defaultValue="info" className="mt-2">
                 <TabsList>
                   <TabsTrigger value="info">{t('classes.classDetails')}</TabsTrigger>
-                  <TabsTrigger value="students">{t('classes.studentsEnrolled')}</TabsTrigger>
+                  <TabsTrigger value="students">
+                    {t('classes.studentsEnrolled')}
+                    {enrollments.length > 0 && (
+                      <span className="ml-1.5 bg-primary/10 text-primary text-xs rounded-full px-1.5 py-0.5">
+                        {enrollments.length}
+                      </span>
+                    )}
+                  </TabsTrigger>
                   <TabsTrigger value="schedule">{t('classes.schedule')}</TabsTrigger>
                 </TabsList>
-                
-                <TabsContent value="info" className="space-y-4">
+
+                <TabsContent value="info" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-muted-foreground">{t('classes.teacher')}</Label>
-                      <p className="font-medium">{selectedClass.teacherName}</p>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Teacher</Label>
+                      <p className="font-medium mt-0.5">
+                        {selectedClass.teacherFirstName} {selectedClass.teacherLastName}
+                      </p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">{t('classes.room')}</Label>
-                      <p className="font-medium">{selectedClass.room}</p>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Branch</Label>
+                      <p className="font-medium mt-0.5">{selectedClass.branchName ?? '—'}</p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">{t('classes.maxCapacity')}</Label>
-                      <p className="font-medium">{selectedClass.maxCapacity}</p>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">{t('classes.room')}</Label>
+                      <p className="font-medium mt-0.5">{selectedClass.location ?? '—'}</p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">{t('classes.status')}</Label>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">{t('classes.maxCapacity')}</Label>
+                      <p className="font-medium mt-0.5">{selectedClass.maxCapacity}</p>
+                    </div>
+                    {selectedClass.academicYear && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Academic Year</Label>
+                        <p className="font-medium mt-0.5">{selectedClass.academicYear}</p>
+                      </div>
+                    )}
+                    {selectedClass.semester && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Semester</Label>
+                        <p className="font-medium mt-0.5 capitalize">{selectedClass.semester}</p>
+                      </div>
+                    )}
+                    <div>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Status</Label>
                       <div className="mt-1">
                         <StatusBadge status={selectedClass.status} />
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">{t('classes.description')}</Label>
-                    <p className="mt-1">{selectedClass.description}</p>
-                  </div>
+                  {selectedClass.description && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Description</Label>
+                      <p className="mt-1 text-sm">{selectedClass.description}</p>
+                    </div>
+                  )}
                 </TabsContent>
-                
-                <TabsContent value="students">
+
+                <TabsContent value="students" className="mt-4">
                   <div className="space-y-2">
-                    {getEnrolledStudents(selectedClass.id).map((student) => (
-                      <div
-                        key={student.id}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div>
-                          <p className="font-medium">
-                            {student.firstName} {student.lastName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{student.email}</p>
-                        </div>
-                        <Button variant="ghost" size="sm" className="text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                    {enrollments.length === 0 ? (
+                      <div className="text-center py-10 text-muted-foreground">
+                        <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                        <p>No students enrolled yet</p>
                       </div>
-                    ))}
-                    {getEnrolledStudents(selectedClass.id).length === 0 && (
-                      <p className="text-center text-muted-foreground py-4">
-                        {t('common.noData')}
-                      </p>
+                    ) : (
+                      enrollments.map((e) => (
+                        <div
+                          key={e.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <div>
+                            <p className="font-medium text-sm">
+                              {e.student?.user?.first_name} {e.student?.user?.last_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {e.student?.user?.email} · ID: {e.student?.student_id}
+                            </p>
+                          </div>
+                          {e.attendance_percentage != null && (
+                            <Badge
+                              variant={e.attendance_percentage >= 80 ? 'default' : 'destructive'}
+                              className="text-xs"
+                            >
+                              {e.attendance_percentage}% attendance
+                            </Badge>
+                          )}
+                        </div>
+                      ))
                     )}
                   </div>
                 </TabsContent>
-                
-                <TabsContent value="schedule">
-                  <div className="space-y-2">
-                    {selectedClass.schedule.map((schedule, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-4 p-3 border rounded-lg"
-                      >
-                        <Calendar className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="font-medium">{getDayLabel(schedule.day)}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {schedule.startTime} - {schedule.endTime}
-                          </p>
-                        </div>
+
+                <TabsContent value="schedule" className="mt-4">
+                  <div className="space-y-3">
+                    {selectedClass.scheduleDays.length === 0 ? (
+                      <div className="text-center py-10 text-muted-foreground">
+                        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                        <p>No schedule set</p>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="border rounded-lg divide-y">
+                        <div className="px-4 py-2 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Weekly Schedule
+                        </div>
+                        {selectedClass.scheduleDays.map((day) => (
+                          <div key={day} className="flex items-center gap-4 px-4 py-3">
+                            <Calendar className="h-4 w-4 text-primary shrink-0" />
+                            <div>
+                              <p className="font-medium capitalize">{day}</p>
+                              {(selectedClass.scheduleTime || selectedClass.scheduleEndTime) && (
+                                <p className="text-sm text-muted-foreground">
+                                  {formatTime(selectedClass.scheduleTime)}
+                                  {selectedClass.scheduleEndTime && ` – ${formatTime(selectedClass.scheduleEndTime)}`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
@@ -291,6 +794,27 @@ export function Classes() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Class</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{classToDelete?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface StatusBadgeProps {
-  status: 'active' | 'inactive' | 'pending' | 'available' | 'borrowed' | 'out_of_stock' | 'overdue' | 'returned' | 'good' | 'damaged' | 'lost';
+  status: 'active' | 'inactive' | 'archived' | 'pending' | 'available' | 'borrowed' | 'out_of_stock' | 'overdue' | 'returned' | 'good' | 'damaged' | 'lost';
   className?: string;
 }
 
@@ -14,6 +14,10 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   inactive: {
     label: 'Inactive',
     className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
+  },
+  archived: {
+    label: 'Archived',
+    className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
   },
   pending: {
     label: 'Pending',
