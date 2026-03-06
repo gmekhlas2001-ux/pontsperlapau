@@ -734,6 +734,22 @@ export function Staff() {
                   onChange={(e) => handleEditChange('phone', e.target.value)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-branch">Branch <span className="text-red-500">*</span></Label>
+                <Select
+                  value={editData.branchId ?? ''}
+                  onValueChange={(value) => handleEditChange('branchId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-position">{t('staff.position')}</Label>
@@ -794,22 +810,6 @@ export function Staff() {
                   value={editData.dateJoined ?? ''}
                   onChange={(e) => handleEditChange('dateJoined', e.target.value)}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-branch">Branch <span className="text-red-500">*</span></Label>
-                <Select
-                  value={editData.branchId ?? ''}
-                  onValueChange={(value) => handleEditChange('branchId', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               {user?.role === 'superadmin' && (
                 <>
