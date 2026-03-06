@@ -77,10 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
 
-      await supabase
-        .from('users')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', data.id);
+      await supabase.rpc('update_last_login', { p_user_id: data.id });
 
       return true;
     } catch (error) {

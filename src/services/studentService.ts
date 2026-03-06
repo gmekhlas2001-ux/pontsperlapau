@@ -77,34 +77,36 @@ export async function createStudent(data: CreateStudentData) {
 
 export async function updateStudent(studentId: string, userId: string, data: UpdateStudentData) {
   try {
-    const userUpdates: Record<string, string> = {};
-    if (data.firstName !== undefined) userUpdates.first_name = data.firstName;
-    if (data.lastName !== undefined) userUpdates.last_name = data.lastName;
-    if (data.fatherName !== undefined) userUpdates.father_name = data.fatherName;
-    if (data.phone !== undefined) userUpdates.phone_number = data.phone;
-    if (data.status !== undefined) userUpdates.status = data.status;
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) return { success: false, error: 'Not authenticated' };
+    const caller = JSON.parse(storedUser);
 
-    if (Object.keys(userUpdates).length > 0) {
-      const { error: userError } = await supabase
-        .from('users')
-        .update(userUpdates)
-        .eq('id', userId);
-      if (userError) throw userError;
-    }
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'X-User-Id': caller.id,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        targetUserId: userId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        fatherName: data.fatherName,
+        phone: data.phone,
+        status: data.status,
+        studentData: {
+          studentId,
+          gradeLevel: data.gradeLevel,
+          enrollmentDate: data.enrollmentDate,
+          branchId: data.branchId,
+        },
+      }),
+    });
 
-    const studentUpdates: Record<string, any> = {};
-    if (data.gradeLevel !== undefined) studentUpdates.grade_level = data.gradeLevel;
-    if (data.enrollmentDate !== undefined) studentUpdates.enrollment_date = data.enrollmentDate;
-    if (data.branchId !== undefined) studentUpdates.branch_id = data.branchId || null;
-
-    if (Object.keys(studentUpdates).length > 0) {
-      const { error: studentError } = await supabase
-        .from('students')
-        .update(studentUpdates)
-        .eq('id', studentId);
-      if (studentError) throw studentError;
-    }
-
+    const result = await response.json();
+    if (!response.ok) return { success: false, error: result.error || 'Failed to update student' };
     return { success: true };
   } catch (error: any) {
     console.error('Error updating student:', error);
@@ -112,20 +114,25 @@ export async function updateStudent(studentId: string, userId: string, data: Upd
   }
 }
 
-export async function deleteStudent(studentId: string, userId: string) {
+export async function deleteStudent(_studentId: string, userId: string) {
   try {
-    const { error: studentError } = await supabase
-      .from('students')
-      .delete()
-      .eq('id', studentId);
-    if (studentError) throw studentError;
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) return { success: false, error: 'Not authenticated' };
+    const caller = JSON.parse(storedUser);
 
-    const { error: userError } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', userId);
-    if (userError) throw userError;
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'X-User-Id': caller.id,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ targetUserId: userId, operation: 'delete' }),
+    });
 
+    const result = await response.json();
+    if (!response.ok) return { success: false, error: result.error || 'Failed to delete student' };
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting student:', error);

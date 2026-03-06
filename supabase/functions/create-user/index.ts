@@ -30,32 +30,21 @@ interface CreateUserRequest {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
+      { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
     const callerId = req.headers.get("X-User-Id");
     if (!callerId) {
       return new Response(
         JSON.stringify({ error: "Missing X-User-Id header" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -69,24 +58,32 @@ Deno.serve(async (req: Request) => {
     if (callerUserError || !callerUser) {
       return new Response(
         JSON.stringify({ error: "Unauthorized - User not found or inactive" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!["superadmin", "admin"].includes(callerUser.role)) {
       return new Response(
         JSON.stringify({ error: "Unauthorized - Insufficient permissions" }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const requestData: CreateUserRequest = await req.json();
+
+    // Admins can only create teacher or librarian — not admin or superadmin
+    if (
+      callerUser.role === "admin" &&
+      !["teacher", "librarian"].includes(requestData.role)
+    ) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Admins can only create teacher or librarian accounts. Contact a superadmin to create admin or superadmin accounts.",
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const { data: hashData, error: hashError } = await supabaseClient
       .rpc("hash_password", { password: requestData.password });
@@ -95,20 +92,15 @@ Deno.serve(async (req: Request) => {
       console.error("Password hashing error:", hashError);
       return new Response(
         JSON.stringify({ error: "Failed to hash password" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const passwordHash = hashData as string;
 
     const { data: userData, error: userError } = await supabaseClient
       .from("users")
       .insert({
         email: requestData.email,
-        password_hash: passwordHash,
+        password_hash: hashData as string,
         first_name: requestData.firstName,
         last_name: requestData.lastName,
         phone_number: requestData.phoneNumber,
@@ -126,10 +118,7 @@ Deno.serve(async (req: Request) => {
       console.error("User creation error:", userError);
       return new Response(
         JSON.stringify({ error: userError.message }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -174,28 +163,19 @@ Deno.serve(async (req: Request) => {
       await supabaseClient.from("users").delete().eq("id", userData.id);
       return new Response(
         JSON.stringify({ error: roleError.message }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
       JSON.stringify({ success: true, user: userData, roleData }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Internal server error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

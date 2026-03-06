@@ -82,36 +82,38 @@ export interface UpdateStaffData {
 
 export async function updateStaff(staffId: string, userId: string, data: UpdateStaffData) {
   try {
-    const userUpdates: Record<string, string> = {};
-    if (data.firstName !== undefined) userUpdates.first_name = data.firstName;
-    if (data.lastName !== undefined) userUpdates.last_name = data.lastName;
-    if (data.fatherName !== undefined) userUpdates.father_name = data.fatherName;
-    if (data.phone !== undefined) userUpdates.phone_number = data.phone;
-    if (data.role !== undefined) userUpdates.role = data.role;
-    if (data.status !== undefined) userUpdates.status = data.status;
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) return { success: false, error: 'Not authenticated' };
+    const caller = JSON.parse(storedUser);
 
-    if (Object.keys(userUpdates).length > 0) {
-      const { error: userError } = await supabase
-        .from('users')
-        .update(userUpdates)
-        .eq('id', userId);
-      if (userError) throw userError;
-    }
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'X-User-Id': caller.id,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        targetUserId: userId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        fatherName: data.fatherName,
+        phone: data.phone,
+        role: data.role,
+        status: data.status,
+        staffData: {
+          staffId,
+          position: data.position,
+          department: data.department,
+          dateJoined: data.dateJoined,
+          branchId: data.branchId,
+        },
+      }),
+    });
 
-    const staffUpdates: Record<string, any> = {};
-    if (data.position !== undefined) staffUpdates.position = data.position;
-    if (data.department !== undefined) staffUpdates.department = data.department;
-    if (data.dateJoined !== undefined) staffUpdates.date_joined = data.dateJoined;
-    if (data.branchId !== undefined) staffUpdates.branch_id = data.branchId || null;
-
-    if (Object.keys(staffUpdates).length > 0) {
-      const { error: staffError } = await supabase
-        .from('staff')
-        .update(staffUpdates)
-        .eq('id', staffId);
-      if (staffError) throw staffError;
-    }
-
+    const result = await response.json();
+    if (!response.ok) return { success: false, error: result.error || 'Failed to update staff member' };
     return { success: true };
   } catch (error: any) {
     console.error('Error updating staff:', error);
@@ -142,20 +144,25 @@ export async function updateUserCredentials(targetUserId: string, email?: string
   }
 }
 
-export async function deleteStaff(staffId: string, userId: string) {
+export async function deleteStaff(_staffId: string, userId: string) {
   try {
-    const { error: staffError } = await supabase
-      .from('staff')
-      .delete()
-      .eq('id', staffId);
-    if (staffError) throw staffError;
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) return { success: false, error: 'Not authenticated' };
+    const caller = JSON.parse(storedUser);
 
-    const { error: userError } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', userId);
-    if (userError) throw userError;
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'X-User-Id': caller.id,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ targetUserId: userId, operation: 'delete' }),
+    });
 
+    const result = await response.json();
+    if (!response.ok) return { success: false, error: result.error || 'Failed to delete staff member' };
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting staff:', error);
