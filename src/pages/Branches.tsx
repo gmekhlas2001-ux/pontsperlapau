@@ -67,13 +67,6 @@ import {
   type UpdateBranchData,
 } from '@/services/branchService';
 
-const AFGHAN_PROVINCES = [
-  'Badakhshan', 'Badghis', 'Baghlan', 'Balkh', 'Bamyan', 'Daykundi', 'Farah',
-  'Faryab', 'Ghazni', 'Ghor', 'Helmand', 'Herat', 'Jowzjan', 'Kabul', 'Kandahar',
-  'Kapisa', 'Khost', 'Kunar', 'Kunduz', 'Laghman', 'Logar', 'Maidan Wardak',
-  'Nangarhar', 'Nimroz', 'Nuristan', 'Paktia', 'Paktika', 'Panjshir', 'Parwan',
-  'Samangan', 'Sar-e Pol', 'Takhar', 'Urozgan', 'Zabul',
-];
 
 const EMPTY_FORM: CreateBranchData = {
   name: '',
@@ -534,17 +527,12 @@ export function Branches() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Province <span className="text-red-500">*</span></Label>
-                <Select value={addForm.province} onValueChange={(v) => setAddForm((p) => ({ ...p, province: v }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select province" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AFGHAN_PROVINCES.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Province / Region <span className="text-red-500">*</span></Label>
+                <Input
+                  placeholder="e.g. Kabul, Catalonia, Madrid..."
+                  value={addForm.province}
+                  onChange={(e) => setAddForm((p) => ({ ...p, province: e.target.value }))}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -631,17 +619,12 @@ export function Branches() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Province <span className="text-red-500">*</span></Label>
-                <Select value={editForm.province ?? ''} onValueChange={(v) => setEditForm((p) => ({ ...p, province: v }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select province" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AFGHAN_PROVINCES.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Province / Region <span className="text-red-500">*</span></Label>
+                <Input
+                  placeholder="e.g. Kabul, Catalonia, Madrid..."
+                  value={editForm.province ?? ''}
+                  onChange={(e) => setEditForm((p) => ({ ...p, province: e.target.value }))}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
