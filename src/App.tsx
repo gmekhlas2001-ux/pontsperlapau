@@ -89,7 +89,7 @@ function AppRoutes() {
         <Route
           path="library"
           element={
-            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'librarian', 'student']}>
+            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher', 'librarian', 'student']}>
               <Library />
             </ProtectedRoute>
           }

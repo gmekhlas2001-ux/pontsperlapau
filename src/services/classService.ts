@@ -167,7 +167,7 @@ export async function deleteClass(classId: string) {
   try {
     const { error } = await supabase
       .from('classes')
-      .update({ deleted_at: new Date().toISOString() })
+      .delete()
       .eq('id', classId);
 
     if (error) throw error;

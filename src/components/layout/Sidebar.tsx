@@ -33,7 +33,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
     { path: '/branches', label: t('nav.branches'), icon: MapPin, roles: ['superadmin', 'admin'] },
     { path: '/students', label: t('nav.students'), icon: GraduationCap, roles: ['superadmin', 'admin', 'teacher'] },
     { path: '/classes', label: t('nav.classes'), icon: BookOpen, roles: ['superadmin', 'admin', 'teacher', 'student'] },
-    { path: '/library', label: t('nav.library'), icon: Library, roles: ['superadmin', 'admin', 'librarian', 'student'] },
+    { path: '/library', label: t('nav.library'), icon: Library, roles: ['superadmin', 'admin', 'teacher', 'librarian', 'student'] },
     { path: '/reports', label: t('nav.reports'), icon: BarChart2, roles: ['superadmin', 'admin'] },
     { path: '/settings', label: t('nav.settings'), icon: Settings, roles: ['superadmin', 'admin'] },
   ];
