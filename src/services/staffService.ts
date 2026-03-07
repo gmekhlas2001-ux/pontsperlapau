@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/services/activityService';
 
 export interface CreateStaffData {
   firstName: string;
@@ -60,6 +61,7 @@ export async function createStaff(data: CreateStaffData) {
       return { success: false, error: result.error || 'Failed to create staff member' };
     }
 
+    logActivity({ action_type: 'INSERT', table_name: 'staff', description: `Added staff: ${data.firstName} ${data.lastName}` });
     return { success: true, data: result.roleData };
   } catch (error: any) {
     console.error('Error creating staff:', error);
@@ -114,6 +116,7 @@ export async function updateStaff(staffId: string, userId: string, data: UpdateS
 
     const result = await response.json();
     if (!response.ok) return { success: false, error: result.error || 'Failed to update staff member' };
+    logActivity({ action_type: 'UPDATE', table_name: 'staff', description: `Updated staff member` });
     return { success: true };
   } catch (error: any) {
     console.error('Error updating staff:', error);
@@ -163,6 +166,7 @@ export async function deleteStaff(_staffId: string, userId: string) {
 
     const result = await response.json();
     if (!response.ok) return { success: false, error: result.error || 'Failed to delete staff member' };
+    logActivity({ action_type: 'DELETE', table_name: 'staff', description: `Removed staff member` });
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting staff:', error);

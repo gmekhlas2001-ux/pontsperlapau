@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/services/activityService';
 
 export interface BookRow {
   id: string;
@@ -92,6 +93,7 @@ export async function createBook(bookData: CreateBookData) {
       .single();
 
     if (error) throw error;
+    logActivity({ action_type: 'INSERT', table_name: 'books', record_id: data.id, description: `Added book: ${data.title}` });
     return { success: true, data: data as BookRow };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create book' };
@@ -108,20 +110,22 @@ export async function updateBook(bookId: string, updates: UpdateBookData) {
       .single();
 
     if (error) throw error;
+    logActivity({ action_type: 'UPDATE', table_name: 'books', record_id: bookId, description: `Updated book: ${data.title}` });
     return { success: true, data: data as BookRow };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update book' };
   }
 }
 
-export async function deleteBook(bookId: string) {
+export async function deleteBook(bookId: string, bookTitle?: string) {
   try {
     const { error } = await supabase
       .from('books')
-      .update({ deleted_at: new Date().toISOString() })
+      .delete()
       .eq('id', bookId);
 
     if (error) throw error;
+    logActivity({ action_type: 'DELETE', table_name: 'books', record_id: bookId, description: `Deleted book: ${bookTitle ?? bookId}` });
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to delete book' };

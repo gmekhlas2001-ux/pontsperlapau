@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { mockClasses, mockBookLoans } from '@/lib/mockData';
 import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
+import { fetchRecentActivities, type ActivityLog } from '@/services/activityService';
 import { Users, UserCheck, GraduationCap, BookOpen, Library, Plus, Calendar, Clock, CircleAlert as AlertCircle, MapPin } from 'lucide-react';
 import {
   BarChart,
@@ -40,10 +41,12 @@ export function Dashboard() {
   const { user, hasPermission } = useAuth();
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [branchStats, setBranchStats] = useState<BranchStat[]>([]);
+  const [recentActivities, setRecentActivities] = useState<ActivityLog[]>([]);
 
   useEffect(() => {
     fetchDashboardStats().then(setStats);
     fetchBranchStats().then(setBranchStats);
+    fetchRecentActivities(8).then(setRecentActivities);
   }, []);
 
   const staffData = [
@@ -202,7 +205,29 @@ export function Dashboard() {
             <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">{t('common.noData')}</p>
+            {recentActivities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('common.noData')}</p>
+            ) : (
+              <div className="space-y-3">
+                {recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3">
+                    <div className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold
+                      ${activity.action_type === 'INSERT' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : ''}
+                      ${activity.action_type === 'UPDATE' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' : ''}
+                      ${activity.action_type === 'DELETE' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' : ''}
+                    `}>
+                      {activity.action_type === 'INSERT' ? '+' : activity.action_type === 'DELETE' ? '−' : '~'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium leading-snug">{activity.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(activity.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -326,7 +351,7 @@ export function Dashboard() {
           title={t('dashboard.overdueBooks')}
           value={stats.overdueBooks}
           icon={AlertCircle}
-          iconClassName="bg-red-100"
+          iconClassName="bg-red-500/15 text-red-600 dark:bg-red-500/20 dark:text-red-400"
         />
       </div>
 

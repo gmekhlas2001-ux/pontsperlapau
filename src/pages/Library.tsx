@@ -80,6 +80,7 @@ export function Library() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<BookRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [addForm, setAddForm] = useState<CreateBookData>(EMPTY_FORM);
   const [editForm, setEditForm] = useState<UpdateBookData>({});
@@ -189,15 +190,19 @@ export function Library() {
 
   const handleDeleteConfirm = async () => {
     if (!bookToDelete) return;
-    const result = await deleteBook(bookToDelete.id);
+    setDeleting(true);
+    const result = await deleteBook(bookToDelete.id, bookToDelete.title);
+    setDeleting(false);
     if (result.success) {
       toast.success(t('common.success'));
+      setIsDeleteDialogOpen(false);
+      setBookToDelete(null);
       fetchBooks();
     } else {
       toast.error(result.error || t('common.error'));
+      setIsDeleteDialogOpen(false);
+      setBookToDelete(null);
     }
-    setIsDeleteDialogOpen(false);
-    setBookToDelete(null);
   };
 
   const getBookStatus = (book: BookRow): 'active' | 'inactive' | 'pending' => {
@@ -557,10 +562,11 @@ export function Library() {
               {t('common.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteConfirm}
+              onClick={(e) => { e.preventDefault(); handleDeleteConfirm(); }}
+              disabled={deleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              {t('common.delete')}
+              {deleting ? t('common.loading') : t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/services/activityService';
 
 export interface CreateStudentData {
   firstName: string;
@@ -68,6 +69,7 @@ export async function createStudent(data: CreateStudentData) {
       return { success: false, error: result.error || 'Failed to create student' };
     }
 
+    logActivity({ action_type: 'INSERT', table_name: 'students', description: `Enrolled student: ${data.firstName} ${data.lastName}` });
     return { success: true, data: result.roleData };
   } catch (error: any) {
     console.error('Error creating student:', error);
@@ -107,6 +109,7 @@ export async function updateStudent(studentId: string, userId: string, data: Upd
 
     const result = await response.json();
     if (!response.ok) return { success: false, error: result.error || 'Failed to update student' };
+    logActivity({ action_type: 'UPDATE', table_name: 'students', description: `Updated student record` });
     return { success: true };
   } catch (error: any) {
     console.error('Error updating student:', error);
@@ -133,6 +136,7 @@ export async function deleteStudent(_studentId: string, userId: string) {
 
     const result = await response.json();
     if (!response.ok) return { success: false, error: result.error || 'Failed to delete student' };
+    logActivity({ action_type: 'DELETE', table_name: 'students', description: `Removed student record` });
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting student:', error);
