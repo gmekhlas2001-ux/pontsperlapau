@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, MoveHorizontal as MoreHorizontal, BookOpen, Users, CircleCheck as CheckCircle, Pencil, Trash2, Clock, BookMarked } from 'lucide-react';
+import { Plus, MoveHorizontal as MoreHorizontal, BookOpen, CircleCheck as CheckCircle, Pencil, Trash2, Clock, BookMarked } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getBooks,
@@ -52,6 +52,7 @@ import {
   type UpdateBookData,
 } from '@/services/libraryService';
 import { getBranches, type Branch } from '@/services/branchService';
+import { useAuth } from '@/contexts/AuthContext';
 
 const EMPTY_FORM: CreateBookData = {
   title: '',
@@ -68,6 +69,8 @@ const EMPTY_FORM: CreateBookData = {
 
 export function Library() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const canManage = ['superadmin', 'admin', 'librarian'].includes(user?.role ?? '');
   const [books, setBooks] = useState<BookRow[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -261,21 +264,25 @@ export function Library() {
               <BookOpen className="mr-2 h-4 w-4" />
               {t('common.view')}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEditOpen(book)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              {t('common.edit')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleBorrowOpen(book)}>
-              <BookMarked className="mr-2 h-4 w-4" />
-              Update Borrowed Copies
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-red-600"
-              onClick={() => { setBookToDelete(book); setIsDeleteDialogOpen(true); }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t('common.delete')}
-            </DropdownMenuItem>
+            {canManage && (
+              <>
+                <DropdownMenuItem onClick={() => handleEditOpen(book)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  {t('common.edit')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleBorrowOpen(book)}>
+                  <BookMarked className="mr-2 h-4 w-4" />
+                  Update Borrowed Copies
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-red-600"
+                  onClick={() => { setBookToDelete(book); setIsDeleteDialogOpen(true); }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t('common.delete')}
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -289,10 +296,12 @@ export function Library() {
           <h1 className="text-3xl font-bold tracking-tight">{t('library.management')}</h1>
           <p className="text-muted-foreground">{t('library.bookList')}</p>
         </div>
-        <Button onClick={() => { setAddForm(EMPTY_FORM); setIsAddDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('library.addBook')}
-        </Button>
+        {canManage && (
+          <Button onClick={() => { setAddForm(EMPTY_FORM); setIsAddDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('library.addBook')}
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -305,20 +314,20 @@ export function Library() {
           title={t('dashboard.availableBooks')}
           value={availableBooks}
           icon={CheckCircle}
-          iconClassName="bg-green-100"
+          iconClassName="bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
         />
         <StatCard
           title={t('dashboard.borrowedBooks')}
           value={borrowedBooks}
-          icon={Users}
-          iconClassName="bg-blue-100"
+          icon={BookMarked}
+          iconClassName="bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
         />
       </div>
 
       <Tabs defaultValue="books">
         <TabsList>
           <TabsTrigger value="books">{t('library.bookList')}</TabsTrigger>
-          <TabsTrigger value="borrowed">{t('library.borrowedBooks')}</TabsTrigger>
+          {canManage && <TabsTrigger value="borrowed">{t('library.borrowedBooks')}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="books">
