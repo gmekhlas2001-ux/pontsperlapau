@@ -71,15 +71,14 @@ Deno.serve(async (req: Request) => {
 
     const requestData: CreateUserRequest = await req.json();
 
-    // Admins can only create teacher or librarian — not admin or superadmin
+    // Admins can create any role except superadmin
     if (
       callerUser.role === "admin" &&
-      !["teacher", "librarian"].includes(requestData.role)
+      !["admin", "teacher", "librarian", "student"].includes(requestData.role)
     ) {
       return new Response(
         JSON.stringify({
-          error:
-            "Admins can only create teacher or librarian accounts. Contact a superadmin to create admin or superadmin accounts.",
+          error: "Admins cannot create superadmin accounts.",
         }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
