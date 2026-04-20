@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { DataTable } from '@/components/ui-custom/DataTable';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
@@ -62,6 +63,8 @@ import {
   Eye,
   Calendar,
   BookOpen,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
 import { formatDate, getFullName } from '@/lib/utils';
 
@@ -87,6 +90,10 @@ interface StudentRecord {
 export function Students() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(
+    (searchParams.get('status') as 'active' | 'inactive') || 'all'
+  );
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -100,7 +107,6 @@ export function Students() {
   });
   const [editData, setEditData] = useState<Partial<UpdateStudentData>>({});
   const [editEmail, setEditEmail] = useState('');
-  const [editPassword, setEditPassword] = useState('');
   const [branches, setBranches] = useState<Branch[]>([]);
 
   const fetchStudents = useCallback(async () => {
@@ -132,6 +138,33 @@ export function Students() {
     getBranches().then((r) => { if (r.success && r.data) setBranches(r.data); });
   }, [fetchStudents]);
 
+  const handleStatusFilterChange = (filter: 'all' | 'active' | 'inactive') => {
+    setStatusFilter(filter);
+    if (filter === 'all') {
+      searchParams.delete('status');
+    } else {
+      searchParams.set('status', filter);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const handleQuickActivate = async (student: StudentRecord) => {
+    const result = await updateStudent(student.id, student.userId, { status: 'active' });
+    if (result.success) {
+      toast.success(`${student.firstName} ${student.lastName} has been activated`);
+      await fetchStudents();
+    } else {
+      toast.error(result.error || 'Failed to activate student');
+    }
+  };
+
+  const filteredStudents = statusFilter === 'all'
+    ? studentList
+    : studentList.filter((s) => s.status === statusFilter);
+
+  const activeCount = studentList.filter((s) => s.status === 'active').length;
+  const inactiveCount = studentList.filter((s) => s.status === 'inactive').length;
+
   const handleInputChange = (field: keyof CreateStudentData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -157,7 +190,6 @@ export function Students() {
       branchId: student.branchId ?? '',
     });
     setEditEmail(student.email);
-    setEditPassword('');
     setIsEditDialogOpen(true);
   };
 
@@ -196,16 +228,15 @@ export function Students() {
         return;
       }
 
-      const emailChanged = editEmail && editEmail !== selectedStudent.email;
-      const passwordChanged = !!editPassword;
-      if ((emailChanged || passwordChanged) && user?.role === 'superadmin') {
+      const emailChanged = editEmail !== selectedStudent.email;
+      if (emailChanged && user?.role === 'superadmin') {
         const credResult = await updateStudentCredentials(
           selectedStudent.userId,
-          emailChanged ? editEmail : undefined,
-          passwordChanged ? editPassword : undefined
+          editEmail || undefined,
+          undefined
         );
         if (!credResult.success) {
-          toast.error(credResult.error || 'Profile updated but credentials failed to update');
+          toast.error(credResult.error || 'Profile updated but email failed to update');
           return;
         }
       }
@@ -225,8 +256,6 @@ export function Students() {
     if (
       !formData.firstName ||
       !formData.lastName ||
-      !formData.email ||
-      !formData.password ||
       !formData.dateOfBirth ||
       !formData.gender ||
       !formData.enrollmentDate ||
@@ -274,10 +303,12 @@ export function Students() {
     {
       key: 'email',
       header: t('students.email'),
-      cell: (student: StudentRecord) => (
+      cell: (student: StudentRecord) => student.email ? (
         <a href={`mailto:${student.email}`} className="text-primary hover:underline">
           {student.email}
         </a>
+      ) : (
+        <span className="text-muted-foreground text-xs">—</span>
       ),
     },
     {
@@ -336,6 +367,12 @@ export function Students() {
               <Pencil className="mr-2 h-4 w-4" />
               {t('common.edit')}
             </DropdownMenuItem>
+            {student.status === 'inactive' && (
+              <DropdownMenuItem className="text-emerald-600" onClick={() => handleQuickActivate(student)}>
+                <UserCheck className="mr-2 h-4 w-4" />
+                Activate
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteStudent(student)}>
               <Trash2 className="mr-2 h-4 w-4" />
               {t('common.delete')}
@@ -348,7 +385,7 @@ export function Students() {
 
   const renderCardView = () => (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {studentList.map((student) => (
+      {filteredStudents.map((student) => (
         <Card key={student.id}>
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
@@ -368,12 +405,14 @@ export function Students() {
             </div>
 
             <div className="mt-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <a href={`mailto:${student.email}`} className="text-primary hover:underline">
-                  {student.email}
-                </a>
-              </div>
+              {student.email && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <a href={`mailto:${student.email}`} className="text-primary hover:underline">
+                    {student.email}
+                  </a>
+                </div>
+              )}
               {student.phone && (
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
@@ -522,26 +561,13 @@ export function Students() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">
-                    {t('students.email')} <span className="text-red-500">*</span>
+                    {t('students.email')} <span className="text-muted-foreground text-xs">(optional)</span>
                   </Label>
                   <Input
                     id="email"
                     type="email"
-                    required
                     value={formData.email || ''}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">
-                    Password <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    value={formData.password || ''}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -608,9 +634,38 @@ export function Students() {
         </div>
       </div>
 
+      {/* Status filter tabs */}
+      <div className="flex items-center gap-1 border rounded-lg p-1 w-fit">
+        <Button
+          variant={statusFilter === 'all' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => handleStatusFilterChange('all')}
+        >
+          All <span className="ml-1.5 text-xs opacity-70">{studentList.length}</span>
+        </Button>
+        <Button
+          variant={statusFilter === 'active' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => handleStatusFilterChange('active')}
+          className={statusFilter === 'active' ? '' : 'text-emerald-600'}
+        >
+          <UserCheck className="mr-1.5 h-3.5 w-3.5" />
+          Active <span className="ml-1.5 text-xs opacity-70">{activeCount}</span>
+        </Button>
+        <Button
+          variant={statusFilter === 'inactive' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => handleStatusFilterChange('inactive')}
+          className={statusFilter === 'inactive' ? '' : 'text-red-500'}
+        >
+          <UserX className="mr-1.5 h-3.5 w-3.5" />
+          Inactive <span className="ml-1.5 text-xs opacity-70">{inactiveCount}</span>
+        </Button>
+      </div>
+
       {viewMode === 'list' ? (
         <DataTable
-          data={studentList}
+          data={filteredStudents}
           columns={columns}
           keyExtractor={(student) => student.id}
           searchKeys={['firstName', 'lastName', 'email', 'gradeLevel']}
@@ -645,10 +700,12 @@ export function Students() {
               </div>
 
               <div className="grid gap-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span>{selectedStudent.email}</span>
-                </div>
+                {selectedStudent.email && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span>{selectedStudent.email}</span>
+                  </div>
+                )}
                 {selectedStudent.phone && (
                   <div className="flex items-center gap-3 text-sm">
                     <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -765,34 +822,18 @@ export function Students() {
                 />
               </div>
               {user?.role === 'superadmin' && (
-                <>
-                  <div className="border-t pt-4">
-                    <p className="text-sm font-medium text-muted-foreground mb-3">Credentials (Superadmin only)</p>
-                    <div className="grid gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-email">Email</Label>
-                        <Input
-                          id="edit-email"
-                          type="email"
-                          value={editEmail}
-                          onChange={(e) => setEditEmail(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-password">
-                          New Password <span className="text-muted-foreground text-xs">(leave blank to keep current)</span>
-                        </Label>
-                        <Input
-                          id="edit-password"
-                          type="password"
-                          placeholder="Enter new password"
-                          value={editPassword}
-                          onChange={(e) => setEditPassword(e.target.value)}
-                        />
-                      </div>
-                    </div>
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Contact Email (optional)</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                    />
                   </div>
-                </>
+                </div>
               )}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>

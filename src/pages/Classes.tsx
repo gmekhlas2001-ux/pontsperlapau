@@ -9,8 +9,12 @@ import {
   deleteClass,
   getTeachers,
   getClassEnrollments,
+  getStudentsByBranch,
+  enrollStudent,
+  unenrollStudent,
   type ClassRecord,
   type ClassTeacher,
+  type BranchStudent,
 } from '@/services/classService';
 import { getBranches, type Branch } from '@/services/branchService';
 import { Button } from '@/components/ui/button';
@@ -52,7 +56,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, MoveHorizontal as MoreHorizontal, Users, Clock, MapPin, Pencil, Trash2, Calendar, BookOpen, GraduationCap, Building2, Search } from 'lucide-react';
+import { Plus, MoveHorizontal as MoreHorizontal, Users, Clock, MapPin, Pencil, Trash2, Calendar, BookOpen, GraduationCap, Building2, Search, UserPlus, UserMinus, Loader2 } from 'lucide-react';
 
 const DAYS = [
   { value: 'monday', label: 'Mon' },
@@ -107,6 +111,7 @@ export function Classes() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [classStatus, setClassStatus] = useState<'all' | 'active' | 'inactive' | 'archived'>('all');
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -114,6 +119,10 @@ export function Classes() {
   const [editingClass, setEditingClass] = useState<ClassRecord | null>(null);
   const [selectedClass, setSelectedClass] = useState<ClassRecord | null>(null);
   const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [branchStudents, setBranchStudents] = useState<BranchStudent[]>([]);
+  const [enrollSearch, setEnrollSearch] = useState('');
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
+  const [unenrollingId, setUnenrollingId] = useState<string | null>(null);
   const [classToDelete, setClassToDelete] = useState<ClassRecord | null>(null);
 
   const [form, setForm] = useState<ClassFormData>(emptyForm);
@@ -163,8 +172,45 @@ export function Classes() {
   const openDetailDialog = async (cls: ClassRecord) => {
     setSelectedClass(cls);
     setIsDetailOpen(true);
-    const res = await getClassEnrollments(cls.id);
-    if (res.success) setEnrollments(res.data ?? []);
+    setEnrollSearch('');
+    setBranchStudents([]);
+    setEnrollments([]);
+
+    const [enrollRes, studentsRes] = await Promise.all([
+      getClassEnrollments(cls.id),
+      cls.branchId
+        ? getStudentsByBranch(cls.branchId)
+        : Promise.resolve({ success: true, data: [] as BranchStudent[] }),
+    ]);
+
+    if (enrollRes.success) setEnrollments(enrollRes.data ?? []);
+    if (studentsRes.success) setBranchStudents(studentsRes.data ?? []);
+  };
+
+  const handleEnroll = async (studentId: string) => {
+    if (!selectedClass) return;
+    setEnrollingId(studentId);
+    const res = await enrollStudent(selectedClass.id, studentId);
+    if (res.success) {
+      toast.success('Student enrolled successfully');
+      const enrollRes = await getClassEnrollments(selectedClass.id);
+      if (enrollRes.success) setEnrollments(enrollRes.data ?? []);
+    } else {
+      toast.error(res.error || 'Failed to enroll student');
+    }
+    setEnrollingId(null);
+  };
+
+  const handleUnenroll = async (enrollmentId: string) => {
+    setUnenrollingId(enrollmentId);
+    const res = await unenrollStudent(enrollmentId);
+    if (res.success) {
+      toast.success('Student removed from class');
+      setEnrollments((prev) => prev.filter((e) => e.id !== enrollmentId));
+    } else {
+      toast.error(res.error || 'Failed to remove student');
+    }
+    setUnenrollingId(null);
   };
 
   const confirmDelete = (cls: ClassRecord) => {
@@ -249,10 +295,20 @@ export function Classes() {
     return time.slice(0, 5);
   };
 
-  const filteredClasses = classes.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    `${c.teacherFirstName} ${c.teacherLastName}`.toLowerCase().includes(search.toLowerCase()) ||
-    (c.branchName ?? '').toLowerCase().includes(search.toLowerCase())
+  const filteredClasses = classes.filter((c) => {
+    const matchesSearch =
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      `${c.teacherFirstName} ${c.teacherLastName}`.toLowerCase().includes(search.toLowerCase()) ||
+      (c.branchName ?? '').toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = classStatus === 'all' || c.status === classStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  const enrolledStudentIds = new Set(enrollments.map((e) => e.student_id));
+  const availableStudents = branchStudents.filter((s) => !enrolledStudentIds.has(s.id));
+  const filteredAvailable = availableStudents.filter((s) =>
+    `${s.firstName} ${s.lastName}`.toLowerCase().includes(enrollSearch.toLowerCase()) ||
+    s.studentId.toLowerCase().includes(enrollSearch.toLowerCase())
   );
 
   const selectedTeacher = teachers.find((t) => t.id === form.teacherId);
@@ -271,15 +327,32 @@ export function Classes() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search classes, teachers, branches..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search + Status filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search classes, teachers, branches..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center gap-1 border rounded-lg p-1">
+          {(['all', 'active', 'inactive', 'archived'] as const).map((s) => (
+            <Button
+              key={s}
+              variant={classStatus === s ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setClassStatus(s)}
+            >
+              <span className="capitalize">{s}</span>
+              <span className="ml-1.5 text-xs opacity-60">
+                {s === 'all' ? classes.length : classes.filter((c) => c.status === s).length}
+              </span>
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Classes Grid */}
@@ -711,39 +784,108 @@ export function Classes() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="students" className="mt-4">
-                  <div className="space-y-2">
+                <TabsContent value="students" className="mt-4 space-y-5">
+                  {/* Enrolled students */}
+                  <div>
+                    <p className="text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wide">
+                      Enrolled ({enrollments.length})
+                    </p>
                     {enrollments.length === 0 ? (
-                      <div className="text-center py-10 text-muted-foreground">
-                        <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                        <p>No students enrolled yet</p>
+                      <div className="text-center py-6 text-muted-foreground border rounded-lg">
+                        <Users className="h-7 w-7 mx-auto mb-1.5 opacity-40" />
+                        <p className="text-sm">No students enrolled yet</p>
                       </div>
                     ) : (
-                      enrollments.map((e) => (
-                        <div
-                          key={e.id}
-                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <div>
-                            <p className="font-medium text-sm">
-                              {e.student?.user?.first_name} {e.student?.user?.last_name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {e.student?.user?.email} · ID: {e.student?.student_id}
-                            </p>
-                          </div>
-                          {e.attendance_percentage != null && (
-                            <Badge
-                              variant={e.attendance_percentage >= 80 ? 'default' : 'destructive'}
-                              className="text-xs"
+                      <div className="space-y-1.5">
+                        {enrollments.map((e) => (
+                          <div
+                            key={e.id}
+                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors"
+                          >
+                            <div>
+                              <p className="font-medium text-sm">
+                                {e.student?.user?.first_name} {e.student?.user?.last_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                ID: {e.student?.student_id || '—'}
+                                {e.attendance_percentage != null && ` · ${e.attendance_percentage}% attendance`}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                              disabled={unenrollingId === e.id}
+                              onClick={() => handleUnenroll(e.id)}
                             >
-                              {e.attendance_percentage}% attendance
-                            </Badge>
-                          )}
-                        </div>
-                      ))
+                              {unenrollingId === e.id
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <UserMinus className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
+
+                  {/* Add students from branch */}
+                  {selectedClass.branchId ? (
+                    <div>
+                      <p className="text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wide">
+                        Add from {selectedClass.branchName}
+                      </p>
+                      <div className="relative mb-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search students by name or ID..."
+                          value={enrollSearch}
+                          onChange={(e) => setEnrollSearch(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                      {filteredAvailable.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground border rounded-lg">
+                          <GraduationCap className="h-7 w-7 mx-auto mb-1.5 opacity-40" />
+                          <p className="text-sm">
+                            {availableStudents.length === 0
+                              ? 'All students from this branch are enrolled'
+                              : 'No students match your search'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                          {filteredAvailable.map((s) => (
+                            <div
+                              key={s.id}
+                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors"
+                            >
+                              <div>
+                                <p className="font-medium text-sm">{s.firstName} {s.lastName}</p>
+                                {s.studentId && (
+                                  <p className="text-xs text-muted-foreground">ID: {s.studentId}</p>
+                                )}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={enrollingId === s.id}
+                                onClick={() => handleEnroll(s.id)}
+                              >
+                                {enrollingId === s.id
+                                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                                  : <><UserPlus className="h-4 w-4 mr-1.5" />Enroll</>}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground border rounded-lg border-dashed">
+                      <Building2 className="h-7 w-7 mx-auto mb-1.5 opacity-40" />
+                      <p className="text-sm">Assign a branch to this class to enroll students</p>
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="schedule" className="mt-4">

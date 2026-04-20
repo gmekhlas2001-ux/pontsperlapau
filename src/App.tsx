@@ -123,8 +123,8 @@ function App() {
         <AuthProvider>
           <BrowserRouter>
             <AppRoutes />
+            <Toaster />
           </BrowserRouter>
-          <Toaster />
         </AuthProvider>
       </ThemeProvider>
     </I18nextProvider>

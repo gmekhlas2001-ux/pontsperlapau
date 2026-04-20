@@ -56,6 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
+      // Students do not have site access
+      if (data.role === 'student') {
+        return false;
+      }
+
       const { data: isValidPassword } = await supabase.rpc('verify_password', {
         user_email: email.toLowerCase(),
         user_password: password

@@ -224,6 +224,81 @@ export async function getTeachers() {
   }
 }
 
+export interface BranchStudent {
+  id: string;
+  userId: string;
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  branchId: string;
+}
+
+export async function getStudentsByBranch(branchId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select(`
+        id,
+        student_id,
+        branch_id,
+        user:users!user_id(id, first_name, last_name)
+      `)
+      .eq('branch_id', branchId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    const students: BranchStudent[] = (data || []).map((s: any) => ({
+      id: s.id,
+      userId: s.user?.id ?? '',
+      studentId: s.student_id ?? '',
+      firstName: s.user?.first_name ?? '',
+      lastName: s.user?.last_name ?? '',
+      branchId: s.branch_id,
+    }));
+
+    return { success: true, data: students };
+  } catch (error: any) {
+    console.error('Error fetching branch students:', error);
+    return { success: false, error: error.message || 'Failed to fetch students', data: [] as BranchStudent[] };
+  }
+}
+
+export async function enrollStudent(classId: string, studentId: string) {
+  try {
+    const { error } = await supabase
+      .from('class_enrollments')
+      .insert({
+        class_id: classId,
+        student_id: studentId,
+        enrollment_date: new Date().toISOString().split('T')[0],
+        status: 'active',
+      });
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error enrolling student:', error);
+    return { success: false, error: error.message || 'Failed to enroll student' };
+  }
+}
+
+export async function unenrollStudent(enrollmentId: string) {
+  try {
+    const { error } = await supabase
+      .from('class_enrollments')
+      .delete()
+      .eq('id', enrollmentId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error removing enrollment:', error);
+    return { success: false, error: error.message || 'Failed to remove student' };
+  }
+}
+
 export async function getClassEnrollments(classId: string) {
   try {
     const { data, error } = await supabase

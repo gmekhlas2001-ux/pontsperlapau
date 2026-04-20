@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { DataTable } from '@/components/ui-custom/DataTable';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
@@ -42,7 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List, Eye, Calendar, Briefcase, Building2 } from 'lucide-react';
+import { Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List, Eye, Calendar, Briefcase, Building2, UserCheck, UserX } from 'lucide-react';
 import { formatDate, getFullName } from '@/lib/utils';
 import type { Staff } from '@/types';
 
@@ -54,6 +55,10 @@ interface StaffRecord extends Staff {
 export function Staff() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(
+    (searchParams.get('status') as 'active' | 'inactive') || 'all'
+  );
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -99,6 +104,33 @@ export function Staff() {
     fetchStaff();
     getBranches().then((r) => { if (r.success && r.data) setBranches(r.data); });
   }, [fetchStaff]);
+
+  const handleStatusFilterChange = (filter: 'all' | 'active' | 'inactive') => {
+    setStatusFilter(filter);
+    if (filter === 'all') {
+      searchParams.delete('status');
+    } else {
+      searchParams.set('status', filter);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const handleQuickActivate = async (staff: StaffRecord) => {
+    const result = await updateStaff(staff.id, staff.userId, { status: 'active' });
+    if (result.success) {
+      toast.success(`${staff.firstName} ${staff.lastName} has been activated`);
+      await fetchStaff();
+    } else {
+      toast.error(result.error || 'Failed to activate staff member');
+    }
+  };
+
+  const filteredStaff = statusFilter === 'all'
+    ? staffList
+    : staffList.filter((s) => s.status === statusFilter);
+
+  const activeCount = staffList.filter((s) => s.status === 'active').length;
+  const inactiveCount = staffList.filter((s) => s.status === 'inactive').length;
 
   const handleInputChange = (field: keyof CreateStaffData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -310,6 +342,12 @@ export function Staff() {
               <Pencil className="mr-2 h-4 w-4" />
               {t('common.edit')}
             </DropdownMenuItem>
+            {staff.status === 'inactive' && (
+              <DropdownMenuItem className="text-emerald-600" onClick={() => handleQuickActivate(staff)}>
+                <UserCheck className="mr-2 h-4 w-4" />
+                Activate
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteStaff(staff)}>
               <Trash2 className="mr-2 h-4 w-4" />
               {t('common.delete')}
@@ -322,7 +360,7 @@ export function Staff() {
 
   const renderCardView = () => (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {staffList.map((staff) => (
+      {filteredStaff.map((staff) => (
         <Card key={staff.id}>
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
@@ -617,9 +655,38 @@ export function Staff() {
         </div>
       </div>
 
+      {/* Status filter tabs */}
+      <div className="flex items-center gap-1 border rounded-lg p-1 w-fit">
+        <Button
+          variant={statusFilter === 'all' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => handleStatusFilterChange('all')}
+        >
+          All <span className="ml-1.5 text-xs opacity-70">{staffList.length}</span>
+        </Button>
+        <Button
+          variant={statusFilter === 'active' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => handleStatusFilterChange('active')}
+          className={statusFilter === 'active' ? '' : 'text-emerald-600'}
+        >
+          <UserCheck className="mr-1.5 h-3.5 w-3.5" />
+          Active <span className="ml-1.5 text-xs opacity-70">{activeCount}</span>
+        </Button>
+        <Button
+          variant={statusFilter === 'inactive' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => handleStatusFilterChange('inactive')}
+          className={statusFilter === 'inactive' ? '' : 'text-red-500'}
+        >
+          <UserX className="mr-1.5 h-3.5 w-3.5" />
+          Inactive <span className="ml-1.5 text-xs opacity-70">{inactiveCount}</span>
+        </Button>
+      </div>
+
       {viewMode === 'list' ? (
         <DataTable
-          data={staffList}
+          data={filteredStaff}
           columns={columns}
           keyExtractor={(staff) => staff.id}
           searchKeys={['firstName', 'lastName', 'email', 'position']}

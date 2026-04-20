@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatCard } from '@/components/ui-custom/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { mockClasses, mockBookLoans } from '@/lib/mockData';
 import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
 import { fetchRecentActivities, type ActivityLog } from '@/services/activityService';
-import { Users, UserCheck, GraduationCap, BookOpen, Library, Plus, Calendar, Clock, CircleAlert as AlertCircle, MapPin } from 'lucide-react';
+import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Calendar, Clock, CircleAlert as AlertCircle, MapPin } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -39,6 +40,7 @@ const emptyStats: DashboardStats = {
 export function Dashboard() {
   const { t } = useTranslation();
   const { user, hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [branchStats, setBranchStats] = useState<BranchStat[]>([]);
   const [recentActivities, setRecentActivities] = useState<ActivityLog[]>([]);
@@ -70,18 +72,68 @@ export function Dashboard() {
     <>
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title={t('dashboard.totalStaff')}
-          value={stats.totalStaff}
-          description={`${stats.activeStaff} ${t('dashboard.activeStaff')}`}
-          icon={Users}
-        />
-        <StatCard
-          title={t('dashboard.totalStudents')}
-          value={stats.totalStudents}
-          description={`${stats.activeStudents} ${t('dashboard.activeStudents')}`}
-          icon={GraduationCap}
-        />
+        {/* Staff card with clickable active/inactive breakdown */}
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.totalStaff')}</CardTitle>
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalStaff}</div>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => navigate('/staff?status=active')}
+                className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:hover:bg-emerald-900/60 transition-colors"
+              >
+                <UserCheck className="h-3 w-3" />
+                {stats.activeStaff} active
+              </button>
+              {stats.inactiveStaff > 0 && (
+                <button
+                  onClick={() => navigate('/staff?status=inactive')}
+                  className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-400 dark:hover:bg-red-900/60 transition-colors"
+                >
+                  <UserX className="h-3 w-3" />
+                  {stats.inactiveStaff} inactive
+                </button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Students card with clickable active/inactive breakdown */}
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.totalStudents')}</CardTitle>
+            <div className="p-2 rounded-lg bg-primary/10">
+              <GraduationCap className="h-4 w-4 text-primary" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalStudents}</div>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => navigate('/students?status=active')}
+                className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:hover:bg-emerald-900/60 transition-colors"
+              >
+                <UserCheck className="h-3 w-3" />
+                {stats.activeStudents} active
+              </button>
+              {stats.inactiveStudents > 0 && (
+                <button
+                  onClick={() => navigate('/students?status=inactive')}
+                  className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-400 dark:hover:bg-red-900/60 transition-colors"
+                >
+                  <UserX className="h-3 w-3" />
+                  {stats.inactiveStudents} inactive
+                </button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <StatCard
           title={t('dashboard.totalClasses')}
           value={stats.totalClasses}

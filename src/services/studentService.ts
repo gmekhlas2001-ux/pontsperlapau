@@ -8,8 +8,7 @@ export interface CreateStudentData {
   dateOfBirth: string;
   gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   passportNumber?: string;
-  email: string;
-  password: string;
+  email?: string;
   phone?: string;
   gradeLevel?: string;
   enrollmentDate: string;
@@ -37,6 +36,10 @@ export async function createStudent(data: CreateStudentData) {
     const user = JSON.parse(storedUser);
     const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`;
 
+    // Students have no login access — use contact email if provided, otherwise a placeholder
+    const email = data.email || `nologin-${crypto.randomUUID()}@students.internal`;
+    const password = crypto.randomUUID() + crypto.randomUUID();
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -45,8 +48,8 @@ export async function createStudent(data: CreateStudentData) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: data.email,
-        password: data.password,
+        email,
+        password,
         firstName: data.firstName,
         lastName: data.lastName,
         phoneNumber: data.phone,
