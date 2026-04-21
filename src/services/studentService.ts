@@ -8,11 +8,21 @@ export interface CreateStudentData {
   dateOfBirth: string;
   gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   passportNumber?: string;
+  nationality?: string;
   email?: string;
   phone?: string;
+  address?: string;
   gradeLevel?: string;
   enrollmentDate: string;
   branchId?: string;
+  parentGuardianName?: string;
+  parentGuardianEmail?: string;
+  parentGuardianPhone?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
+  medicalNotes?: string;
+  allergies?: string;
 }
 
 export interface UpdateStudentData {
@@ -20,10 +30,20 @@ export interface UpdateStudentData {
   lastName?: string;
   fatherName?: string;
   phone?: string;
+  nationality?: string;
+  address?: string;
   gradeLevel?: string;
   enrollmentDate?: string;
   status?: 'active' | 'inactive';
   branchId?: string;
+  parentGuardianName?: string;
+  parentGuardianEmail?: string;
+  parentGuardianPhone?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
+  medicalNotes?: string;
+  allergies?: string;
 }
 
 export async function createStudent(data: CreateStudentData) {
@@ -62,6 +82,16 @@ export async function createStudent(data: CreateStudentData) {
           gradeLevel: data.gradeLevel,
           enrollmentDate: data.enrollmentDate,
           branchId: data.branchId,
+          nationality: data.nationality,
+          address: data.address,
+          parentGuardianName: data.parentGuardianName,
+          parentGuardianEmail: data.parentGuardianEmail,
+          parentGuardianPhone: data.parentGuardianPhone,
+          emergencyContactName: data.emergencyContactName,
+          emergencyContactPhone: data.emergencyContactPhone,
+          emergencyContactRelationship: data.emergencyContactRelationship,
+          medicalNotes: data.medicalNotes,
+          allergies: data.allergies,
         },
       }),
     });
@@ -106,6 +136,16 @@ export async function updateStudent(studentId: string, userId: string, data: Upd
           gradeLevel: data.gradeLevel,
           enrollmentDate: data.enrollmentDate,
           branchId: data.branchId,
+          nationality: data.nationality,
+          address: data.address,
+          parentGuardianName: data.parentGuardianName,
+          parentGuardianEmail: data.parentGuardianEmail,
+          parentGuardianPhone: data.parentGuardianPhone,
+          emergencyContactName: data.emergencyContactName,
+          emergencyContactPhone: data.emergencyContactPhone,
+          emergencyContactRelationship: data.emergencyContactRelationship,
+          medicalNotes: data.medicalNotes,
+          allergies: data.allergies,
         },
       }),
     });

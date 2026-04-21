@@ -22,9 +22,20 @@ interface CreateUserRequest {
     position?: string;
     department?: string;
     dateJoined?: string;
+    bio?: string;
     gradeLevel?: string;
     enrollmentDate?: string;
     branchId?: string;
+    nationality?: string;
+    address?: string;
+    parentGuardianName?: string;
+    parentGuardianEmail?: string;
+    parentGuardianPhone?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    emergencyContactRelationship?: string;
+    medicalNotes?: string;
+    allergies?: string;
   };
 }
 
@@ -132,6 +143,16 @@ Deno.serve(async (req: Request) => {
           grade_level: requestData.additionalData.gradeLevel,
           enrollment_date: requestData.additionalData.enrollmentDate,
           branch_id: requestData.additionalData.branchId || null,
+          nationality: requestData.additionalData.nationality || null,
+          address: requestData.additionalData.address || null,
+          parent_guardian_name: requestData.additionalData.parentGuardianName || null,
+          parent_guardian_email: requestData.additionalData.parentGuardianEmail || null,
+          parent_guardian_phone: requestData.additionalData.parentGuardianPhone || null,
+          emergency_contact_name: requestData.additionalData.emergencyContactName || null,
+          emergency_contact_phone: requestData.additionalData.emergencyContactPhone || null,
+          emergency_contact_relationship: requestData.additionalData.emergencyContactRelationship || null,
+          medical_notes: requestData.additionalData.medicalNotes || null,
+          allergies: requestData.additionalData.allergies || null,
         })
         .select()
         .single();
@@ -150,6 +171,7 @@ Deno.serve(async (req: Request) => {
           department: requestData.additionalData.department,
           date_joined: requestData.additionalData.dateJoined,
           branch_id: requestData.additionalData.branchId || null,
+          bio: requestData.additionalData.bio || null,
         })
         .select()
         .single();

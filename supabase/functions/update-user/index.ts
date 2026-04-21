@@ -26,12 +26,23 @@ interface UpdateUserRequest {
     department?: string;
     dateJoined?: string;
     branchId?: string | null;
+    bio?: string;
   };
   studentData?: {
     studentId?: string;
     gradeLevel?: string;
     enrollmentDate?: string;
     branchId?: string | null;
+    nationality?: string;
+    address?: string;
+    parentGuardianName?: string;
+    parentGuardianEmail?: string;
+    parentGuardianPhone?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    emergencyContactRelationship?: string;
+    medicalNotes?: string;
+    allergies?: string;
   };
 }
 
@@ -208,6 +219,7 @@ Deno.serve(async (req: Request) => {
       if (staffFields.department !== undefined) staffUpdates.department = staffFields.department;
       if (staffFields.dateJoined !== undefined) staffUpdates.date_joined = staffFields.dateJoined;
       if ("branchId" in staffFields) staffUpdates.branch_id = staffFields.branchId ?? null;
+      if (staffFields.bio !== undefined) staffUpdates.bio = staffFields.bio || null;
 
       if (Object.keys(staffUpdates).length > 0) {
         const query = staffId
@@ -231,6 +243,16 @@ Deno.serve(async (req: Request) => {
       if (studentFields.gradeLevel !== undefined) studentUpdates.grade_level = studentFields.gradeLevel;
       if (studentFields.enrollmentDate !== undefined) studentUpdates.enrollment_date = studentFields.enrollmentDate;
       if ("branchId" in studentFields) studentUpdates.branch_id = studentFields.branchId ?? null;
+      if (studentFields.nationality !== undefined) studentUpdates.nationality = studentFields.nationality || null;
+      if (studentFields.address !== undefined) studentUpdates.address = studentFields.address || null;
+      if (studentFields.parentGuardianName !== undefined) studentUpdates.parent_guardian_name = studentFields.parentGuardianName || null;
+      if (studentFields.parentGuardianEmail !== undefined) studentUpdates.parent_guardian_email = studentFields.parentGuardianEmail || null;
+      if (studentFields.parentGuardianPhone !== undefined) studentUpdates.parent_guardian_phone = studentFields.parentGuardianPhone || null;
+      if (studentFields.emergencyContactName !== undefined) studentUpdates.emergency_contact_name = studentFields.emergencyContactName || null;
+      if (studentFields.emergencyContactPhone !== undefined) studentUpdates.emergency_contact_phone = studentFields.emergencyContactPhone || null;
+      if (studentFields.emergencyContactRelationship !== undefined) studentUpdates.emergency_contact_relationship = studentFields.emergencyContactRelationship || null;
+      if (studentFields.medicalNotes !== undefined) studentUpdates.medical_notes = studentFields.medicalNotes || null;
+      if (studentFields.allergies !== undefined) studentUpdates.allergies = studentFields.allergies || null;
 
       if (Object.keys(studentUpdates).length > 0) {
         const query = studentId

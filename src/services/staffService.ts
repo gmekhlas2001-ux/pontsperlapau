@@ -16,6 +16,7 @@ export interface CreateStaffData {
   role: 'superadmin' | 'admin' | 'teacher' | 'librarian';
   dateJoined: string;
   branchId?: string;
+  bio?: string;
 }
 
 export async function createStaff(data: CreateStaffData) {
@@ -51,6 +52,7 @@ export async function createStaff(data: CreateStaffData) {
           department: data.department,
           dateJoined: data.dateJoined,
           branchId: data.branchId,
+          bio: data.bio,
         },
       }),
     });
@@ -80,6 +82,7 @@ export interface UpdateStaffData {
   status?: 'active' | 'inactive';
   dateJoined?: string;
   branchId?: string;
+  bio?: string;
 }
 
 export async function updateStaff(staffId: string, userId: string, data: UpdateStaffData) {
@@ -110,6 +113,7 @@ export async function updateStaff(staffId: string, userId: string, data: UpdateS
           department: data.department,
           dateJoined: data.dateJoined,
           branchId: data.branchId,
+          bio: data.bio,
         },
       }),
     });

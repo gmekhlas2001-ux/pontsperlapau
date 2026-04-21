@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -43,13 +44,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List, Eye, Calendar, Briefcase, Building2, UserCheck, UserX } from 'lucide-react';
+import { type LucideIcon, Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List, Eye, Calendar, Briefcase, Building2, UserCheck, UserX, MapPin, User, Heart, FileText, Hash, Shield, IdCard } from 'lucide-react';
 import { formatDate, getFullName } from '@/lib/utils';
 import type { Staff } from '@/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+
+function calculateAge(dob: string): number {
+  const today = new Date();
+  const birth = new Date(dob);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function ProfileField({ icon: Icon, label, value, className }: { icon: LucideIcon; label: string; value?: string | null; className?: string }) {
+  return (
+    <div className={`flex items-start gap-2.5${className ? ' ' + className : ''}`}>
+      <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide leading-none mb-1">{label}</p>
+        {value ? (
+          <p className="text-sm break-words">{value}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground/40 italic">Not provided</p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface StaffRecord extends Staff {
   userId: string;
   branchId?: string;
+  fatherName?: string;
+  passportNumber?: string;
+  employeeId?: string;
+  employmentType?: string;
 }
 
 export function Staff() {
@@ -92,6 +124,13 @@ export function Staff() {
         position: s.position ?? '',
         department: s.department ?? undefined,
         dateJoined: s.date_joined ?? '',
+        dateOfBirth: s.user?.date_of_birth ?? undefined,
+        gender: s.user?.gender ?? undefined,
+        bio: s.bio ?? undefined,
+        fatherName: s.user?.father_name ?? undefined,
+        passportNumber: s.user?.passport_number ?? undefined,
+        employeeId: s.employee_id ?? undefined,
+        employmentType: s.employment_type ?? undefined,
         branchId: s.branch_id ?? undefined,
         createdAt: s.created_at ?? '',
         updatedAt: s.updated_at ?? '',
@@ -150,6 +189,7 @@ export function Staff() {
     setEditData({
       firstName: staff.firstName,
       lastName: staff.lastName,
+      fatherName: staff.fatherName ?? '',
       phone: staff.phone ?? '',
       position: staff.position,
       department: staff.department ?? '',
@@ -157,6 +197,7 @@ export function Staff() {
       status: staff.status as UpdateStaffData['status'],
       dateJoined: staff.dateJoined,
       branchId: staff.branchId ?? '',
+      bio: staff.bio ?? '',
     });
     setEditEmail(staff.email);
     setEditPassword('');
@@ -458,64 +499,31 @@ export function Staff() {
                 <DialogDescription>Fill in the details to add a new staff member to the system</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+
+                {/* Personal Information */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">
-                      {t('staff.firstName')} <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="firstName"
-                      required
-                      value={formData.firstName || ''}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    />
+                    <Label htmlFor="firstName">{t('staff.firstName')} <span className="text-red-500">*</span></Label>
+                    <Input id="firstName" required value={formData.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">
-                      {t('staff.lastName')} <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="lastName"
-                      required
-                      value={formData.lastName || ''}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    />
+                    <Label htmlFor="lastName">{t('staff.lastName')} <span className="text-red-500">*</span></Label>
+                    <Input id="lastName" required value={formData.lastName || ''} onChange={(e) => handleInputChange('lastName', e.target.value)} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="fatherName">
-                    Father's Name <span className="text-muted-foreground text-xs">(optional)</span>
-                  </Label>
-                  <Input
-                    id="fatherName"
-                    value={formData.fatherName || ''}
-                    onChange={(e) => handleInputChange('fatherName', e.target.value)}
-                  />
+                  <Label htmlFor="fatherName">Father's Name</Label>
+                  <Input id="fatherName" value={formData.fatherName || ''} onChange={(e) => handleInputChange('fatherName', e.target.value)} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dateOfBirth">
-                      Date of Birth <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="dateOfBirth"
-                      type="date"
-                      required
-                      value={formData.dateOfBirth || ''}
-                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                    />
+                    <Label htmlFor="dateOfBirth">Date of Birth <span className="text-red-500">*</span></Label>
+                    <Input id="dateOfBirth" type="date" required value={formData.dateOfBirth || ''} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gender">
-                      Gender <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={formData.gender}
-                      onValueChange={(value) => handleInputChange('gender', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
+                    <Label htmlFor="gender">Gender <span className="text-red-500">*</span></Label>
+                    <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
+                      <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="male">Male</SelectItem>
                         <SelectItem value="female">Female</SelectItem>
@@ -526,128 +534,87 @@ export function Staff() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="passportNumber">
-                    Passport/ID Number <span className="text-muted-foreground text-xs">(optional)</span>
-                  </Label>
-                  <Input
-                    id="passportNumber"
-                    value={formData.passportNumber || ''}
-                    onChange={(e) => handleInputChange('passportNumber', e.target.value)}
-                  />
+                  <Label htmlFor="passportNumber">Passport / ID Number</Label>
+                  <Input id="passportNumber" value={formData.passportNumber || ''} onChange={(e) => handleInputChange('passportNumber', e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">
-                    {t('staff.email')} <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    required
-                    value={formData.email || ''}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">
-                    Password <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    value={formData.password || ''}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">
-                    {t('staff.phone')} <span className="text-muted-foreground text-xs">(optional)</span>
-                  </Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone || ''}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="position">
-                      {t('staff.position')} <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="position"
-                      required
-                      value={formData.position || ''}
-                      onChange={(e) => handleInputChange('position', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="department">
-                      {t('staff.department')} <span className="text-muted-foreground text-xs">(optional)</span>
-                    </Label>
-                    <Input
-                      id="department"
-                      value={formData.department || ''}
-                      onChange={(e) => handleInputChange('department', e.target.value)}
-                    />
+
+                {/* Login & Contact */}
+                <div className="border-t pt-4">
+                  <p className="text-sm font-semibold mb-3">Login & Contact</p>
+                  <div className="grid gap-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">{t('staff.email')} <span className="text-red-500">*</span></Label>
+                        <Input id="email" type="email" required value={formData.email || ''} onChange={(e) => handleInputChange('email', e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                        <Input id="password" type="password" required value={formData.password || ''} onChange={(e) => handleInputChange('password', e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">{t('staff.phone')} <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                      <Input id="phone" value={formData.phone || ''} onChange={(e) => handleInputChange('phone', e.target.value)} />
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">
-                    {t('staff.role')} <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value) => handleInputChange('role', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="superadmin">{t('roles.superadmin')}</SelectItem>
-                      <SelectItem value="admin">{t('roles.admin')}</SelectItem>
-                      <SelectItem value="teacher">{t('roles.teacher')}</SelectItem>
-                      <SelectItem value="librarian">{t('roles.librarian')}</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                {/* Employment */}
+                <div className="border-t pt-4">
+                  <p className="text-sm font-semibold mb-3">Employment</p>
+                  <div className="grid gap-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="position">{t('staff.position')} <span className="text-red-500">*</span></Label>
+                        <Input id="position" required value={formData.position || ''} onChange={(e) => handleInputChange('position', e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="department">{t('staff.department')}</Label>
+                        <Input id="department" value={formData.department || ''} onChange={(e) => handleInputChange('department', e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="role">{t('staff.role')} <span className="text-red-500">*</span></Label>
+                        <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
+                          <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="superadmin">{t('roles.superadmin')}</SelectItem>
+                            <SelectItem value="admin">{t('roles.admin')}</SelectItem>
+                            <SelectItem value="teacher">{t('roles.teacher')}</SelectItem>
+                            <SelectItem value="librarian">{t('roles.librarian')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dateJoined">Date Joined <span className="text-red-500">*</span></Label>
+                        <Input id="dateJoined" type="date" required value={formData.dateJoined || ''} onChange={(e) => handleInputChange('dateJoined', e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="branch">Branch <span className="text-red-500">*</span></Label>
+                      <Select value={formData.branchId || ''} onValueChange={(value) => handleInputChange('branchId', value)}>
+                        <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                        <SelectContent>
+                          {branches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dateJoined">
-                    Date Joined <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="dateJoined"
-                    type="date"
-                    required
-                    value={formData.dateJoined || ''}
-                    onChange={(e) => handleInputChange('dateJoined', e.target.value)}
-                  />
+
+                {/* Biography */}
+                <div className="border-t pt-4">
+                  <p className="text-sm font-semibold mb-1">Biography</p>
+                  <p className="text-xs text-muted-foreground mb-3">Optional — a short professional bio shown on the staff profile</p>
+                  <Textarea id="bio" rows={3} placeholder="A brief professional background, qualifications, or specialisation..." value={formData.bio || ''} onChange={(e) => handleInputChange('bio', e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="branch">
-                    Branch <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.branchId || ''}
-                    onValueChange={(value) => handleInputChange('branchId', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    {t('common.cancel')}
-                  </Button>
-                  <Button onClick={handleSaveStaff} disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : t('common.save')}
-                  </Button>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>{t('common.cancel')}</Button>
+                  <Button onClick={handleSaveStaff} disabled={isSubmitting}>{isSubmitting ? 'Saving...' : t('common.save')}</Button>
                 </div>
               </div>
             </DialogContent>
@@ -697,62 +664,108 @@ export function Staff() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Staff Profile</DialogTitle>
-            <DialogDescription>Full details for this staff member</DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+          <DialogTitle className="sr-only">Staff Profile</DialogTitle>
+          <DialogDescription className="sr-only">Full details for this staff member</DialogDescription>
           {selectedStaff && (
-            <div className="space-y-6 py-2">
-              <div className="flex items-center gap-4">
-                <AvatarWithFallback
-                  src={selectedStaff.avatar}
-                  firstName={selectedStaff.firstName}
-                  lastName={selectedStaff.lastName}
-                  className="h-16 w-16 text-lg"
-                />
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    {getFullName(selectedStaff.firstName, selectedStaff.lastName)}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{selectedStaff.position}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-                      {t(`roles.${selectedStaff.role}`)}
-                    </span>
-                    <StatusBadge status={selectedStaff.status} />
+            <div className="flex flex-col max-h-[88vh] overflow-hidden">
+              {/* Gradient header */}
+              <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 px-6 pt-7 pb-5 text-white shrink-0">
+                <div className="flex items-start gap-4">
+                  <AvatarWithFallback
+                    src={selectedStaff.avatar}
+                    firstName={selectedStaff.firstName}
+                    lastName={selectedStaff.lastName}
+                    className="h-20 w-20 text-xl ring-4 ring-white/30 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0 pt-1">
+                    <h2 className="text-xl font-bold leading-tight">
+                      {getFullName(selectedStaff.firstName, selectedStaff.lastName)}
+                    </h2>
+                    <p className="text-emerald-100/90 text-sm mt-0.5">{selectedStaff.position}</p>
+                    {selectedStaff.employeeId && (
+                      <p className="text-emerald-100/60 text-xs font-mono mt-0.5">{selectedStaff.employeeId}</p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">
+                        {t(`roles.${selectedStaff.role}`)}
+                      </span>
+                      <StatusBadge status={selectedStaff.status} />
+                      {selectedStaff.employmentType && (
+                        <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium capitalize">
+                          {selectedStaff.employmentType.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid gap-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span>{selectedStaff.email}</span>
-                </div>
-                {selectedStaff.phone && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span>{selectedStaff.phone}</span>
-                  </div>
-                )}
-                {selectedStaff.department && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span>{selectedStaff.department}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-3 text-sm">
-                  <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span>{selectedStaff.position}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span>{t('staff.dateJoined')}: {formatDate(selectedStaff.dateJoined)}</span>
-                </div>
-              </div>
+              {/* Tabbed content */}
+              <Tabs defaultValue="overview" className="flex flex-col flex-1 min-h-0">
+                <TabsList className="rounded-none border-b px-4 h-11 bg-background justify-start gap-1 shrink-0 w-full">
+                  <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                  <TabsTrigger value="personal" className="text-xs">Personal</TabsTrigger>
+                </TabsList>
+                <div className="flex-1 overflow-y-auto">
+                  <TabsContent value="overview" className="p-6 m-0 space-y-5">
+                    <div>
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contact</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <ProfileField icon={Mail} label="Email" value={selectedStaff.email} />
+                        <ProfileField icon={Phone} label="Phone" value={selectedStaff.phone} />
+                      </div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Employment</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <ProfileField icon={Briefcase} label="Position" value={selectedStaff.position} />
+                        <ProfileField icon={Building2} label="Department" value={selectedStaff.department} />
+                        <ProfileField icon={Calendar} label="Date Joined" value={formatDate(selectedStaff.dateJoined)} />
+                        <ProfileField icon={Building2} label="Branch" value={branches.find(b => b.id === selectedStaff.branchId)?.name} />
+                        <ProfileField icon={Hash} label="Employee ID" value={selectedStaff.employeeId} />
+                        <ProfileField icon={IdCard} label="Employment Type" value={selectedStaff.employmentType?.replace(/_/g, ' ')} />
+                      </div>
+                    </div>
+                    <Separator />
+                    <p className="text-xs text-muted-foreground">Staff member since {formatDate(selectedStaff.createdAt)}</p>
+                  </TabsContent>
 
-              <div className="flex justify-end gap-2">
+                  <TabsContent value="personal" className="p-6 m-0 space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <ProfileField
+                        icon={Calendar}
+                        label="Date of Birth"
+                        value={selectedStaff.dateOfBirth
+                          ? `${formatDate(selectedStaff.dateOfBirth)} · Age ${calculateAge(selectedStaff.dateOfBirth)}`
+                          : undefined}
+                      />
+                      <ProfileField
+                        icon={User}
+                        label="Gender"
+                        value={selectedStaff.gender
+                          ? selectedStaff.gender.charAt(0).toUpperCase() + selectedStaff.gender.slice(1)
+                          : undefined}
+                      />
+                      <ProfileField icon={User} label="Father's Name" value={selectedStaff.fatherName} />
+                      <ProfileField icon={FileText} label="Passport / ID No." value={selectedStaff.passportNumber} />
+                    </div>
+                    {selectedStaff.bio && (
+                      <>
+                        <Separator />
+                        <div>
+                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Biography</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{selectedStaff.bio}</p>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+                </div>
+              </Tabs>
+
+              {/* Footer */}
+              <div className="border-t px-6 py-4 flex justify-end gap-2 shrink-0 bg-background">
                 <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
                   {t('common.close')}
                 </Button>
@@ -775,144 +788,112 @@ export function Staff() {
           </DialogHeader>
           {selectedStaff && (
             <div className="grid gap-4 py-4">
+
+              {/* Personal */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-firstName">{t('staff.firstName')}</Label>
-                  <Input
-                    id="edit-firstName"
-                    value={editData.firstName ?? ''}
-                    onChange={(e) => handleEditChange('firstName', e.target.value)}
-                  />
+                  <Input id="edit-firstName" value={editData.firstName ?? ''} onChange={(e) => handleEditChange('firstName', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-lastName">{t('staff.lastName')}</Label>
-                  <Input
-                    id="edit-lastName"
-                    value={editData.lastName ?? ''}
-                    onChange={(e) => handleEditChange('lastName', e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-phone">{t('staff.phone')}</Label>
-                <Input
-                  id="edit-phone"
-                  value={editData.phone ?? ''}
-                  onChange={(e) => handleEditChange('phone', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-branch">Branch <span className="text-red-500">*</span></Label>
-                <Select
-                  value={editData.branchId ?? ''}
-                  onValueChange={(value) => handleEditChange('branchId', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-position">{t('staff.position')}</Label>
-                  <Input
-                    id="edit-position"
-                    value={editData.position ?? ''}
-                    onChange={(e) => handleEditChange('position', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-department">{t('staff.department')}</Label>
-                  <Input
-                    id="edit-department"
-                    value={editData.department ?? ''}
-                    onChange={(e) => handleEditChange('department', e.target.value)}
-                  />
+                  <Input id="edit-lastName" value={editData.lastName ?? ''} onChange={(e) => handleEditChange('lastName', e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-role">{t('staff.role')}</Label>
-                  <Select
-                    value={editData.role ?? ''}
-                    onValueChange={(value) => handleEditChange('role', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="superadmin">{t('roles.superadmin')}</SelectItem>
-                      <SelectItem value="admin">{t('roles.admin')}</SelectItem>
-                      <SelectItem value="teacher">{t('roles.teacher')}</SelectItem>
-                      <SelectItem value="librarian">{t('roles.librarian')}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="edit-fatherName">Father's Name</Label>
+                  <Input id="edit-fatherName" value={editData.fatherName ?? ''} onChange={(e) => handleEditChange('fatherName', e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-status">{t('staff.status')}</Label>
-                  <Select
-                    value={editData.status ?? ''}
-                    onValueChange={(value) => handleEditChange('status', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="edit-phone">{t('staff.phone')}</Label>
+                  <Input id="edit-phone" value={editData.phone ?? ''} onChange={(e) => handleEditChange('phone', e.target.value)} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-dateJoined">Date Joined</Label>
-                <Input
-                  id="edit-dateJoined"
-                  type="date"
-                  value={editData.dateJoined ?? ''}
-                  onChange={(e) => handleEditChange('dateJoined', e.target.value)}
-                />
-              </div>
-              {user?.role === 'superadmin' && (
-                <>
-                  <div className="border-t pt-4">
-                    <p className="text-sm font-medium text-muted-foreground mb-3">Credentials (Superadmin only)</p>
-                    <div className="grid gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-email">Email</Label>
-                        <Input
-                          id="edit-email"
-                          type="email"
-                          value={editEmail}
-                          onChange={(e) => setEditEmail(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-password">New Password <span className="text-muted-foreground text-xs">(leave blank to keep current)</span></Label>
-                        <Input
-                          id="edit-password"
-                          type="password"
-                          placeholder="Enter new password"
-                          value={editPassword}
-                          onChange={(e) => setEditPassword(e.target.value)}
-                        />
-                      </div>
+
+              {/* Employment */}
+              <div className="border-t pt-4">
+                <p className="text-sm font-semibold mb-3">Employment</p>
+                <div className="grid gap-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-position">{t('staff.position')}</Label>
+                      <Input id="edit-position" value={editData.position ?? ''} onChange={(e) => handleEditChange('position', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-department">{t('staff.department')}</Label>
+                      <Input id="edit-department" value={editData.department ?? ''} onChange={(e) => handleEditChange('department', e.target.value)} />
                     </div>
                   </div>
-                </>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-role">{t('staff.role')}</Label>
+                      <Select value={editData.role ?? ''} onValueChange={(value) => handleEditChange('role', value)}>
+                        <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="superadmin">{t('roles.superadmin')}</SelectItem>
+                          <SelectItem value="admin">{t('roles.admin')}</SelectItem>
+                          <SelectItem value="teacher">{t('roles.teacher')}</SelectItem>
+                          <SelectItem value="librarian">{t('roles.librarian')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-status">{t('staff.status')}</Label>
+                      <Select value={editData.status ?? ''} onValueChange={(value) => handleEditChange('status', value)}>
+                        <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-dateJoined">Date Joined</Label>
+                      <Input id="edit-dateJoined" type="date" value={editData.dateJoined ?? ''} onChange={(e) => handleEditChange('dateJoined', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-branch">Branch <span className="text-red-500">*</span></Label>
+                      <Select value={editData.branchId ?? ''} onValueChange={(value) => handleEditChange('branchId', value)}>
+                        <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                        <SelectContent>
+                          {branches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>{branch.name} — {branch.province}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Biography */}
+              <div className="border-t pt-4">
+                <p className="text-sm font-semibold mb-3">Biography</p>
+                <Textarea id="edit-bio" rows={3} placeholder="A brief professional background, qualifications, or specialisation..." value={editData.bio ?? ''} onChange={(e) => handleEditChange('bio', e.target.value)} />
+              </div>
+
+              {user?.role === 'superadmin' && (
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium text-muted-foreground mb-3">Credentials (Superadmin only)</p>
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input id="edit-email" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-password">New Password <span className="text-muted-foreground text-xs">(leave blank to keep current)</span></Label>
+                      <Input id="edit-password" type="password" placeholder="Enter new password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
               )}
+
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  {t('common.cancel')}
-                </Button>
-                <Button onClick={handleSaveEdit} disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : t('common.save')}
-                </Button>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>{t('common.cancel')}</Button>
+                <Button onClick={handleSaveEdit} disabled={isSubmitting}>{isSubmitting ? 'Saving...' : t('common.save')}</Button>
               </div>
             </div>
           )}
