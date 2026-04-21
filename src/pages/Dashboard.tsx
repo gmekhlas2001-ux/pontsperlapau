@@ -9,6 +9,7 @@ import { mockClasses, mockBookLoans } from '@/lib/mockData';
 import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
 import { fetchRecentActivities, type ActivityLog } from '@/services/activityService';
 import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Calendar, Clock, CircleAlert as AlertCircle, MapPin } from 'lucide-react';
+import i18n from '@/i18n';
 import {
   BarChart,
   Bar,
@@ -273,7 +274,7 @@ export function Dashboard() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium leading-snug">{activity.description}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(activity.created_at).toLocaleString()}
+                        {new Date(activity.created_at).toLocaleString(i18n.language)}
                       </p>
                     </div>
                   </div>

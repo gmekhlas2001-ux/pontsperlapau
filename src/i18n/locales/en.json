@@ -65,7 +65,8 @@
     "refresh": "Refresh",
     "status": "Status",
     "notes": "Notes",
-    "address": "Address"
+    "address": "Address",
+    "notProvided": "Not provided"
   },
   "auth": {
     "login": "Login",

@@ -61,12 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      const { data: isValidPassword } = await supabase.rpc('verify_password', {
+      const { data: isValidPassword, error: pwError } = await supabase.rpc('verify_password', {
         user_email: email.toLowerCase(),
         user_password: password
       });
 
-      if (!isValidPassword) {
+      if (pwError || !isValidPassword) {
         return false;
       }
 

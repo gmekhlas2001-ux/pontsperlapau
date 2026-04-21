@@ -65,7 +65,8 @@
     "refresh": "Actualitzar",
     "status": "Estat",
     "notes": "Notes",
-    "address": "Adreça"
+    "address": "Adreça",
+    "notProvided": "No proporcionat"
   },
   "auth": {
     "login": "Iniciar Sessió",

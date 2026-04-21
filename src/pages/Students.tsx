@@ -91,6 +91,7 @@ function calculateAge(dob: string): number {
 }
 
 function ProfileField({ icon: Icon, label, value, className }: { icon: LucideIcon; label: string; value?: string | null; className?: string }) {
+  const { t } = useTranslation();
   return (
     <div className={`flex items-start gap-2.5${className ? ' ' + className : ''}`}>
       <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
@@ -99,7 +100,7 @@ function ProfileField({ icon: Icon, label, value, className }: { icon: LucideIco
         {value ? (
           <p className="text-sm break-words">{value}</p>
         ) : (
-          <p className="text-sm text-muted-foreground/40 italic">Not provided</p>
+          <p className="text-sm text-muted-foreground/40 italic">{t('common.notProvided')}</p>
         )}
       </div>
     </div>

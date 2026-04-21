@@ -25,7 +25,7 @@ export interface BranchStat {
 }
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
-  const [staffResult, studentsResult, classesResult, booksResult, branchesResult] = await Promise.all([
+  const [staffResult, studentsResult, classesResult, booksResult, branchesResult, overdueResult] = await Promise.all([
     supabase
       .from('staff')
       .select('id, user:users!inner(status)')
@@ -43,6 +43,11 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     supabase
       .from('branches')
       .select('id', { count: 'exact', head: true }),
+    supabase
+      .from('book_borrowings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_overdue', true)
+      .is('returned_date', null),
   ]);
 
   const staffRows = (staffResult.data ?? []) as unknown as Array<{ user: { status: string } | null }>;
@@ -67,7 +72,7 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     totalBooks,
     availableBooks,
     borrowedBooks,
-    overdueBooks: 0,
+    overdueBooks: overdueResult.count ?? 0,
     totalBranches: branchesResult.count ?? 0,
   };
 }

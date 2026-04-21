@@ -65,7 +65,8 @@
     "refresh": "بازآوری",
     "status": "وضعیت",
     "notes": "یادداشت‌ها",
-    "address": "آدرس"
+    "address": "آدرس",
+    "notProvided": "ارائه نشده"
   },
   "auth": {
     "login": "ورود",

@@ -65,7 +65,8 @@
     "refresh": "Actualizar",
     "status": "Estado",
     "notes": "Notas",
-    "address": "Dirección"
+    "address": "Dirección",
+    "notProvided": "No proporcionado"
   },
   "auth": {
     "login": "Iniciar Sesión",
