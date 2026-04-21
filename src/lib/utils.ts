@@ -1,22 +1,23 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import i18n from '@/i18n';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: string | Date, locale: string = 'ca'): string {
+export function formatDate(date: string | Date, locale?: string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString(locale, {
+  return d.toLocaleDateString(locale ?? i18n.language, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   });
 }
 
-export function formatDateTime(date: string | Date, locale: string = 'ca'): string {
+export function formatDateTime(date: string | Date, locale?: string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString(locale, {
+  return d.toLocaleDateString(locale ?? i18n.language, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
