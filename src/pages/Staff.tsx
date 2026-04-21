@@ -44,7 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type LucideIcon, Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List, Eye, Calendar, Briefcase, Building2, UserCheck, UserX, MapPin, User, Heart, FileText, Hash, Shield, IdCard } from 'lucide-react';
+import { type LucideIcon, Plus, MoveHorizontal as MoreHorizontal, Mail, Phone, Pencil, Trash2, Grid3x2 as Grid3X3, List, Eye, Calendar, Briefcase, Building2, UserCheck, UserX, User, FileText, Hash, IdCard } from 'lucide-react';
 import { formatDate, getFullName } from '@/lib/utils';
 import type { Staff } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
