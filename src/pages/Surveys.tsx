@@ -58,11 +58,6 @@ const STATUS_CONFIG: Record<SurveyStatus, { label: string; className: string; ic
   closed: { label: 'Closed', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400', icon: Clock },
 };
 
-const SENTIMENT_CONFIG: Record<Sentiment, { label: string; className: string }> = {
-  positive: { label: 'Positive', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' },
-  negative: { label: 'Negative', className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' },
-  neutral:  { label: 'Neutral',  className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' },
-};
 
 const PIE_COLORS = ['#10b981', '#ef4444', '#94a3b8'];
 
@@ -396,10 +391,25 @@ interface DataEntryProps {
   defaultBranchId?: string;
 }
 
+const OPTION_ACCENT: Record<Sentiment, string> = {
+  positive: 'border-t-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/20',
+  negative: 'border-t-red-400 bg-red-50/60 dark:bg-red-950/20',
+  neutral:  'border-t-slate-300 bg-slate-50/60 dark:bg-slate-800/20',
+};
+const OPTION_INPUT_FOCUS: Record<Sentiment, string> = {
+  positive: 'focus-visible:ring-emerald-400',
+  negative: 'focus-visible:ring-red-400',
+  neutral:  'focus-visible:ring-slate-400',
+};
+const OPTION_DOT: Record<Sentiment, string> = {
+  positive: 'bg-emerald-400',
+  negative: 'bg-red-400',
+  neutral:  'bg-slate-400',
+};
+
 function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBranchId }: DataEntryProps) {
   const [branchId, setBranchId] = useState(defaultBranchId ?? '');
   const [totalRespondents, setTotalRespondents] = useState('');
-  // counts[questionId][optionId] = count string
   const [counts, setCounts] = useState<Record<string, Record<string, string>>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -448,97 +458,218 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     onClose();
   };
 
+  const selectedBranch = branches.find((b) => b.id === branchId);
+  const respondentsNum = parseInt(totalRespondents) || 0;
+
+  // overall completion: how many questions have a non-zero row total
+  const filledCount = survey.questions.filter((q) => rowTotal(q.id) > 0).length;
+  const completionPct = survey.questions.length > 0 ? Math.round((filledCount / survey.questions.length) * 100) : 0;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5 text-primary" />
-            Enter Survey Data
-          </DialogTitle>
-          <DialogDescription>{survey.title}{survey.period ? ` · ${survey.period}` : ''}</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
 
-        <div className="flex items-center gap-4 px-6 py-3 border-b bg-muted/30 shrink-0">
-          <div className="flex items-center gap-2 flex-1">
-            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger className="w-52"><SelectValue placeholder="Select branch" /></SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+        {/* ── Header ── */}
+        <div className="relative px-6 pt-6 pb-5 shrink-0 overflow-hidden">
+          {/* Subtle gradient backdrop */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Send className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold leading-tight">Enter Survey Data</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground mt-0.5">
+                  {survey.title}{survey.period ? <span className="mx-1.5 opacity-40">·</span> : ''}{survey.period}
+                </DialogDescription>
+              </div>
+            </div>
+            {/* Completion pill */}
+            <div className={cn(
+              'shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border',
+              completionPct === 100
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                : 'bg-muted text-muted-foreground border-border'
+            )}>
+              <span className={cn('h-1.5 w-1.5 rounded-full', completionPct === 100 ? 'bg-emerald-500' : 'bg-slate-400')} />
+              {filledCount}/{survey.questions.length} filled
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <Label className="text-sm whitespace-nowrap">Total Respondents</Label>
-            <Input type="number" min="0" className="w-24 h-8" value={totalRespondents} onChange={(e) => setTotalRespondents(e.target.value)} />
+
+          {/* Branch + Respondents row */}
+          <div className="relative mt-4 grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Building2 className="h-3 w-3" /> Branch
+              </label>
+              <Select value={branchId} onValueChange={setBranchId}>
+                <SelectTrigger className="h-10 bg-background border-border shadow-sm">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Users className="h-3 w-3" /> Total Respondents
+              </label>
+              <Input
+                type="number" min="0" placeholder="0"
+                className="h-10 bg-background border-border shadow-sm text-center font-semibold text-base tabular-nums"
+                value={totalRespondents}
+                onChange={(e) => setTotalRespondents(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto">
+        <div className="h-px bg-border shrink-0" />
+
+        {/* ── Question cards ── */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {loading ? (
-            <div className="p-6 space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-xl border p-4 space-y-3">
+                <Skeleton className="h-4 w-3/4" />
+                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${survey.options.length}, 1fr)` }}>
+                  {survey.options.map((_, j) => <Skeleton key={j} className="h-20 rounded-lg" />)}
+                </div>
+              </div>
+            ))
           ) : (
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-muted/50 sticky top-0 z-10">
-                  <th className="text-left p-3 font-semibold text-xs uppercase tracking-wide border-b w-[45%]">Question</th>
-                  {survey.options.map((opt) => (
-                    <th key={opt.id} className="p-2 font-medium text-center border-b min-w-[80px]">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-semibold', SENTIMENT_CONFIG[opt.sentiment].className)}>
-                          {opt.label}
-                        </span>
+            survey.questions.map((q, qi) => {
+              const total = rowTotal(q.id);
+              const over = respondentsNum > 0 && total > respondentsNum;
+              const exact = respondentsNum > 0 && total === respondentsNum;
+              const positiveCount = survey.options
+                .filter((o) => o.sentiment === 'positive')
+                .reduce((s, o) => s + (parseInt(counts[q.id]?.[o.id] ?? '0') || 0), 0);
+              const negativeCount = survey.options
+                .filter((o) => o.sentiment === 'negative')
+                .reduce((s, o) => s + (parseInt(counts[q.id]?.[o.id] ?? '0') || 0), 0);
+              const posW = total > 0 ? (positiveCount / total) * 100 : 0;
+              const negW = total > 0 ? (negativeCount / total) * 100 : 0;
+
+              return (
+                <div
+                  key={q.id}
+                  className={cn(
+                    'rounded-xl border bg-card transition-all duration-200',
+                    over ? 'border-red-300 dark:border-red-800 shadow-sm shadow-red-100 dark:shadow-red-950/20'
+                      : exact ? 'border-emerald-300 dark:border-emerald-800'
+                      : 'border-border hover:border-border/80'
+                  )}
+                >
+                  {/* Question header */}
+                  <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+                    <span className={cn(
+                      'shrink-0 h-6 w-6 rounded-full text-[11px] font-bold flex items-center justify-center mt-0.5',
+                      over ? 'bg-red-100 text-red-600 dark:bg-red-900/40'
+                        : exact ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40'
+                        : 'bg-primary/10 text-primary'
+                    )}>
+                      {qi + 1}
+                    </span>
+                    <p className="text-sm font-medium leading-snug flex-1">{q.question_text}</p>
+                    {/* Row total badge */}
+                    <div className={cn(
+                      'shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums',
+                      over ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'
+                        : exact ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                        : total > 0 ? 'bg-muted text-muted-foreground'
+                        : 'bg-muted/50 text-muted-foreground/50'
+                    )}>
+                      {over && '⚠ '}
+                      {total}{respondentsNum > 0 ? ` / ${respondentsNum}` : ''}
+                    </div>
+                  </div>
+
+                  {/* Option tiles */}
+                  <div className="px-4 pb-3">
+                    <div
+                      className="grid gap-2"
+                      style={{ gridTemplateColumns: `repeat(${Math.min(survey.options.length, 6)}, 1fr)` }}
+                    >
+                      {survey.options.map((opt) => {
+                        const val = counts[q.id]?.[opt.id] ?? '';
+                        const num = parseInt(val) || 0;
+                        return (
+                          <div
+                            key={opt.id}
+                            className={cn(
+                              'flex flex-col items-center gap-1.5 rounded-lg border-t-2 p-2.5 transition-all',
+                              OPTION_ACCENT[opt.sentiment],
+                              num > 0 ? 'opacity-100' : 'opacity-70 hover:opacity-90'
+                            )}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', OPTION_DOT[opt.sentiment])} />
+                              <span className="text-[11px] font-semibold text-center leading-tight line-clamp-2">
+                                {opt.label}
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={val}
+                              onChange={(e) => setCount(q.id, opt.id, e.target.value)}
+                              className={cn(
+                                'w-full h-9 text-center text-base font-bold tabular-nums rounded-md border bg-background',
+                                'outline-none focus-visible:ring-2 focus-visible:ring-offset-0 transition-colors',
+                                'placeholder:text-muted-foreground/30',
+                                OPTION_INPUT_FOCUS[opt.sentiment],
+                                num > 0 ? 'text-foreground' : 'text-muted-foreground'
+                              )}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Mini distribution bar */}
+                  {total > 0 && (
+                    <div className="px-4 pb-3">
+                      <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5">
+                        <div className="bg-emerald-400 rounded-full transition-all duration-300" style={{ width: `${posW}%` }} />
+                        <div className="bg-red-400 rounded-full transition-all duration-300" style={{ width: `${negW}%` }} />
+                        <div className="bg-slate-300 dark:bg-slate-600 rounded-full flex-1" />
                       </div>
-                    </th>
-                  ))}
-                  <th className="p-2 font-semibold text-center border-b text-xs text-muted-foreground min-w-[60px]">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {survey.questions.map((q, qi) => {
-                  const total = rowTotal(q.id);
-                  const respondents = parseInt(totalRespondents) || 0;
-                  const over = respondents > 0 && total > respondents;
-                  return (
-                    <tr key={q.id} className={cn('border-b hover:bg-muted/20 transition-colors', over && 'bg-red-50 dark:bg-red-950/20')}>
-                      <td className="p-3 text-sm leading-snug">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center">
-                            {qi + 1}
-                          </span>
-                          {q.question_text}
-                        </span>
-                      </td>
-                      {survey.options.map((opt) => (
-                        <td key={opt.id} className="p-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            className="h-8 text-center text-sm w-full"
-                            value={counts[q.id]?.[opt.id] ?? ''}
-                            onChange={(e) => setCount(q.id, opt.id, e.target.value)}
-                          />
-                        </td>
-                      ))}
-                      <td className={cn('p-2 text-center font-semibold tabular-nums', over ? 'text-red-600' : 'text-foreground')}>
-                        {total}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      <div className="flex gap-3 mt-1.5 text-[10px] text-muted-foreground">
+                        <span>✓ {Math.round(posW)}% positive</span>
+                        <span>✗ {Math.round(negW)}% negative</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
 
-        <div className="border-t px-6 py-4 flex items-center justify-between shrink-0 bg-background">
-          <p className="text-xs text-muted-foreground">Enter the number of respondents who selected each answer option per question.</p>
+        {/* ── Footer ── */}
+        <div className="border-t px-6 py-4 flex items-center justify-between shrink-0 bg-muted/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {selectedBranch && (
+              <>
+                <Building2 className="h-3.5 w-3.5" />
+                <span className="font-medium">{selectedBranch.name}</span>
+                {respondentsNum > 0 && <span className="opacity-60">· {respondentsNum} respondents</span>}
+              </>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || loading}>
-              {saving ? 'Saving...' : 'Save Data'}
+            <Button onClick={handleSave} disabled={saving || loading} className="min-w-[100px]">
+              {saving ? (
+                <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Saving…</span>
+              ) : (
+                <span className="flex items-center gap-2"><Send className="h-3.5 w-3.5" />Save Data</span>
+              )}
             </Button>
           </div>
         </div>
