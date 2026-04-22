@@ -18,6 +18,7 @@ import { Classes } from '@/pages/Classes';
 import { Library } from '@/pages/Library';
 import { Settings } from '@/pages/Settings';
 import { Reports } from '@/pages/Reports';
+import { Surveys } from '@/pages/Surveys';
 
 import type { UserRole } from '@/contexts/AuthContext';
 
@@ -99,6 +100,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
               <Reports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="surveys"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
+              <Surveys />
             </ProtectedRoute>
           }
         />
