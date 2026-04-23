@@ -253,6 +253,9 @@ export function Students() {
       lastName: student.lastName,
       fatherName: student.fatherName ?? '',
       phone: student.phone ?? '',
+      dateOfBirth: student.dateOfBirth ?? '',
+      gender: student.gender ?? 'male',
+      passportNumber: student.passportNumber ?? '',
       nationality: student.nationality ?? '',
       address: student.address ?? '',
       gradeLevel: student.gradeLevel ?? '',
@@ -951,13 +954,35 @@ export function Students() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="edit-dateOfBirth">Date of Birth</Label>
+                  <Input id="edit-dateOfBirth" type="date" value={editData.dateOfBirth ?? ''} onChange={(e) => handleEditChange('dateOfBirth', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-gender">Gender</Label>
+                  <Select value={editData.gender ?? ''} onValueChange={(v) => handleEditChange('gender', v)}>
+                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-passportNumber">Passport / ID Number</Label>
+                  <Input id="edit-passportNumber" value={editData.passportNumber ?? ''} onChange={(e) => handleEditChange('passportNumber', e.target.value)} />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="edit-nationality">Nationality</Label>
                   <Input id="edit-nationality" value={editData.nationality ?? ''} onChange={(e) => handleEditChange('nationality', e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-gradeLevel">{t('students.gradeLevel')}</Label>
-                  <Input id="edit-gradeLevel" value={editData.gradeLevel ?? ''} onChange={(e) => handleEditChange('gradeLevel', e.target.value)} />
-                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-gradeLevel">{t('students.gradeLevel')}</Label>
+                <Input id="edit-gradeLevel" value={editData.gradeLevel ?? ''} onChange={(e) => handleEditChange('gradeLevel', e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-address">Address</Label>

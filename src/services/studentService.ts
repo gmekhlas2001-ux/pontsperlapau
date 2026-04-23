@@ -30,6 +30,9 @@ export interface UpdateStudentData {
   lastName?: string;
   fatherName?: string;
   phone?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  passportNumber?: string;
   nationality?: string;
   address?: string;
   gradeLevel?: string;
@@ -130,6 +133,9 @@ export async function updateStudent(studentId: string, userId: string, data: Upd
         lastName: data.lastName,
         fatherName: data.fatherName,
         phone: data.phone,
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        passportNumber: data.passportNumber,
         status: data.status,
         studentData: {
           studentId,

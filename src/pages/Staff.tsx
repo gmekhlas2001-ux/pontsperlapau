@@ -192,6 +192,9 @@ export function Staff() {
       lastName: staff.lastName,
       fatherName: staff.fatherName ?? '',
       phone: staff.phone ?? '',
+      dateOfBirth: staff.dateOfBirth ?? '',
+      gender: staff.gender ?? 'male',
+      passportNumber: staff.passportNumber ?? '',
       position: staff.position,
       department: staff.department ?? '',
       role: staff.role as UpdateStaffData['role'],
@@ -810,6 +813,28 @@ export function Staff() {
                   <Label htmlFor="edit-phone">{t('staff.phone')}</Label>
                   <Input id="edit-phone" value={editData.phone ?? ''} onChange={(e) => handleEditChange('phone', e.target.value)} />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-dateOfBirth">Date of Birth</Label>
+                  <Input id="edit-dateOfBirth" type="date" value={editData.dateOfBirth ?? ''} onChange={(e) => handleEditChange('dateOfBirth', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-gender">Gender</Label>
+                  <Select value={editData.gender ?? ''} onValueChange={(v) => handleEditChange('gender', v)}>
+                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-passportNumber">Passport / ID Number</Label>
+                <Input id="edit-passportNumber" value={editData.passportNumber ?? ''} onChange={(e) => handleEditChange('passportNumber', e.target.value)} />
               </div>
 
               {/* Employment */}

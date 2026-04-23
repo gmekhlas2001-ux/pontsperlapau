@@ -18,6 +18,9 @@ interface UpdateUserRequest {
   lastName?: string;
   fatherName?: string;
   phone?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  passportNumber?: string;
   role?: string;
   status?: string;
   staffData?: {
@@ -182,6 +185,9 @@ Deno.serve(async (req: Request) => {
     if (body.lastName !== undefined) userUpdates.last_name = body.lastName;
     if (body.fatherName !== undefined) userUpdates.father_name = body.fatherName;
     if (body.phone !== undefined) userUpdates.phone_number = body.phone;
+    if (body.dateOfBirth !== undefined) userUpdates.date_of_birth = body.dateOfBirth || null;
+    if (body.gender !== undefined) userUpdates.gender = body.gender || null;
+    if (body.passportNumber !== undefined) userUpdates.passport_number = body.passportNumber || null;
     if (body.role !== undefined) userUpdates.role = body.role;
     if (body.status !== undefined) userUpdates.status = body.status;
 

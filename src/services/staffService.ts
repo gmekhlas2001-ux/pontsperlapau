@@ -76,6 +76,9 @@ export interface UpdateStaffData {
   lastName?: string;
   fatherName?: string;
   phone?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  passportNumber?: string;
   position?: string;
   department?: string;
   role?: 'superadmin' | 'admin' | 'teacher' | 'librarian';
@@ -105,6 +108,9 @@ export async function updateStaff(staffId: string, userId: string, data: UpdateS
         lastName: data.lastName,
         fatherName: data.fatherName,
         phone: data.phone,
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        passportNumber: data.passportNumber,
         role: data.role,
         status: data.status,
         staffData: {
