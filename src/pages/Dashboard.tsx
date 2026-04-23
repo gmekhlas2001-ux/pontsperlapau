@@ -5,10 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { StatCard } from '@/components/ui-custom/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { mockClasses, mockBookLoans } from '@/lib/mockData';
 import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
 import { fetchRecentActivities, type ActivityLog } from '@/services/activityService';
-import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Calendar, Clock, CircleAlert as AlertCircle, MapPin } from 'lucide-react';
+import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Clock, CircleAlert as AlertCircle, MapPin } from 'lucide-react';
 import i18n from '@/i18n';
 import {
   BarChart,
@@ -290,19 +289,19 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="justify-start">
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/staff')}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t('staff.addStaff')}
               </Button>
-              <Button variant="outline" className="justify-start">
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/students')}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t('students.addStudent')}
               </Button>
-              <Button variant="outline" className="justify-start">
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/classes')}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t('classes.addClass')}
               </Button>
-              <Button variant="outline" className="justify-start">
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/library')}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t('library.addBook')}
               </Button>
@@ -317,64 +316,73 @@ export function Dashboard() {
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title={t('dashboard.myClasses')}
-          value={mockClasses.length}
-          icon={BookOpen}
-        />
-        <StatCard
           title={t('dashboard.totalStudents')}
           value={stats.totalStudents}
           icon={GraduationCap}
         />
         <StatCard
-          title={t('dashboard.attendanceSummary')}
-          value="92%"
-          icon={UserCheck}
+          title={t('dashboard.totalClasses')}
+          value={stats.totalClasses}
+          icon={BookOpen}
+        />
+        <StatCard
+          title={t('dashboard.totalBooks')}
+          value={stats.totalBooks}
+          description={`${stats.availableBooks} ${t('dashboard.availableBooks')}`}
+          icon={Library}
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>{t('dashboard.myClasses')}</CardTitle>
+            <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockClasses.map((cls) => (
-                <div key={cls.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{cls.name}</p>
-                    <p className="text-sm text-muted-foreground">{cls.schedule.length} sessions/week</p>
+            {recentActivities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('common.noData')}</p>
+            ) : (
+              <div className="space-y-3">
+                {recentActivities.slice(0, 5).map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3">
+                    <div className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold
+                      ${activity.action_type === 'INSERT' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : ''}
+                      ${activity.action_type === 'UPDATE' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' : ''}
+                      ${activity.action_type === 'DELETE' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' : ''}
+                    `}>
+                      {activity.action_type === 'INSERT' ? '+' : activity.action_type === 'DELETE' ? '−' : '~'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium leading-snug">{activity.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(activity.created_at).toLocaleString(i18n.language)}
+                      </p>
+                    </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    {t('common.view')}
-                  </Button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>{t('dashboard.upcomingEvents')}</CardTitle>
+            <CardTitle>{t('dashboard.quickActions')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Calendar className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="font-medium">Català Bàsic A1</p>
-                  <p className="text-sm text-muted-foreground">Monday, 9:00 - 11:00</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Calendar className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="font-medium">Català Intermedi B1</p>
-                  <p className="text-sm text-muted-foreground">Tuesday, 10:00 - 12:00</p>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 gap-3">
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/classes')}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                {t('classes.title')}
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/students')}>
+                <GraduationCap className="mr-2 h-4 w-4" />
+                {t('nav.students')}
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/library')}>
+                <Library className="mr-2 h-4 w-4" />
+                {t('nav.library')}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -414,21 +422,12 @@ export function Dashboard() {
             <CardTitle>{t('library.borrowedBooks')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockBookLoans.map((loan) => (
-                <div key={loan.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{loan.bookTitle}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {t('library.borrower')}: {loan.borrowerName}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{loan.dueDate}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+              <BookOpen className="h-8 w-8 mb-2 opacity-40" />
+              <p className="text-sm font-medium">{stats.borrowedBooks} {t('dashboard.borrowedBooks').toLowerCase()}</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/library')}>
+                {t('common.view')} {t('nav.library')}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -439,15 +438,15 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-3">
-              <Button variant="outline" className="justify-start">
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/library')}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t('library.addBook')}
               </Button>
-              <Button variant="outline" className="justify-start">
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/library')}>
                 <UserCheck className="mr-2 h-4 w-4" />
                 {t('library.lendBook')}
               </Button>
-              <Button variant="outline" className="justify-start">
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/library')}>
                 <BookOpen className="mr-2 h-4 w-4" />
                 {t('library.returnBook')}
               </Button>
@@ -462,18 +461,19 @@ export function Dashboard() {
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title={t('dashboard.myClasses')}
-          value={2}
+          title={t('dashboard.totalClasses')}
+          value={stats.totalClasses}
           icon={BookOpen}
         />
         <StatCard
-          title={t('library.booksBorrowed')}
-          value={1}
+          title={t('dashboard.totalBooks')}
+          value={stats.totalBooks}
+          description={`${stats.availableBooks} ${t('dashboard.availableBooks')}`}
           icon={Library}
         />
         <StatCard
-          title={t('dashboard.dueSoon')}
-          value={1}
+          title={t('dashboard.borrowedBooks')}
+          value={stats.borrowedBooks}
           icon={Clock}
         />
       </div>
@@ -481,38 +481,30 @@ export function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>{t('dashboard.myClasses')}</CardTitle>
+            <CardTitle>{t('nav.classes')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockClasses.slice(0, 2).map((cls) => (
-                <div key={cls.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{cls.name}</p>
-                    <p className="text-sm text-muted-foreground">{cls.teacherName}</p>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    {t('common.view')}
-                  </Button>
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+              <BookOpen className="h-8 w-8 mb-2 opacity-40" />
+              <p className="text-sm">{t('classes.classList')}</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/classes')}>
+                {t('common.view')} {t('nav.classes')}
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>{t('dashboard.upcomingEvents')}</CardTitle>
+            <CardTitle>{t('nav.library')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Calendar className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="font-medium">Català Bàsic A1</p>
-                  <p className="text-sm text-muted-foreground">Monday, 9:00 - 11:00</p>
-                </div>
-              </div>
+            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+              <Library className="h-8 w-8 mb-2 opacity-40" />
+              <p className="text-sm">{t('library.bookList')}</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/library')}>
+                {t('common.view')} {t('nav.library')}
+              </Button>
             </div>
           </CardContent>
         </Card>
