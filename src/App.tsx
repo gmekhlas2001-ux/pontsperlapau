@@ -7,7 +7,9 @@
  * unauthenticated or unauthorized users.
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { getMyStudentRecord } from '@/services/studentService';
 import { I18nextProvider } from 'react-i18next';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -36,6 +38,24 @@ import { StudentProfile } from '@/pages/StudentProfile';
 import { Timetable } from '@/pages/Timetable';
 
 import type { UserRole } from '@/contexts/AuthContext';
+
+/**
+ * Resolves the current user's student record and redirects to their profile.
+ * Only reached by the student role via the /my-profile route.
+ */
+function MyProfileRedirect() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    getMyStudentRecord().then((res) => {
+      if (res.success && res.studentId) {
+        navigate(`/students/${res.studentId}`, { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    });
+  }, [navigate]);
+  return null;
+}
 
 /**
  * Route guard component.
@@ -103,11 +123,12 @@ function AppRoutes() {
         <Route
           path="students/:id"
           element={
-            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher']}>
+            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher', 'student']}>
               <StudentProfile />
             </ProtectedRoute>
           }
         />
+        <Route path="my-profile" element={<MyProfileRedirect />} />
         <Route
           path="classes"
           element={

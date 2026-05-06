@@ -36,6 +36,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
     { path: '/attendance', label: t('nav.attendance'), icon: ClipboardCheck, roles: ['superadmin', 'admin', 'teacher'] },
     { path: '/grades', label: t('nav.grades'), icon: GraduationCap, roles: ['superadmin', 'admin', 'teacher'] },
     { path: '/timetable', label: t('nav.timetable'), icon: CalendarDays, roles: ['superadmin', 'admin', 'teacher', 'student'] },
+    { path: '/my-profile', label: t('nav.myGrades'), icon: GraduationCap, roles: ['student'] },
     { path: '/library', label: t('nav.library'), icon: Library, roles: ['superadmin', 'admin', 'teacher', 'librarian', 'student'] },
     { path: '/surveys', label: t('nav.surveys'), icon: ClipboardList, roles: ['superadmin', 'admin'] },
     { path: '/reports', label: t('nav.reports'), icon: BarChart2, roles: ['superadmin', 'admin'] },

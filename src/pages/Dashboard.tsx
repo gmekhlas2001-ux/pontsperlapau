@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
 import { fetchRecentActivities, type ActivityLog } from '@/services/activityService';
-import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Clock, CircleAlert as AlertCircle, MapPin, ClipboardCheck, CalendarDays } from 'lucide-react';
+import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Clock, CircleAlert as AlertCircle, MapPin, ClipboardCheck, CalendarDays, TrendingDown, AlertTriangle } from 'lucide-react';
 import i18n from '@/i18n';
 import {
   BarChart,
@@ -35,6 +35,9 @@ const emptyStats: DashboardStats = {
   borrowedBooks: 0,
   overdueBooks: 0,
   totalBranches: 0,
+  lowAttendanceCount: 0,
+  failingStudentsCount: 0,
+  gradedEnrollments: 0,
 };
 
 export function Dashboard() {
@@ -146,6 +149,44 @@ export function Dashboard() {
           icon={Library}
         />
       </div>
+
+      {/* Academic health alerts */}
+      {(stats.lowAttendanceCount > 0 || stats.failingStudentsCount > 0) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {stats.lowAttendanceCount > 0 && (
+            <button
+              onClick={() => navigate('/attendance')}
+              className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors text-left"
+            >
+              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex-shrink-0">
+                <TrendingDown className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-amber-800 dark:text-amber-300 text-sm">
+                  {stats.lowAttendanceCount} student{stats.lowAttendanceCount !== 1 ? 's' : ''} with low attendance
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">Below 80% — click to review</p>
+              </div>
+            </button>
+          )}
+          {stats.failingStudentsCount > 0 && (
+            <button
+              onClick={() => navigate('/grades')}
+              className="flex items-center gap-3 p-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-left"
+            >
+              <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 flex-shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-red-800 dark:text-red-300 text-sm">
+                  {stats.failingStudentsCount} student{stats.failingStudentsCount !== 1 ? 's' : ''} with failing grade
+                </p>
+                <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">Grade F — click to review</p>
+              </div>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -524,6 +565,31 @@ export function Dashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Student quick actions */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Button variant="outline" className="justify-start h-auto py-3" onClick={() => navigate('/my-profile')}>
+          <GraduationCap className="mr-2 h-4 w-4 text-teal-600" />
+          <div className="text-left">
+            <p className="font-medium text-sm">My Grades</p>
+            <p className="text-xs text-muted-foreground">View assessments & report card</p>
+          </div>
+        </Button>
+        <Button variant="outline" className="justify-start h-auto py-3" onClick={() => navigate('/timetable')}>
+          <CalendarDays className="mr-2 h-4 w-4 text-blue-600" />
+          <div className="text-left">
+            <p className="font-medium text-sm">Timetable</p>
+            <p className="text-xs text-muted-foreground">Weekly class schedule</p>
+          </div>
+        </Button>
+        <Button variant="outline" className="justify-start h-auto py-3" onClick={() => navigate('/library')}>
+          <BookOpen className="mr-2 h-4 w-4 text-violet-600" />
+          <div className="text-left">
+            <p className="font-medium text-sm">Library</p>
+            <p className="text-xs text-muted-foreground">Browse available books</p>
+          </div>
+        </Button>
       </div>
     </>
   );

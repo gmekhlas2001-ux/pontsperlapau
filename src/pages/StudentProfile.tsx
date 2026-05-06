@@ -21,8 +21,10 @@ import {
   type StudentProfileData,
   type StudentProfileClass,
 } from '@/services/studentService';
+import { useAuth } from '@/contexts/AuthContext';
 import { exportReportCardPDF, exportGradesExcel } from '@/services/exportService';
 import type { GradeStudent } from '@/services/gradesService';
+import { DocumentsManager } from '@/components/DocumentsManager';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -34,7 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, GraduationCap, BookOpen, ClipboardCheck, User,
   Phone, Mail, MapPin, Calendar, Hash, Building2, Shield,
-  Users, Heart, FileText, TrendingUp, Award, FileDown, AlertCircle,
+  Users, Heart, FileText, TrendingUp, Award, FileDown, AlertCircle, Paperclip,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -487,6 +489,7 @@ function PersonalTab({ student }: { student: StudentProfileData }) {
 export function StudentProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [student, setStudent] = useState<StudentProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -495,13 +498,18 @@ export function StudentProfile() {
     setLoading(true);
     getStudentProfile(id).then((res) => {
       if (res.success && res.data) {
+        // Students can only view their own profile
+        if (user?.role === 'student' && res.data.userId !== user.id) {
+          navigate('/', { replace: true });
+          return;
+        }
         setStudent(res.data);
       } else {
         toast.error(res.error ?? 'Could not load student profile');
       }
       setLoading(false);
     });
-  }, [id]);
+  }, [id, user, navigate]);
 
   if (loading) {
     return (
@@ -584,6 +592,11 @@ export function StudentProfile() {
             <TabsTrigger value="personal" className="text-xs gap-1.5">
               <User className="h-3.5 w-3.5" /> Personal
             </TabsTrigger>
+            {user?.role !== 'student' && (
+              <TabsTrigger value="documents" className="text-xs gap-1.5">
+                <Paperclip className="h-3.5 w-3.5" /> Documents
+              </TabsTrigger>
+            )}
           </TabsList>
           <div className="flex-1 overflow-y-auto">
             <TabsContent value="overview" className="mt-0">
@@ -598,6 +611,11 @@ export function StudentProfile() {
             <TabsContent value="personal" className="mt-0">
               <PersonalTab student={student} />
             </TabsContent>
+            {user?.role !== 'student' && (
+              <TabsContent value="documents" className="mt-0 p-6">
+                <DocumentsManager userId={student.userId} />
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </div>

@@ -14,6 +14,10 @@ export interface DashboardStats {
   borrowedBooks: number;
   overdueBooks: number;
   totalBranches: number;
+  // Academic health
+  lowAttendanceCount: number;   // students with attendance_percentage < 80
+  failingStudentsCount: number; // students with final grade = 'F'
+  gradedEnrollments: number;    // enrollments that have a grade set
 }
 
 export interface BranchStat {
@@ -33,20 +37,25 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const classQ = supabase.from('classes').select('id', { count: 'exact', head: true });
   const bookQ = supabase.from('books').select('id, branch_id, total_copies, available_copies');
   const branchQ = supabase.from('branches').select('id', { count: 'exact', head: true });
-  // Overdue counts via the join — borrowings inherit the book's branch.
   const overdueQ = supabase
     .from('book_borrowings')
     .select('id, book:books!inner(branch_id)', { count: 'exact', head: true })
     .eq('is_overdue', true)
     .is('returned_date', null);
+  // Academic health: pull attendance_percentage + grade from active enrollments
+  const enrollQ = supabase
+    .from('class_enrollments')
+    .select('attendance_percentage, grade, student:students!student_id(branch_id)')
+    .eq('status', 'active');
 
-  const [staffResult, studentsResult, classesResult, booksResult, branchesResult, overdueResult] = await Promise.all([
+  const [staffResult, studentsResult, classesResult, booksResult, branchesResult, overdueResult, enrollResult] = await Promise.all([
     branchId ? staffQ.eq('branch_id', branchId) : staffQ,
     branchId ? studentQ.eq('branch_id', branchId) : studentQ,
     branchId ? classQ.eq('branch_id', branchId) : classQ,
     branchId ? bookQ.eq('branch_id', branchId) : bookQ,
     branchId ? branchQ.eq('id', branchId) : branchQ,
     branchId ? overdueQ.eq('book.branch_id', branchId) : overdueQ,
+    enrollQ,
   ]);
 
   const staffRows = (staffResult.data ?? []) as unknown as Array<{ user: { status: string } | null }>;
@@ -59,6 +68,15 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const totalBooks = books.reduce((sum, b) => sum + (b.total_copies ?? 0), 0);
   const availableBooks = books.reduce((sum, b) => sum + (b.available_copies ?? 0), 0);
   const borrowedBooks = totalBooks - availableBooks;
+
+  const enrollRows = ((enrollResult.data ?? []) as any[]).filter((e) =>
+    !branchId || e.student?.branch_id === branchId
+  );
+  const lowAttendanceCount = enrollRows.filter((e) =>
+    e.attendance_percentage !== null && e.attendance_percentage < 80
+  ).length;
+  const failingStudentsCount = enrollRows.filter((e) => e.grade === 'F').length;
+  const gradedEnrollments = enrollRows.filter((e) => e.grade !== null && e.grade !== '').length;
 
   return {
     totalStaff: staffRows.length,
@@ -73,6 +91,9 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     borrowedBooks,
     overdueBooks: overdueResult.count ?? 0,
     totalBranches: branchesResult.count ?? 0,
+    lowAttendanceCount,
+    failingStudentsCount,
+    gradedEnrollments,
   };
 }
 

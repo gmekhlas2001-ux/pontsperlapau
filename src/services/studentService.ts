@@ -368,6 +368,29 @@ export async function getStudentProfile(
   }
 }
 
+/**
+ * Look up the students row for the currently logged-in user (by user_id).
+ * Used so a student can resolve their own profile URL.
+ */
+export async function getMyStudentRecord(): Promise<{ success: boolean; studentId?: string; error?: string }> {
+  try {
+    const storedUser = localStorage.getItem('user');
+    const userId = storedUser ? JSON.parse(storedUser).id : null;
+    if (!userId) return { success: false, error: 'Not logged in' };
+
+    const { data, error } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+    return { success: true, studentId: (data as any).id };
+  } catch (err: any) {
+    return { success: false, error: err.message ?? 'Student record not found' };
+  }
+}
+
 export async function getStudentsList() {
   try {
     const branchId = scopedBranchId();
