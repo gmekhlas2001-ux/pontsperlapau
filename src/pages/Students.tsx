@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { DocumentsManager, flushPendingDocuments } from '@/components/DocumentsManager';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { DataTable } from '@/components/ui-custom/DataTable';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
@@ -144,6 +144,7 @@ interface StudentRecord {
 export function Students() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const pendingDocsRef = useRef<File[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(
@@ -244,8 +245,7 @@ export function Students() {
   };
 
   const handleViewStudent = (student: StudentRecord) => {
-    setSelectedStudent(student);
-    setIsViewDialogOpen(true);
+    navigate(`/students/${student.id}`);
   };
 
   const handleEditStudent = (student: StudentRecord) => {

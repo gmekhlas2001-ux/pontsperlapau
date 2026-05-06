@@ -176,6 +176,198 @@ export async function updateStudentCredentials(targetUserId: string, email?: str
  * Retrieve all active students with their user profiles.
  * Branch-scoped automatically for non-superadmin users.
  */
+// ─── Profile ──────────────────────────────────────────────────────────────────
+
+export interface StudentProfileClass {
+  enrollmentId: string;
+  classId: string;
+  className: string;
+  subject: string | null;
+  teacherFirstName: string;
+  teacherLastName: string;
+  finalGrade: string | null;
+  attendancePct: number;
+  totalPresent: number;
+  totalAbsent: number;
+  totalLate: number;
+  totalExcused: number;
+  gradeEntries: {
+    id: string;
+    assessmentName: string;
+    assessmentType: string;
+    score: number | null;
+    maxScore: number;
+    gradeLetter: string | null;
+    assessmentDate: string;
+  }[];
+  averageScore: number | null;
+}
+
+export interface StudentProfileData {
+  id: string;
+  studentCode: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  fatherName: string | null;
+  email: string | null;
+  phone: string | null;
+  dateOfBirth: string | null;
+  gender: string | null;
+  nationality: string | null;
+  passportNumber: string | null;
+  address: string | null;
+  gradeLevel: string | null;
+  enrollmentDate: string | null;
+  status: string;
+  branchId: string | null;
+  profilePictureUrl: string | null;
+  parentGuardianName: string | null;
+  parentGuardianEmail: string | null;
+  parentGuardianPhone: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  emergencyContactRelationship: string | null;
+  medicalNotes: string | null;
+  allergies: string | null;
+  createdAt: string;
+  classes: StudentProfileClass[];
+}
+
+/**
+ * Fetch a complete student profile: personal info, class enrollments,
+ * per-class grade entries, and per-class attendance breakdown.
+ */
+export async function getStudentProfile(
+  studentId: string,
+): Promise<{ success: boolean; data?: StudentProfileData; error?: string }> {
+  try {
+    const [studentRes, enrollRes, gradeRes, attendRes] = await Promise.all([
+      supabase
+        .from('students')
+        .select(`
+          id, student_id, branch_id, grade_level, enrollment_date,
+          nationality, address,
+          parent_guardian_name, parent_guardian_email, parent_guardian_phone,
+          emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+          medical_notes, allergies, created_at,
+          user:users!user_id(
+            id, first_name, last_name, father_name, phone_number,
+            date_of_birth, gender, status, profile_picture_url,
+            email, passport_number
+          )
+        `)
+        .eq('id', studentId)
+        .single(),
+
+      supabase
+        .from('class_enrollments')
+        .select(`
+          id, grade, attendance_percentage,
+          class:classes!class_id(
+            id, name, subject,
+            teacher:staff!teacher_id(
+              user:users!user_id(first_name, last_name)
+            )
+          )
+        `)
+        .eq('student_id', studentId)
+        .eq('status', 'active'),
+
+      supabase
+        .from('grade_entries')
+        .select('id, class_id, assessment_name, assessment_type, score, max_score, grade_letter, assessment_date')
+        .eq('student_id', studentId)
+        .order('assessment_date', { ascending: false }),
+
+      supabase
+        .from('attendance')
+        .select('class_id, status')
+        .eq('student_id', studentId),
+    ]);
+
+    if (studentRes.error) throw studentRes.error;
+    const s = studentRes.data as any;
+    const u = s.user as any;
+
+    const entries = (gradeRes.data ?? []) as any[];
+    const attRecords = (attendRes.data ?? []) as any[];
+
+    const classes: StudentProfileClass[] = ((enrollRes.data ?? []) as any[]).map((e) => {
+      const cls = e.class as any;
+      const teacher = cls?.teacher?.user as any;
+      const classEntries = entries.filter((g) => g.class_id === cls?.id);
+      const scored = classEntries.filter((g) => g.score !== null);
+      const avg = scored.length > 0
+        ? Math.round((scored.reduce((sum: number, g: any) => sum + (g.score / g.max_score) * 100, 0) / scored.length) * 10) / 10
+        : null;
+
+      const attForClass = attRecords.filter((r) => r.class_id === cls?.id);
+      const countStatus = (st: string) => attForClass.filter((r) => r.status === st).length;
+
+      return {
+        enrollmentId: e.id,
+        classId: cls?.id ?? '',
+        className: cls?.name ?? '',
+        subject: cls?.subject ?? null,
+        teacherFirstName: teacher?.first_name ?? '',
+        teacherLastName: teacher?.last_name ?? '',
+        finalGrade: e.grade ?? null,
+        attendancePct: e.attendance_percentage ?? 0,
+        totalPresent: countStatus('present'),
+        totalAbsent: countStatus('absent'),
+        totalLate: countStatus('late'),
+        totalExcused: countStatus('excused'),
+        gradeEntries: classEntries.map((g: any) => ({
+          id: g.id,
+          assessmentName: g.assessment_name,
+          assessmentType: g.assessment_type,
+          score: g.score,
+          maxScore: g.max_score,
+          gradeLetter: g.grade_letter,
+          assessmentDate: g.assessment_date,
+        })),
+        averageScore: avg,
+      };
+    });
+
+    const profile: StudentProfileData = {
+      id: s.id,
+      studentCode: s.student_id ?? '',
+      userId: u?.id ?? '',
+      firstName: u?.first_name ?? '',
+      lastName: u?.last_name ?? '',
+      fatherName: u?.father_name ?? null,
+      email: u?.email ?? null,
+      phone: u?.phone_number ?? null,
+      dateOfBirth: u?.date_of_birth ?? null,
+      gender: u?.gender ?? null,
+      nationality: s.nationality ?? null,
+      passportNumber: u?.passport_number ?? null,
+      address: s.address ?? null,
+      gradeLevel: s.grade_level ?? null,
+      enrollmentDate: s.enrollment_date ?? null,
+      status: u?.status ?? 'active',
+      branchId: s.branch_id ?? null,
+      profilePictureUrl: u?.profile_picture_url ?? null,
+      parentGuardianName: s.parent_guardian_name ?? null,
+      parentGuardianEmail: s.parent_guardian_email ?? null,
+      parentGuardianPhone: s.parent_guardian_phone ?? null,
+      emergencyContactName: s.emergency_contact_name ?? null,
+      emergencyContactPhone: s.emergency_contact_phone ?? null,
+      emergencyContactRelationship: s.emergency_contact_relationship ?? null,
+      medicalNotes: s.medical_notes ?? null,
+      allergies: s.allergies ?? null,
+      createdAt: s.created_at,
+      classes,
+    };
+
+    return { success: true, data: profile };
+  } catch (err: any) {
+    return { success: false, error: err.message ?? 'Failed to load student profile' };
+  }
+}
+
 export async function getStudentsList() {
   try {
     const branchId = scopedBranchId();

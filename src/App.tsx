@@ -32,6 +32,7 @@ import { PasswordResets } from '@/pages/PasswordResets';
 import { Profile } from '@/pages/Profile';
 import { Attendance } from '@/pages/Attendance';
 import { Grades } from '@/pages/Grades';
+import { StudentProfile } from '@/pages/StudentProfile';
 
 import type { UserRole } from '@/contexts/AuthContext';
 
@@ -95,6 +96,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher']}>
               <Students />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="students/:id"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher']}>
+              <StudentProfile />
             </ProtectedRoute>
           }
         />
