@@ -79,7 +79,6 @@ export default function ParentLinks() {
       .from('users')
       .select('id, first_name, last_name, email')
       .eq('role', 'parent')
-      .is('deleted_at', null)
       .then(({ data }) => {
         if (data) setParents(data as ParentUser[]);
       });

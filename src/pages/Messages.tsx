@@ -77,14 +77,15 @@ function ComposeDialog({
   userId: string;
 }) {
   const { t } = useTranslation();
-  const [recipientId, setRecipientId] = useState(replyTo?.senderId ?? '');
+  const BROADCAST = '__everyone__';
+  const [recipientId, setRecipientId] = useState(replyTo?.senderId ?? BROADCAST);
   const [subject, setSubject] = useState(replyTo ? `Re: ${replyTo.subject}` : '');
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setRecipientId(replyTo?.senderId ?? '');
+      setRecipientId(replyTo?.senderId ?? BROADCAST);
       setSubject(replyTo ? `Re: ${replyTo.subject}` : '');
       setBody('');
     }
@@ -96,7 +97,7 @@ function ComposeDialog({
     if (!body.trim()) { toast.error(t('messages.errors.body')); return; }
     setSaving(true);
     const res = await sendMessage(userId, {
-      recipientId: recipientId || null,
+      recipientId: recipientId === BROADCAST ? null : recipientId,
       subject,
       body,
       parentId: replyTo?.parentId ?? replyTo?.id,
@@ -118,7 +119,7 @@ function ComposeDialog({
             <Select value={recipientId} onValueChange={setRecipientId}>
               <SelectTrigger><SelectValue placeholder={t('messages.everyone')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{t('messages.everyone')}</SelectItem>
+                <SelectItem value={BROADCAST}>{t('messages.everyone')}</SelectItem>
                 {staff.filter((s) => s.id !== userId).map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.first_name} {s.last_name} ({s.role})
@@ -274,7 +275,6 @@ export default function Messages() {
       .select('id, first_name, last_name, role')
       .neq('role', 'student')
       .neq('role', 'parent')
-      .is('deleted_at', null)
       .then(({ data }) => { if (data) setStaff(data as StaffUser[]); });
   }, []);
 
