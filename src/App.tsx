@@ -30,6 +30,7 @@ import { Reports } from '@/pages/Reports';
 import { Surveys } from '@/pages/Surveys';
 import { PasswordResets } from '@/pages/PasswordResets';
 import { Profile } from '@/pages/Profile';
+import { Attendance } from '@/pages/Attendance';
 
 import type { UserRole } from '@/contexts/AuthContext';
 
@@ -101,6 +102,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher', 'student']}>
               <Classes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="attendance"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher']}>
+              <Attendance />
             </ProtectedRoute>
           }
         />
