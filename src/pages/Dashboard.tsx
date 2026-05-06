@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
 import { fetchRecentActivities, type ActivityLog } from '@/services/activityService';
-import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Clock, CircleAlert as AlertCircle, MapPin } from 'lucide-react';
+import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Clock, CircleAlert as AlertCircle, MapPin, ClipboardCheck, CalendarDays } from 'lucide-react';
 import i18n from '@/i18n';
 import {
   BarChart,
@@ -305,6 +305,14 @@ export function Dashboard() {
                 <Plus className="mr-2 h-4 w-4" />
                 {t('library.addBook')}
               </Button>
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/attendance')}>
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+                Attendance
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/timetable')}>
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Timetable
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -382,6 +390,14 @@ export function Dashboard() {
               <Button variant="outline" className="justify-start" onClick={() => navigate('/library')}>
                 <Library className="mr-2 h-4 w-4" />
                 {t('nav.library')}
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/attendance')}>
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+                Attendance
+              </Button>
+              <Button variant="outline" className="justify-start" onClick={() => navigate('/timetable')}>
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Timetable
               </Button>
             </div>
           </CardContent>

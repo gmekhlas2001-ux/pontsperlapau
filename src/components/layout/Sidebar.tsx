@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
-import { LayoutDashboard, Users, GraduationCap, BookOpen, Library, Settings, LogOut, Menu, ChevronLeft, ChevronRight, MapPin, ChartBar as BarChart2, ClipboardList, KeyRound, User, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, BookOpen, Library, Settings, LogOut, Menu, ChevronLeft, ChevronRight, MapPin, ChartBar as BarChart2, ClipboardList, KeyRound, User, ClipboardCheck, CalendarDays } from 'lucide-react';
 
 interface NavItem {
   path: string;
@@ -35,6 +35,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
     { path: '/classes', label: t('nav.classes'), icon: BookOpen, roles: ['superadmin', 'admin', 'teacher', 'student'] },
     { path: '/attendance', label: t('nav.attendance'), icon: ClipboardCheck, roles: ['superadmin', 'admin', 'teacher'] },
     { path: '/grades', label: t('nav.grades'), icon: GraduationCap, roles: ['superadmin', 'admin', 'teacher'] },
+    { path: '/timetable', label: t('nav.timetable'), icon: CalendarDays, roles: ['superadmin', 'admin', 'teacher', 'student'] },
     { path: '/library', label: t('nav.library'), icon: Library, roles: ['superadmin', 'admin', 'teacher', 'librarian', 'student'] },
     { path: '/surveys', label: t('nav.surveys'), icon: ClipboardList, roles: ['superadmin', 'admin'] },
     { path: '/reports', label: t('nav.reports'), icon: BarChart2, roles: ['superadmin', 'admin'] },

@@ -33,6 +33,7 @@ import { Profile } from '@/pages/Profile';
 import { Attendance } from '@/pages/Attendance';
 import { Grades } from '@/pages/Grades';
 import { StudentProfile } from '@/pages/StudentProfile';
+import { Timetable } from '@/pages/Timetable';
 
 import type { UserRole } from '@/contexts/AuthContext';
 
@@ -128,6 +129,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher']}>
               <Grades />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="timetable"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher', 'student']}>
+              <Timetable />
             </ProtectedRoute>
           }
         />
