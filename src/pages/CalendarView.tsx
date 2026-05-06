@@ -241,10 +241,10 @@ export default function CalendarView() {
                 startAccessor="start"
                 endAccessor="end"
                 view={view}
-                onView={(v) => setView(v)}
+                onView={(v: (typeof Views)[keyof typeof Views]) => setView(v)}
                 date={currentDate}
-                onNavigate={(d) => setCurrentDate(d)}
-                onSelectEvent={(event) => setSelectedEvent(event as CalendarEvent)}
+                onNavigate={(d: Date) => setCurrentDate(d)}
+                onSelectEvent={(event: object) => setSelectedEvent(event as CalendarEvent)}
                 eventPropGetter={eventStyleGetter}
                 views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
                 messages={{
@@ -256,7 +256,7 @@ export default function CalendarView() {
                   day: t('calendar.day'),
                   agenda: t('calendar.agenda'),
                   noEventsInRange: t('calendar.noEvents'),
-                  showMore: (count) => `+${count} ${t('calendar.more')}`,
+                  showMore: (count: number) => `+${count} ${t('calendar.more')}`,
                 }}
                 popup
               />
