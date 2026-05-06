@@ -45,8 +45,13 @@ import {
 } from '@/components/ui/select';
 import {
   GraduationCap, BookOpen, ChevronRight, ChevronDown, Plus, Pencil,
-  Trash2, RefreshCw, Award, TrendingUp, ClipboardCheck,
+  Trash2, RefreshCw, Award, TrendingUp, ClipboardCheck, FileDown,
 } from 'lucide-react';
+import {
+  exportClassRosterPDF,
+  exportReportCardPDF,
+  exportGradesExcel,
+} from '@/services/exportService';
 import { cn, getFullName } from '@/lib/utils';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 
@@ -252,9 +257,11 @@ function EntryDialog({ open, onClose, onSaved, classId, studentId, existing }: E
 
 function StudentGradeCard({
   student,
+  classInfo,
   onRefresh,
 }: {
   student: GradeStudent;
+  classInfo: { name: string; teacherName?: string };
   onRefresh: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -400,14 +407,25 @@ function StudentGradeCard({
             </div>
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Assessment
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Assessment
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground"
+              onClick={() => exportReportCardPDF(classInfo, student)}
+              title="Download report card PDF"
+            >
+              <FileDown className="h-3.5 w-3.5" /> Report Card
+            </Button>
+          </div>
         </div>
       )}
 
@@ -507,9 +525,39 @@ export function Grades() {
             Record and manage student assessment grades per class
           </p>
         </div>
-        <Button variant="outline" size="icon" onClick={fetchGrades} title="Refresh">
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedClass && students.length > 0 && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => exportClassRosterPDF(
+                  { name: selectedClass.name, teacherName: `${selectedClass.teacherFirstName} ${selectedClass.teacherLastName}` },
+                  students,
+                )}
+              >
+                <FileDown className="h-4 w-4" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => exportGradesExcel(
+                  { name: selectedClass.name },
+                  students,
+                )}
+              >
+                <FileDown className="h-4 w-4" />
+                Excel
+              </Button>
+            </>
+          )}
+          <Button variant="outline" size="icon" onClick={fetchGrades} title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -623,6 +671,7 @@ export function Grades() {
                         ...s,
                         entries: s.entries.map((e) => ({ ...e, class_id: selectedClass.id })),
                       }}
+                      classInfo={{ name: selectedClass.name, teacherName: `${selectedClass.teacherFirstName} ${selectedClass.teacherLastName}` }}
                       onRefresh={fetchGrades}
                     />
                   ))}

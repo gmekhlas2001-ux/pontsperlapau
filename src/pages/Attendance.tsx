@@ -20,10 +20,15 @@ import { format } from 'date-fns';
 import {
   getAttendanceForClass,
   getAttendanceDates,
+  getAttendanceHistory,
   saveAttendance,
   type AttendanceStudent,
   type AttendanceStatus,
 } from '@/services/attendanceService';
+import {
+  exportAttendanceSheetPDF,
+  exportAttendanceExcel,
+} from '@/services/exportService';
 import { getClassesList, type ClassRecord } from '@/services/classService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,7 +41,7 @@ import {
 } from '@/components/ui/select';
 import {
   ClipboardCheck, BookOpen, Users, Calendar, Save, RefreshCw,
-  CheckCircle2, XCircle, Clock, FileText, ChevronRight, History,
+  CheckCircle2, XCircle, Clock, FileText, ChevronRight, History, FileDown,
 } from 'lucide-react';
 import { cn, getFullName } from '@/lib/utils';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
@@ -316,6 +321,32 @@ export function Attendance() {
     counts[st]++;
   });
 
+  /** Fetch all attendance history and export as PDF or Excel. */
+  const handleExport = async (format: 'pdf' | 'excel') => {
+    if (!selectedClass) return;
+    const [histRes, datesArr, sheetRes] = await Promise.all([
+      getAttendanceHistory(selectedClass.id),
+      getAttendanceDates(selectedClass.id),
+      getAttendanceForClass(selectedClass.id, date),
+    ]);
+
+    const records = histRes.data ?? [];
+    const studentList = sheetRes.data ?? students;
+    const classInfo = { name: selectedClass.name, teacherName: `${selectedClass.teacherFirstName} ${selectedClass.teacherLastName}` };
+
+    // Build pivot: one row per student, one record per date
+    const rows = studentList.map((s) => ({
+      studentName: `${s.lastName}, ${s.firstName}`,
+      studentCode: s.studentCode,
+      records: records
+        .filter((r) => r.student_id === s.studentId)
+        .map((r) => ({ date: r.attendance_date, status: r.status })),
+    }));
+
+    if (format === 'pdf') exportAttendanceSheetPDF(classInfo, datesArr, rows);
+    else exportAttendanceExcel(classInfo, datesArr, rows);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -329,9 +360,21 @@ export function Attendance() {
             Mark and track student attendance per class session
           </p>
         </div>
-        <Button variant="outline" size="icon" onClick={fetchClasses} title="Refresh">
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedClass && students.length > 0 && (
+            <>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleExport('pdf')}>
+                <FileDown className="h-4 w-4" /> PDF
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleExport('excel')}>
+                <FileDown className="h-4 w-4" /> Excel
+              </Button>
+            </>
+          )}
+          <Button variant="outline" size="icon" onClick={fetchClasses} title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
