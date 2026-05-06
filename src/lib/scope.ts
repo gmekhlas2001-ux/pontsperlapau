@@ -97,8 +97,18 @@ export function getCurrentScope(): CurrentScope {
 // ─── Convenience Accessors ───────────────────────────────────────────────────
 
 /**
+ * Sentinel UUID returned for non-superadmin users who have no branch assigned.
+ * Filtering `branch_id = NO_BRANCH_SENTINEL` will match no rows, giving a
+ * deny-by-default experience instead of leaking all data globally.
+ */
+export const NO_BRANCH_SENTINEL = '00000000-0000-0000-0000-000000000000';
+
+/**
  * Returns the branch_id to use as a query filter, or `null` when the caller
  * has global (superadmin) access and no filter should be applied.
+ *
+ * For non-superadmin roles WITHOUT a branch_id, returns NO_BRANCH_SENTINEL
+ * so queries return empty results rather than leaking everything.
  *
  * Usage pattern:
  *   const branchId = scopedBranchId();
@@ -107,5 +117,17 @@ export function getCurrentScope(): CurrentScope {
  */
 export function scopedBranchId(): string | null {
   const s = getCurrentScope();
-  return s.isGlobal ? null : s.branchId;
+  if (s.isGlobal) return null;          // superadmin: no filter
+  if (!s.branchId) return NO_BRANCH_SENTINEL; // deny-by-default
+  return s.branchId;
+}
+
+/**
+ * Returns true when the current user is a non-superadmin role that is
+ * missing a branch assignment. UI can show a warning banner so admins
+ * know they need a superadmin to assign them a branch.
+ */
+export function hasMissingBranch(): boolean {
+  const s = getCurrentScope();
+  return !s.isGlobal && !!s.role && !s.branchId;
 }

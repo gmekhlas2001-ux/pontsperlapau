@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
 import { fetchRecentActivities, type ActivityLog } from '@/services/activityService';
+import { hasMissingBranch } from '@/lib/scope';
 import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Clock, CircleAlert as AlertCircle, MapPin, ClipboardCheck, CalendarDays, TrendingDown, AlertTriangle, CircleDollarSign, HandCoins, MessageSquare } from 'lucide-react';
 import i18n from '@/i18n';
 import {
@@ -663,6 +664,20 @@ export function Dashboard() {
           {t('dashboard.title')}
         </p>
       </div>
+
+      {hasMissingBranch() && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="font-semibold text-red-800 dark:text-red-300 text-sm">
+              No branch assigned to your account
+            </p>
+            <p className="text-xs text-red-600 dark:text-red-500 mt-1">
+              You won't see any branch-scoped data (students, fees, classes, etc.) until a superadmin assigns you to a branch. Ask a superadmin to update your account in Staff &rarr; Edit.
+            </p>
+          </div>
+        </div>
+      )}
 
       {hasPermission(['superadmin', 'admin']) && renderAdminDashboard()}
       {user?.role === 'teacher' && renderTeacherDashboard()}
