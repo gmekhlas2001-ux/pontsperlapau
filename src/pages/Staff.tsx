@@ -598,6 +598,7 @@ export function Staff() {
                             <SelectItem value="admin">{t('roles.admin')}</SelectItem>
                             <SelectItem value="teacher">{t('roles.teacher')}</SelectItem>
                             <SelectItem value="librarian">{t('roles.librarian')}</SelectItem>
+                            <SelectItem value="parent">{t('roles.parent')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -877,6 +878,7 @@ export function Staff() {
                           <SelectItem value="admin">{t('roles.admin')}</SelectItem>
                           <SelectItem value="teacher">{t('roles.teacher')}</SelectItem>
                           <SelectItem value="librarian">{t('roles.librarian')}</SelectItem>
+                          <SelectItem value="parent">{t('roles.parent')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

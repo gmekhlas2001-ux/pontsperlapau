@@ -123,7 +123,8 @@
     "admin": "Administrator",
     "teacher": "Teacher",
     "librarian": "Librarian",
-    "student": "Student"
+    "student": "Student",
+    "parent": "Parent"
   },
   "common": {
     "search": "Search",
@@ -699,6 +700,7 @@
     "addLink": "Add Link",
     "create": "Create Link",
     "student": "Student",
+    "parent": "Parent",
     "parentUser": "Parent Account",
     "relationship": "Relationship",
     "branch": "Branch",
@@ -752,6 +754,7 @@
     "addFee": "Add Fee",
     "create": "Create Fee",
     "student": "Student",
+    "parent": "Parent",
     "selectStudent": "Select a student",
     "branch": "Branch",
     "description": "Description",

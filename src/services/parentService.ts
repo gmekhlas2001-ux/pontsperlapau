@@ -45,23 +45,17 @@ export interface ChildSummary {
 
 export async function getParentLinks(): Promise<{ success: boolean; data?: ParentStudentLink[]; error?: string }> {
   try {
-    let q = supabase
+    const { data, error } = await supabase
       .from('parent_student_links')
       .select(`
         id, parent_user_id, student_id, relationship, is_primary, created_at,
         student:students!student_id(
           student_id,
-          status,
-          branch:branches!branch_id(name),
-          user:users!user_id(first_name, last_name)
+          user:users!user_id(first_name, last_name, status, branch:branches!branch_id(name))
         )
       `)
       .order('created_at', { ascending: false });
 
-    // Filter by branch via student
-    // (no direct branch_id column on parent_student_links)
-
-    const { data, error } = await q;
     if (error) throw error;
 
     const rows: ParentStudentLink[] = ((data ?? []) as any[]).map((row) => ({
@@ -74,8 +68,8 @@ export async function getParentLinks(): Promise<{ success: boolean; data?: Paren
       studentFirstName: row.student?.user?.first_name ?? '',
       studentLastName: row.student?.user?.last_name ?? '',
       studentCode: row.student?.student_id ?? '',
-      studentStatus: row.student?.status ?? '',
-      branchName: row.student?.branch?.name ?? null,
+      studentStatus: row.student?.user?.status ?? '',
+      branchName: row.student?.user?.branch?.name ?? null,
     }));
 
     return { success: true, data: rows };
@@ -131,9 +125,8 @@ export async function getMyChildren(
       .select(`
         student_id, relationship, is_primary,
         student:students!student_id(
-          id, student_id, status,
-          branch:branches!branch_id(name),
-          user:users!user_id(first_name, last_name)
+          id, student_id,
+          user:users!user_id(first_name, last_name, status, branch:branches!branch_id(name))
         )
       `)
       .eq('parent_user_id', parentUserId);
@@ -146,7 +139,7 @@ export async function getMyChildren(
     // Parallel queries: enrollments, fees
     const [enrollRes, feeRes] = await Promise.all([
       supabase
-        .from('enrollments')
+        .from('class_enrollments')
         .select('student_id, grade, attendance_percentage')
         .in('student_id', studentIds)
         .eq('status', 'active'),
@@ -185,8 +178,8 @@ export async function getMyChildren(
         studentFirstName: s?.user?.first_name ?? '',
         studentLastName: s?.user?.last_name ?? '',
         studentCode: s?.student_id ?? '',
-        studentStatus: s?.status ?? '',
-        branchName: s?.branch?.name ?? null,
+        studentStatus: s?.user?.status ?? '',
+        branchName: s?.user?.branch?.name ?? null,
         relationship: link.relationship,
         isPrimary: link.is_primary,
         enrolledClasses: myEnrollments.length,

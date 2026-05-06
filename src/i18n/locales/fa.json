@@ -32,7 +32,8 @@
     "admin": "مدیر",
     "teacher": "معلم",
     "librarian": "کتابدار",
-    "student": "دانش‌آموز"
+    "student": "دانش‌آموز",
+    "parent": "والدین"
   },
   "common": {
     "search": "جستجو",

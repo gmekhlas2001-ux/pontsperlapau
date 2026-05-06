@@ -32,7 +32,8 @@
     "admin": "Administrador",
     "teacher": "Profesor",
     "librarian": "Bibliotecario",
-    "student": "Estudiante"
+    "student": "Estudiante",
+    "parent": "Padre/Madre"
   },
   "common": {
     "search": "Buscar",
