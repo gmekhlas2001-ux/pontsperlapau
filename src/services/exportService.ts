@@ -418,3 +418,138 @@ function styleExcelHeader(ws: XLSX.WorkSheet, colCount: number) {
     };
   }
 }
+
+// ─── PDF: Certificate ────────────────────────────────────────────────────────
+
+export type CertificateType = 'enrollment' | 'completion';
+
+export interface CertificateData {
+  studentFirstName: string;
+  studentLastName: string;
+  studentCode: string;
+  className?: string;
+  branchName?: string;
+  academicYear?: string;
+  issuedBy?: string;
+  type: CertificateType;
+}
+
+/**
+ * Generate a printable PDF certificate (A4 landscape).
+ * enrollment = confirms the student is enrolled
+ * completion  = confirms the student has completed a programme
+ */
+export function exportCertificatePDF(data: CertificateData) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();   // 297
+  const H = doc.internal.pageSize.getHeight();  // 210
+  const cx = W / 2;
+
+  // --- Background / border ---
+  doc.setFillColor(248, 250, 252); // slate-50
+  doc.rect(0, 0, W, H, 'F');
+
+  // Outer decorative border
+  doc.setDrawColor(13, 148, 136); // teal-600
+  doc.setLineWidth(3);
+  doc.rect(8, 8, W - 16, H - 16);
+  doc.setLineWidth(0.8);
+  doc.rect(11, 11, W - 22, H - 22);
+
+  // Teal top ribbon
+  doc.setFillColor(13, 148, 136);
+  doc.rect(8, 8, W - 16, 22, 'F');
+
+  // Organisation name in ribbon
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Ponts per la Pau', cx, 22, { align: 'center' });
+
+  // Certificate title
+  const title = data.type === 'enrollment'
+    ? 'CERTIFICATE OF ENROLLMENT'
+    : 'CERTIFICATE OF COMPLETION';
+
+  doc.setTextColor(13, 148, 136);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text(title, cx, 55, { align: 'center' });
+
+  // Divider line
+  doc.setDrawColor(13, 148, 136);
+  doc.setLineWidth(0.5);
+  doc.line(40, 60, W - 40, 60);
+
+  // Body text
+  doc.setTextColor(80, 80, 80);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+
+  const introText = data.type === 'enrollment'
+    ? 'This is to certify that'
+    : 'This is to certify that';
+  doc.text(introText, cx, 75, { align: 'center' });
+
+  // Student name — large
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(28);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${data.studentFirstName} ${data.studentLastName}`, cx, 92, { align: 'center' });
+
+  // Student code
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120, 120, 120);
+  doc.text(`Student ID: ${data.studentCode}`, cx, 100, { align: 'center' });
+
+  // Middle sentence
+  doc.setTextColor(80, 80, 80);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+
+  const midText = data.type === 'enrollment'
+    ? `is officially enrolled${data.className ? ` in ${data.className}` : ''} at`
+    : `has successfully completed${data.className ? ` the programme ${data.className}` : ' the programme'} at`;
+  doc.text(midText, cx, 112, { align: 'center' });
+
+  // Branch / school name
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(13, 148, 136);
+  doc.text(data.branchName ?? 'Ponts per la Pau', cx, 124, { align: 'center' });
+
+  if (data.academicYear) {
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Academic Year: ${data.academicYear}`, cx, 133, { align: 'center' });
+  }
+
+  // Issue date + signature line
+  const issueDate = new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+  const sigY = H - 40;
+
+  // Date left
+  doc.setFontSize(10);
+  doc.setTextColor(80, 80, 80);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Issued: ${issueDate}`, 30, sigY + 8);
+
+  // Signature right
+  doc.setDrawColor(100, 100, 100);
+  doc.setLineWidth(0.4);
+  doc.line(W - 90, sigY, W - 30, sigY);
+  doc.text(data.issuedBy ?? 'Director', W - 60, sigY + 6, { align: 'center' });
+  doc.text('Authorised Signatory', W - 60, sigY + 11, { align: 'center' });
+
+  // Bottom ribbon
+  doc.setFillColor(13, 148, 136);
+  doc.rect(8, H - 19, W - 16, 11, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.text(`Generated ${issueDate} · pontsperlapau.org`, cx, H - 12, { align: 'center' });
+
+  const name = `certificate-${data.studentCode}-${data.type}-${today()}.pdf`;
+  doc.save(name);
+}

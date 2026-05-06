@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
+import Papa from 'papaparse';
 import { DocumentsManager, flushPendingDocuments } from '@/components/DocumentsManager';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -62,6 +63,7 @@ import {
   Pencil,
   Trash2,
   Grid3x2 as Grid3X3,
+  Upload,
   List,
   Eye,
   Calendar,
@@ -152,6 +154,10 @@ export function Students() {
   );
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [showCsvImport, setShowCsvImport] = useState(false);
+  const [csvRows, setCsvRows] = useState<any[]>([]);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const csvInputId = useId();
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -544,6 +550,10 @@ export function Students() {
           <p className="text-muted-foreground">{t('students.studentList')}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setShowCsvImport(true)}>
+            <Upload className="h-4 w-4" />
+            {t('students.importCsv')}
+          </Button>
           <div className="flex items-center border rounded-lg p-1">
             <Button
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
@@ -1141,6 +1151,125 @@ export function Students() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* CSV Import Dialog */}
+      <Dialog open={showCsvImport} onOpenChange={(o) => { if (!o) { setShowCsvImport(false); setCsvRows([]); } }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              {t('students.importCsv')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('students.importCsvDesc')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {csvRows.length === 0 ? (
+            <div className="space-y-4">
+              <div className="border-2 border-dashed rounded-lg p-8 text-center space-y-3">
+                <Upload className="h-8 w-8 mx-auto text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">{t('students.dropCsv')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('students.csvColumns')}: <code>first_name, last_name, email, phone, date_of_birth, gender, nationality, grade_level</code>
+                </p>
+                <label htmlFor={csvInputId}>
+                  <Button variant="outline" size="sm" asChild>
+                    <span>{t('students.selectFile')}</span>
+                  </Button>
+                </label>
+                <input
+                  id={csvInputId}
+                  type="file"
+                  accept=".csv"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    Papa.parse(file, {
+                      header: true,
+                      skipEmptyLines: true,
+                      complete: (results) => {
+                        setCsvRows(results.data as any[]);
+                      },
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {t('students.csvPreview', { count: csvRows.length })}
+              </p>
+              <div className="max-h-64 overflow-y-auto border rounded-lg">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      {Object.keys(csvRows[0] ?? {}).slice(0, 6).map((k) => (
+                        <th key={k} className="p-2 text-left font-medium">{k}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvRows.slice(0, 20).map((row, i) => (
+                      <tr key={i} className="border-b last:border-0">
+                        {Object.values(row as any).slice(0, 6).map((v: any, j) => (
+                          <td key={j} className="p-2 truncate max-w-[120px]">{v}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <Button variant="outline" size="sm" onClick={() => setCsvRows([])}>
+                  {t('students.chooseDifferent')}
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => { setShowCsvImport(false); setCsvRows([]); }}>
+                    {t('common.cancel')}
+                  </Button>
+                  <Button
+                    disabled={csvImporting}
+                    onClick={async () => {
+                      setCsvImporting(true);
+                      let ok = 0; let fail = 0;
+                      const branchId = branches[0]?.id ?? '';
+                      for (const row of csvRows) {
+                        const res = await createStudent({
+                          firstName: (row.first_name || row.firstName || '') as string,
+                          lastName: (row.last_name || row.lastName || '') as string,
+                          email: row.email || undefined,
+                          phone: row.phone || undefined,
+                          dateOfBirth: (row.date_of_birth || row.dateOfBirth || '') as string,
+                          enrollmentDate: (row.enrollment_date || row.enrollmentDate || new Date().toISOString().split('T')[0]) as string,
+                          gender: ((row.gender as string) || 'male') as 'male' | 'female' | 'other' | 'prefer_not_to_say',
+                          nationality: row.nationality || undefined,
+                          gradeLevel: (row.grade_level || row.gradeLevel || undefined) as string | undefined,
+                          branchId: (row.branch_id || branchId) as string,
+                        });
+                        if (res.success) ok++; else fail++;
+                      }
+                      setCsvImporting(false);
+                      toast.success(t('students.importDone', { ok, fail }));
+                      setShowCsvImport(false);
+                      setCsvRows([]);
+                      fetchStudents();
+                    }}
+                  >
+                    {csvImporting
+                      ? t('students.importing')
+                      : t('students.importN', { count: csvRows.length })
+                    }
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

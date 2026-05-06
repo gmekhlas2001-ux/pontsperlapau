@@ -40,6 +40,8 @@ import Fees from '@/pages/Fees';
 import ParentDashboard from '@/pages/ParentDashboard';
 import ParentLinks from '@/pages/ParentLinks';
 import CalendarView from '@/pages/CalendarView';
+import Messages from '@/pages/Messages';
+import Donors from '@/pages/Donors';
 
 import type { UserRole } from '@/contexts/AuthContext';
 
@@ -194,6 +196,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher', 'student']}>
               <CalendarView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="messages"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher', 'librarian']}>
+              <Messages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="donors"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
+              <Donors />
             </ProtectedRoute>
           }
         />

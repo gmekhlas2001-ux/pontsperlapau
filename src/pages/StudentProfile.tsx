@@ -22,7 +22,7 @@ import {
   type StudentProfileClass,
 } from '@/services/studentService';
 import { useAuth } from '@/contexts/AuthContext';
-import { exportReportCardPDF, exportGradesExcel } from '@/services/exportService';
+import { exportReportCardPDF, exportGradesExcel, exportCertificatePDF } from '@/services/exportService';
 import type { GradeStudent } from '@/services/gradesService';
 import { DocumentsManager } from '@/components/DocumentsManager';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
@@ -36,7 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, GraduationCap, BookOpen, ClipboardCheck, User,
   Phone, Mail, MapPin, Calendar, Hash, Building2, Shield,
-  Users, Heart, FileText, TrendingUp, Award, FileDown, AlertCircle, Paperclip,
+  Users, Heart, FileText, TrendingUp, Award, FileDown, AlertCircle, Paperclip, Medal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -572,6 +572,36 @@ export function StudentProfile() {
                 {student.classes.length} class{student.classes.length !== 1 ? 'es' : ''}
               </span>
             </div>
+            {user?.role !== 'student' && (
+              <div className="flex gap-2 mt-3 flex-wrap">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 gap-1.5 text-xs"
+                  onClick={() => exportCertificatePDF({
+                    studentFirstName: student.firstName,
+                    studentLastName: student.lastName,
+                    studentCode: student.studentCode ?? '',
+                    type: 'enrollment',
+                  })}
+                >
+                  <Medal className="h-3.5 w-3.5" /> Enrollment Certificate
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 gap-1.5 text-xs"
+                  onClick={() => exportCertificatePDF({
+                    studentFirstName: student.firstName,
+                    studentLastName: student.lastName,
+                    studentCode: student.studentCode ?? '',
+                    type: 'completion',
+                  })}
+                >
+                  <Medal className="h-3.5 w-3.5" /> Completion Certificate
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
