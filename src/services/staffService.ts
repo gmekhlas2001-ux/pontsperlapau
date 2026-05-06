@@ -161,7 +161,10 @@ export async function getStaffList() {
     const { data, error } = await query;
     if (error) throw error;
 
-    return { success: true, data };
+    // Exclude parent-role users — parents are managed via Parent Links, not Staff
+    const filtered = (data ?? []).filter((s: any) => s.user?.role !== 'parent');
+
+    return { success: true, data: filtered };
   } catch (error: any) {
     console.error('Error fetching staff:', error);
     return { success: false, error: error.message || 'Failed to fetch staff list' };

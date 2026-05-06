@@ -23,6 +23,7 @@
     "surveys": "Encuestas",
     "reports": "Informes",
     "passwordResets": "Restablecimientos de contraseña",
+    "auditLog": "Registro de Auditoría",
     "settings": "Configuración",
     "logout": "Cerrar Sesión",
     "profile": "Perfil"

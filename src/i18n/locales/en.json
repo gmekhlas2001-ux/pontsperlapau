@@ -23,6 +23,7 @@
     "surveys": "Surveys",
     "reports": "Reports",
     "passwordResets": "Password Resets",
+    "auditLog": "Audit Log",
     "settings": "Settings",
     "logout": "Logout",
     "profile": "Profile"

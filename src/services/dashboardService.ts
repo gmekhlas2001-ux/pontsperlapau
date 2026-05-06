@@ -15,9 +15,16 @@ export interface DashboardStats {
   overdueBooks: number;
   totalBranches: number;
   // Academic health
-  lowAttendanceCount: number;   // students with attendance_percentage < 80
-  failingStudentsCount: number; // students with final grade = 'F'
-  gradedEnrollments: number;    // enrollments that have a grade set
+  lowAttendanceCount: number;
+  failingStudentsCount: number;
+  gradedEnrollments: number;
+  // Finance
+  outstandingFeesCount: number;
+  outstandingFeesAmount: number;
+  activeGrantsCount: number;
+  activeGrantsAmount: number;
+  // Comms
+  unreadMessagesCount: number;
 }
 
 export interface BranchStat {
@@ -48,7 +55,23 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     .select('attendance_percentage, grade, student:students!student_id(branch_id)')
     .eq('status', 'active');
 
-  const [staffResult, studentsResult, classesResult, booksResult, branchesResult, overdueResult, enrollResult] = await Promise.all([
+  const feesQ = supabase
+    .from('student_fees')
+    .select('amount, branch_id')
+    .in('status', ['pending', 'overdue', 'partial']);
+
+  const grantsQ = supabase
+    .from('grants')
+    .select('amount, branch_id')
+    .eq('status', 'active');
+
+  const storedUser = localStorage.getItem('user');
+  const currentUserId = storedUser ? JSON.parse(storedUser).id : null;
+  const msgQ = currentUserId
+    ? supabase.from('messages').select('id', { count: 'exact', head: true }).is('read_at', null).is('parent_id', null).or(`recipient_id.eq.${currentUserId},recipient_id.is.null`)
+    : Promise.resolve({ count: 0 });
+
+  const [staffResult, studentsResult, classesResult, booksResult, branchesResult, overdueResult, enrollResult, feesResult, grantsResult, msgResult] = await Promise.all([
     branchId ? staffQ.eq('branch_id', branchId) : staffQ,
     branchId ? studentQ.eq('branch_id', branchId) : studentQ,
     branchId ? classQ.eq('branch_id', branchId) : classQ,
@@ -56,6 +79,9 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     branchId ? branchQ.eq('id', branchId) : branchQ,
     branchId ? overdueQ.eq('book.branch_id', branchId) : overdueQ,
     enrollQ,
+    branchId ? feesQ.eq('branch_id', branchId) : feesQ,
+    branchId ? grantsQ.eq('branch_id', branchId) : grantsQ,
+    msgQ,
   ]);
 
   const staffRows = (staffResult.data ?? []) as unknown as Array<{ user: { status: string } | null }>;
@@ -78,6 +104,12 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const failingStudentsCount = enrollRows.filter((e) => e.grade === 'F').length;
   const gradedEnrollments = enrollRows.filter((e) => e.grade !== null && e.grade !== '').length;
 
+  const feeRows = (feesResult.data ?? []) as Array<{ amount: string; branch_id: string }>;
+  const outstandingFeesAmount = feeRows.reduce((s, f) => s + parseFloat(f.amount), 0);
+
+  const grantRows = (grantsResult.data ?? []) as Array<{ amount: string; branch_id: string }>;
+  const activeGrantsAmount = grantRows.reduce((s, g) => s + parseFloat(g.amount), 0);
+
   return {
     totalStaff: staffRows.length,
     activeStaff,
@@ -94,6 +126,11 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     lowAttendanceCount,
     failingStudentsCount,
     gradedEnrollments,
+    outstandingFeesCount: feeRows.length,
+    outstandingFeesAmount,
+    activeGrantsCount: grantRows.length,
+    activeGrantsAmount,
+    unreadMessagesCount: (msgResult as any).count ?? 0,
   };
 }
 

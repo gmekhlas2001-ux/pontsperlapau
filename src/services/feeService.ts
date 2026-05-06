@@ -206,6 +206,33 @@ export async function deleteFee(feeId: string): Promise<{ success: boolean; erro
   }
 }
 
+// ─── Bulk creation ────────────────────────────────────────────────────────────
+
+export async function bulkCreateFees(
+  studentIds: string[],
+  shared: Omit<CreateFeeData, 'studentId'>,
+): Promise<{ success: boolean; created: number; errors: string[] }> {
+  const storedUser = localStorage.getItem('user');
+  const recordedBy = storedUser ? JSON.parse(storedUser).id : null;
+
+  const rows = studentIds.map((studentId) => ({
+    student_id: studentId,
+    branch_id: shared.branchId,
+    class_id: shared.classId ?? null,
+    description: shared.description,
+    amount: shared.amount,
+    currency: shared.currency ?? 'EUR',
+    due_date: shared.dueDate,
+    notes: shared.notes ?? null,
+    recorded_by: recordedBy,
+    status: 'pending',
+  }));
+
+  const { error } = await supabase.from('student_fees').insert(rows);
+  if (error) return { success: false, created: 0, errors: [error.message] };
+  return { success: true, created: rows.length, errors: [] };
+}
+
 // ─── Parent portal helpers ────────────────────────────────────────────────────
 
 export async function getFeesForStudent(

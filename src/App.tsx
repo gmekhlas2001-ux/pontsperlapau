@@ -42,6 +42,7 @@ import ParentLinks from '@/pages/ParentLinks';
 import CalendarView from '@/pages/CalendarView';
 import Messages from '@/pages/Messages';
 import Donors from '@/pages/Donors';
+import AuditLog from '@/pages/AuditLog';
 
 import type { UserRole } from '@/contexts/AuthContext';
 
@@ -244,6 +245,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
               <PasswordResets />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="audit-log"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
+              <AuditLog />
             </ProtectedRoute>
           }
         />

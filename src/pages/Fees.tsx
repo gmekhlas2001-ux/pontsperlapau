@@ -48,6 +48,7 @@ import {
   CreditCard,
   Banknote,
   RefreshCw,
+  Users2,
 } from 'lucide-react';
 import {
   getFees,
@@ -55,6 +56,7 @@ import {
   markFeePaid,
   updateFeeStatus,
   deleteFee,
+  bulkCreateFees,
   type FeeRecord,
   type FeeSummary,
   type FeeStatus,
@@ -63,6 +65,8 @@ import {
 } from '@/services/feeService';
 import { getStudentsList } from '@/services/studentService';
 import { getBranches, type Branch } from '@/services/branchService';
+import { getClassesList } from '@/services/classService';
+import { supabase } from '@/lib/supabase';
 import { scopedBranchId } from '@/lib/scope';
 
 // ─── Status helpers ────────────────────────────────────────────────────────────
@@ -395,6 +399,231 @@ function MarkPaidDialog({
   );
 }
 
+// ─── Bulk Fee Dialog ───────────────────────────────────────────────────────────
+
+function BulkFeeDialog({
+  open,
+  onClose,
+  onCreated,
+  branches,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+  branches: Branch[];
+}) {
+  const { t } = useTranslation();
+  const branchId = scopedBranchId();
+
+  type Scope = 'branch' | 'class';
+  const [scope, setScope] = useState<Scope>('branch');
+  const [selectedBranchId, setSelectedBranchId] = useState(branchId ?? (branches[0]?.id ?? ''));
+  const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [previewCount, setPreviewCount] = useState<number | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('EUR');
+  const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Load classes for selected branch
+  useEffect(() => {
+    if (scope !== 'class') return;
+    getClassesList().then((res) => {
+      if (res.success && res.data) {
+        const filtered = selectedBranchId
+          ? res.data.filter((c) => c.branchId === selectedBranchId && c.status === 'active')
+          : res.data.filter((c) => c.status === 'active');
+        setClasses(filtered.map((c) => ({ id: c.id, name: c.name })));
+        if (filtered.length > 0) setSelectedClassId(filtered[0].id);
+      }
+    });
+  }, [scope, selectedBranchId]);
+
+  // Preview: count how many students will get fees
+  useEffect(() => {
+    if (!open) return;
+    setPreviewCount(null);
+    setPreviewLoading(true);
+
+    const run = async () => {
+      if (scope === 'class' && selectedClassId) {
+        const { count } = await supabase
+          .from('class_enrollments')
+          .select('id', { count: 'exact', head: true })
+          .eq('class_id', selectedClassId)
+          .eq('status', 'active');
+        setPreviewCount(count ?? 0);
+      } else if (scope === 'branch' && selectedBranchId) {
+        const { data } = await supabase
+          .from('students')
+          .select('id, user:users!user_id(status, branch_id)')
+          .eq('user.branch_id', selectedBranchId);
+        const active = (data ?? []).filter((s: any) => s.user?.status === 'active');
+        setPreviewCount(active.length);
+      }
+      setPreviewLoading(false);
+    };
+    run();
+  }, [open, scope, selectedBranchId, selectedClassId]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const amt = parseFloat(amount);
+    if (!description.trim()) { toast.error(t('fees.errors.description')); return; }
+    if (isNaN(amt) || amt <= 0) { toast.error(t('fees.errors.amount')); return; }
+
+    setSaving(true);
+    let studentIds: string[] = [];
+
+    if (scope === 'class' && selectedClassId) {
+      const { data } = await supabase
+        .from('class_enrollments')
+        .select('student_id')
+        .eq('class_id', selectedClassId)
+        .eq('status', 'active');
+      studentIds = (data ?? []).map((r: any) => r.student_id);
+    } else {
+      const { data } = await supabase
+        .from('students')
+        .select('id, user:users!user_id(status, branch_id)');
+      studentIds = (data ?? [])
+        .filter((s: any) => s.user?.status === 'active' && s.user?.branch_id === selectedBranchId)
+        .map((s: any) => s.id);
+    }
+
+    if (studentIds.length === 0) {
+      toast.error('No students found for the selected scope');
+      setSaving(false);
+      return;
+    }
+
+    const res = await bulkCreateFees(studentIds, {
+      branchId: selectedBranchId,
+      classId: scope === 'class' ? selectedClassId : undefined,
+      description,
+      amount: amt,
+      currency,
+      dueDate,
+      notes: notes || undefined,
+    });
+
+    setSaving(false);
+    if (res.success) {
+      toast.success(`${res.created} fees created`);
+      onCreated();
+      onClose();
+    } else {
+      toast.error(res.errors[0] ?? 'Failed to create fees');
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Users2 className="w-4 h-4" /> Bulk Create Fees
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Scope */}
+          <div className="space-y-1">
+            <Label>Apply to</Label>
+            <Select value={scope} onValueChange={(v) => setScope(v as Scope)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="branch">All active students in branch</SelectItem>
+                <SelectItem value="class">All students in a class</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Branch selector (superadmins) */}
+          {!branchId && branches.length > 0 && (
+            <div className="space-y-1">
+              <Label>Branch</Label>
+              <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Class selector */}
+          {scope === 'class' && (
+            <div className="space-y-1">
+              <Label>Class</Label>
+              <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+                <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+                <SelectContent>
+                  {classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Preview count */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+            <Users2 className="w-4 h-4 shrink-0" />
+            {previewLoading ? 'Counting students…' : previewCount !== null ? (
+              <span><strong>{previewCount}</strong> {previewCount === 1 ? 'student' : 'students'} will receive this fee</span>
+            ) : '—'}
+          </div>
+
+          {/* Description */}
+          <div className="space-y-1">
+            <Label>{t('fees.description')}</Label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Monthly tuition — May 2026" required />
+          </div>
+
+          {/* Amount + Currency */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>{t('fees.amount')}</Label>
+              <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+            </div>
+            <div className="space-y-1">
+              <Label>{t('fees.currency')}</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['EUR', 'USD', 'GBP', 'AFN', 'TRY'].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Due date */}
+          <div className="space-y-1">
+            <Label>{t('fees.dueDate')}</Label>
+            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} required />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1">
+            <Label>{t('common.notes', 'Notes')} <span className="text-muted-foreground text-xs">({t('common.optional', 'optional')})</span></Label>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
+            <Button type="submit" disabled={saving || previewCount === 0} className="gap-2">
+              <Users2 className="w-4 h-4" />
+              {saving ? 'Creating…' : `Create ${previewCount ?? ''} fees`}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Fees() {
@@ -417,6 +646,7 @@ export default function Fees() {
   const [branches, setBranches] = useState<Branch[]>([]);
 
   const [showAdd, setShowAdd] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
   const [payFee, setPayFee] = useState<FeeRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FeeRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -500,10 +730,16 @@ export default function Fees() {
           <p className="text-muted-foreground text-sm mt-0.5">{t('fees.subtitle')}</p>
         </div>
         {canManage && (
-          <Button onClick={() => setShowAdd(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            {t('fees.addFee')}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowBulk(true)} className="gap-2">
+              <Users2 className="w-4 h-4" />
+              Bulk Create
+            </Button>
+            <Button onClick={() => setShowAdd(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              {t('fees.addFee')}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -644,13 +880,21 @@ export default function Fees() {
 
       {/* Dialogs */}
       {canManage && (
-        <AddFeeDialog
-          open={showAdd}
-          onClose={() => setShowAdd(false)}
-          onCreated={load}
-          students={students}
-          branches={branches}
-        />
+        <>
+          <AddFeeDialog
+            open={showAdd}
+            onClose={() => setShowAdd(false)}
+            onCreated={load}
+            students={students}
+            branches={branches}
+          />
+          <BulkFeeDialog
+            open={showBulk}
+            onClose={() => setShowBulk(false)}
+            onCreated={load}
+            branches={branches}
+          />
+        </>
       )}
       <MarkPaidDialog fee={payFee} onClose={() => setPayFee(null)} onPaid={load} />
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

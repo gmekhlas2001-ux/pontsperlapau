@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
 import { fetchRecentActivities, type ActivityLog } from '@/services/activityService';
-import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Clock, CircleAlert as AlertCircle, MapPin, ClipboardCheck, CalendarDays, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Clock, CircleAlert as AlertCircle, MapPin, ClipboardCheck, CalendarDays, TrendingDown, AlertTriangle, CircleDollarSign, HandCoins, MessageSquare } from 'lucide-react';
 import i18n from '@/i18n';
 import {
   BarChart,
@@ -38,6 +38,11 @@ const emptyStats: DashboardStats = {
   lowAttendanceCount: 0,
   failingStudentsCount: 0,
   gradedEnrollments: 0,
+  outstandingFeesCount: 0,
+  outstandingFeesAmount: 0,
+  activeGrantsCount: 0,
+  activeGrantsAmount: 0,
+  unreadMessagesCount: 0,
 };
 
 export function Dashboard() {
@@ -182,6 +187,60 @@ export function Dashboard() {
                   {stats.failingStudentsCount} student{stats.failingStudentsCount !== 1 ? 's' : ''} with failing grade
                 </p>
                 <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">Grade F — click to review</p>
+              </div>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Finance & comms alerts */}
+      {(stats.outstandingFeesCount > 0 || stats.activeGrantsCount > 0 || stats.unreadMessagesCount > 0) && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {stats.outstandingFeesCount > 0 && (
+            <button
+              onClick={() => navigate('/fees')}
+              className="flex items-center gap-3 p-4 rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors text-left"
+            >
+              <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 flex-shrink-0">
+                <CircleDollarSign className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-orange-800 dark:text-orange-300 text-sm">
+                  {new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(stats.outstandingFeesAmount)} outstanding
+                </p>
+                <p className="text-xs text-orange-600 dark:text-orange-500 mt-0.5">{stats.outstandingFeesCount} unpaid fee{stats.outstandingFeesCount !== 1 ? 's' : ''}</p>
+              </div>
+            </button>
+          )}
+          {stats.activeGrantsCount > 0 && (
+            <button
+              onClick={() => navigate('/donors')}
+              className="flex items-center gap-3 p-4 rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-900/20 hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors text-left"
+            >
+              <div className="p-2 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 flex-shrink-0">
+                <HandCoins className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-teal-800 dark:text-teal-300 text-sm">
+                  {new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(stats.activeGrantsAmount)} in grants
+                </p>
+                <p className="text-xs text-teal-600 dark:text-teal-500 mt-0.5">{stats.activeGrantsCount} active grant{stats.activeGrantsCount !== 1 ? 's' : ''}</p>
+              </div>
+            </button>
+          )}
+          {stats.unreadMessagesCount > 0 && (
+            <button
+              onClick={() => navigate('/messages')}
+              className="flex items-center gap-3 p-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-left"
+            >
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex-shrink-0">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-blue-800 dark:text-blue-300 text-sm">
+                  {stats.unreadMessagesCount} unread message{stats.unreadMessagesCount !== 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-500 mt-0.5">Click to open inbox</p>
               </div>
             </button>
           )}
