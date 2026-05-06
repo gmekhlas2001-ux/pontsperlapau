@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export type UserRole = 'superadmin' | 'admin' | 'teacher' | 'librarian' | 'student';
+export type UserRole = 'superadmin' | 'admin' | 'teacher' | 'librarian' | 'student' | 'parent';
 
 export interface User {
   id: string;

@@ -11,6 +11,10 @@
     "attendance": "Asistencia",
     "grades": "Calificaciones",
     "timetable": "Horario",
+    "calendar": "Calendario",
+    "fees": "Cuotas",
+    "parentPortal": "Mis Hijos",
+    "parentLinks": "Vínculos Padres",
     "myGrades": "Mis Notas",
     "library": "Biblioteca",
     "branches": "Sucursales",
@@ -72,7 +76,8 @@
     "status": "Estado",
     "notes": "Notas",
     "address": "Dirección",
-    "notProvided": "No proporcionado"
+    "notProvided": "No proporcionado",
+    "optional": "opcional"
   },
   "auth": {
     "login": "Iniciar Sesión",
@@ -462,6 +467,137 @@
     "complete": "Completar",
     "cancel": "Cancelar",
     "markFailed": "Marcar como Fallida"
+  },
+  "calendar": {
+    "title": "Calendario",
+    "subtitle": "Ver todos los horarios de clases en formato calendario",
+    "room": "Aula",
+    "today": "Hoy",
+    "prev": "Atrás",
+    "next": "Siguiente",
+    "month": "Mes",
+    "week": "Semana",
+    "day": "Día",
+    "agenda": "Agenda",
+    "noEvents": "No hay clases programadas en este período",
+    "more": "más",
+    "errors": {
+      "load": "Error al cargar las clases"
+    }
+  },
+  "parentLinks": {
+    "title": "Vínculos Padres-Alumnos",
+    "subtitle": "Vincula cuentas de padres con sus hijos para acceso al portal",
+    "addLink": "Añadir vínculo",
+    "create": "Crear vínculo",
+    "student": "Alumno",
+    "parentUser": "Cuenta del padre/madre",
+    "relationship": "Relación",
+    "branch": "Sede",
+    "selectParent": "Selecciona una cuenta de padre/madre",
+    "selectStudent": "Selecciona un alumno",
+    "noParentUsers": "No se encontraron cuentas de padres",
+    "search": "Buscar por nombre o código…",
+    "noLinks": "No hay vínculos configurados",
+    "created": "Vínculo creado correctamente",
+    "deleted": "Vínculo eliminado",
+    "deleteTitle": "Eliminar vínculo",
+    "deleteDesc": "¿Eliminar el vínculo de {{student}}? El padre/madre ya no verá a este alumno.",
+    "errors": {
+      "load": "Error al cargar vínculos",
+      "create": "Error al crear vínculo",
+      "delete": "Error al eliminar vínculo",
+      "selectParent": "Por favor selecciona una cuenta de padre/madre",
+      "selectStudent": "Por favor selecciona un alumno"
+    }
+  },
+  "parent": {
+    "title": "Portal de Padres",
+    "welcome": "Bienvenido/a, {{name}}",
+    "noChildren": "No hay alumnos vinculados a tu cuenta",
+    "noChildrenHint": "Contacta con la administración del centro para vincular a tus hijos",
+    "noFees": "Sin cuotas pendientes",
+    "classes": "Clases",
+    "avgScore": "Nota media",
+    "attendance": "Asistencia",
+    "viewProfile": "Ver perfil completo",
+    "due": "Vence",
+    "pendingFees": "{{count}} cuota(s) pendiente(s) — {{amount}}",
+    "totalPendingFees": "{{count}} cuota(s) pendiente(s) en total — {{amount}}",
+    "tabs": {
+      "overview": "Resumen",
+      "fees": "Cuotas"
+    },
+    "relationship": {
+      "mother": "Madre",
+      "father": "Padre",
+      "guardian": "Tutor/a",
+      "other": "Otro"
+    },
+    "errors": {
+      "load": "Error al cargar la información"
+    }
+  },
+  "fees": {
+    "title": "Gestión de Cuotas",
+    "subtitle": "Seguimiento de cuotas estudiantiles, pagos y saldos pendientes",
+    "addFee": "Añadir Cuota",
+    "create": "Crear Cuota",
+    "student": "Estudiante",
+    "selectStudent": "Selecciona un estudiante",
+    "branch": "Sede",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Ej. Matrícula T1, Tasa de inscripción",
+    "amount": "Importe",
+    "currency": "Moneda",
+    "dueDate": "Fecha límite",
+    "paidDate": "Fecha de pago",
+    "paymentMethod": "Método de pago",
+    "statusLabel": "Estado",
+    "notes": "Notas",
+    "allStatuses": "Todos los estados",
+    "search": "Buscar estudiante o descripción…",
+    "noFees": "No se encontraron cuotas",
+    "markAsPaid": "Marcar como pagado",
+    "waive": "Exonerar cuota",
+    "confirmPaid": "Confirmar pago",
+    "created": "Cuota creada correctamente",
+    "markedPaid": "Cuota marcada como pagada",
+    "waived": "Cuota exonerada",
+    "deleted": "Cuota eliminada",
+    "deleteTitle": "Eliminar cuota",
+    "deleteDesc": "¿Eliminar la cuota '{{description}}' de {{name}}? Esta acción no se puede deshacer.",
+    "overdueAlert": "{{count}} cuota(s) vencida(s) por un total de {{amount}} requieren atención",
+    "summary": {
+      "total": "Total de cuotas",
+      "paid": "Cobrado",
+      "pending": "Pendiente",
+      "overdue": "Vencido",
+      "records": "registros"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "paid": "Pagado",
+      "overdue": "Vencido",
+      "waived": "Exonerado",
+      "partial": "Parcial"
+    },
+    "methods": {
+      "cash": "Efectivo",
+      "bank_transfer": "Transferencia",
+      "card": "Tarjeta",
+      "other": "Otro"
+    },
+    "errors": {
+      "load": "Error al cargar cuotas",
+      "create": "Error al crear cuota",
+      "markPaid": "Error al marcar como pagado",
+      "update": "Error al actualizar cuota",
+      "delete": "Error al eliminar cuota",
+      "selectStudent": "Por favor selecciona un estudiante",
+      "description": "Por favor introduce una descripción",
+      "amount": "El importe debe ser mayor que cero"
+    }
   },
   "validation": {
     "required": "Este campo es obligatorio",

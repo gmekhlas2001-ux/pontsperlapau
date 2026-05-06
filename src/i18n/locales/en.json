@@ -11,6 +11,10 @@
     "attendance": "Attendance",
     "grades": "Grades",
     "timetable": "Timetable",
+    "calendar": "Calendar",
+    "fees": "Fees",
+    "parentPortal": "My Children",
+    "parentLinks": "Parent Links",
     "myGrades": "My Grades",
     "library": "Library",
     "branches": "Branches",
@@ -163,7 +167,8 @@
     "status": "Status",
     "notes": "Notes",
     "address": "Address",
-    "notProvided": "Not provided"
+    "notProvided": "Not provided",
+    "optional": "optional"
   },
   "auth": {
     "login": "Login",
@@ -560,6 +565,137 @@
     "complete": "Complete",
     "cancel": "Cancel",
     "markFailed": "Mark Failed"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "subtitle": "View all class schedules in a calendar format",
+    "room": "Room",
+    "today": "Today",
+    "prev": "Back",
+    "next": "Next",
+    "month": "Month",
+    "week": "Week",
+    "day": "Day",
+    "agenda": "Agenda",
+    "noEvents": "No classes scheduled in this period",
+    "more": "more",
+    "errors": {
+      "load": "Failed to load classes"
+    }
+  },
+  "parentLinks": {
+    "title": "Parent-Student Links",
+    "subtitle": "Link parent accounts to their children for portal access",
+    "addLink": "Add Link",
+    "create": "Create Link",
+    "student": "Student",
+    "parentUser": "Parent Account",
+    "relationship": "Relationship",
+    "branch": "Branch",
+    "selectParent": "Select a parent account",
+    "selectStudent": "Select a student",
+    "noParentUsers": "No parent accounts found",
+    "search": "Search by student name or code…",
+    "noLinks": "No parent-student links configured",
+    "created": "Link created successfully",
+    "deleted": "Link removed",
+    "deleteTitle": "Remove link",
+    "deleteDesc": "Remove the parent link for {{student}}? The parent will no longer see this child.",
+    "errors": {
+      "load": "Failed to load links",
+      "create": "Failed to create link",
+      "delete": "Failed to remove link",
+      "selectParent": "Please select a parent account",
+      "selectStudent": "Please select a student"
+    }
+  },
+  "parent": {
+    "title": "Parent Portal",
+    "welcome": "Welcome, {{name}}",
+    "noChildren": "No children linked to your account",
+    "noChildrenHint": "Contact school administration to link your children",
+    "noFees": "No outstanding fees",
+    "classes": "Classes",
+    "avgScore": "Avg Score",
+    "attendance": "Attendance",
+    "viewProfile": "View full profile",
+    "due": "Due",
+    "pendingFees": "{{count}} pending fee(s) — {{amount}}",
+    "totalPendingFees": "{{count}} outstanding fee(s) across all children — {{amount}} total",
+    "tabs": {
+      "overview": "Overview",
+      "fees": "Fees"
+    },
+    "relationship": {
+      "mother": "Mother",
+      "father": "Father",
+      "guardian": "Guardian",
+      "other": "Other"
+    },
+    "errors": {
+      "load": "Failed to load children"
+    }
+  },
+  "fees": {
+    "title": "Fee Management",
+    "subtitle": "Track student fees, payments and outstanding balances",
+    "addFee": "Add Fee",
+    "create": "Create Fee",
+    "student": "Student",
+    "selectStudent": "Select a student",
+    "branch": "Branch",
+    "description": "Description",
+    "descriptionPlaceholder": "e.g. Tuition Q1, Registration fee",
+    "amount": "Amount",
+    "currency": "Currency",
+    "dueDate": "Due Date",
+    "paidDate": "Paid Date",
+    "paymentMethod": "Payment Method",
+    "statusLabel": "Status",
+    "notes": "Notes",
+    "allStatuses": "All statuses",
+    "search": "Search student or description…",
+    "noFees": "No fee records found",
+    "markAsPaid": "Mark as Paid",
+    "waive": "Waive Fee",
+    "confirmPaid": "Confirm Payment",
+    "created": "Fee created successfully",
+    "markedPaid": "Fee marked as paid",
+    "waived": "Fee waived",
+    "deleted": "Fee deleted",
+    "deleteTitle": "Delete Fee",
+    "deleteDesc": "Delete the fee '{{description}}' for {{name}}? This cannot be undone.",
+    "overdueAlert": "{{count}} overdue fee(s) totalling {{amount}} need attention",
+    "summary": {
+      "total": "Total Fees",
+      "paid": "Collected",
+      "pending": "Pending",
+      "overdue": "Overdue",
+      "records": "records"
+    },
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "waived": "Waived",
+      "partial": "Partial"
+    },
+    "methods": {
+      "cash": "Cash",
+      "bank_transfer": "Bank Transfer",
+      "card": "Card",
+      "other": "Other"
+    },
+    "errors": {
+      "load": "Failed to load fees",
+      "create": "Failed to create fee",
+      "markPaid": "Failed to mark as paid",
+      "update": "Failed to update fee",
+      "delete": "Failed to delete fee",
+      "selectStudent": "Please select a student",
+      "description": "Please enter a description",
+      "amount": "Amount must be greater than zero"
+    }
   },
   "validation": {
     "required": "This field is required",

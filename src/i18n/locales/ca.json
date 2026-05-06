@@ -11,6 +11,10 @@
     "attendance": "Assistència",
     "grades": "Qualificacions",
     "timetable": "Horari",
+    "calendar": "Calendari",
+    "fees": "Quotes",
+    "parentPortal": "Els meus fills",
+    "parentLinks": "Vincles pares",
     "myGrades": "Les meves notes",
     "library": "Biblioteca",
     "branches": "Sucursals",
@@ -72,7 +76,8 @@
     "status": "Estat",
     "notes": "Notes",
     "address": "Adreça",
-    "notProvided": "No proporcionat"
+    "notProvided": "No proporcionat",
+    "optional": "opcional"
   },
   "auth": {
     "login": "Iniciar Sessió",
@@ -462,6 +467,137 @@
     "complete": "Completar",
     "cancel": "Cancel·lar",
     "markFailed": "Marcar com a Fallida"
+  },
+  "calendar": {
+    "title": "Calendari",
+    "subtitle": "Visualitza tots els horaris de classes en format calendari",
+    "room": "Aula",
+    "today": "Avui",
+    "prev": "Enrere",
+    "next": "Següent",
+    "month": "Mes",
+    "week": "Setmana",
+    "day": "Dia",
+    "agenda": "Agenda",
+    "noEvents": "No hi ha classes programades en aquest període",
+    "more": "més",
+    "errors": {
+      "load": "Error en carregar les classes"
+    }
+  },
+  "parentLinks": {
+    "title": "Vincles Pares-Alumnes",
+    "subtitle": "Vincula comptes de pares amb els seus fills per accés al portal",
+    "addLink": "Afegir vincle",
+    "create": "Crear vincle",
+    "student": "Alumne",
+    "parentUser": "Compte del pare/mare",
+    "relationship": "Relació",
+    "branch": "Seu",
+    "selectParent": "Selecciona un compte de pare/mare",
+    "selectStudent": "Selecciona un alumne",
+    "noParentUsers": "No s'han trobat comptes de pares",
+    "search": "Cerca per nom o codi…",
+    "noLinks": "No hi ha vincles configurats",
+    "created": "Vincle creat correctament",
+    "deleted": "Vincle eliminat",
+    "deleteTitle": "Eliminar vincle",
+    "deleteDesc": "Eliminar el vincle de {{student}}? El pare/mare ja no veurà aquest alumne.",
+    "errors": {
+      "load": "Error en carregar vincles",
+      "create": "Error en crear vincle",
+      "delete": "Error en eliminar vincle",
+      "selectParent": "Si us plau, selecciona un compte de pare/mare",
+      "selectStudent": "Si us plau, selecciona un alumne"
+    }
+  },
+  "parent": {
+    "title": "Portal de Pares",
+    "welcome": "Benvingut/da, {{name}}",
+    "noChildren": "No hi ha alumnes vinculats al teu compte",
+    "noChildrenHint": "Contacta amb l'administració del centre per vincular els teus fills",
+    "noFees": "Sense quotes pendents",
+    "classes": "Classes",
+    "avgScore": "Nota mitjana",
+    "attendance": "Assistència",
+    "viewProfile": "Veure perfil complet",
+    "due": "Venciment",
+    "pendingFees": "{{count}} quota/es pendents — {{amount}}",
+    "totalPendingFees": "{{count}} quota/es pendents en total — {{amount}}",
+    "tabs": {
+      "overview": "Resum",
+      "fees": "Quotes"
+    },
+    "relationship": {
+      "mother": "Mare",
+      "father": "Pare",
+      "guardian": "Tutor/a",
+      "other": "Altre"
+    },
+    "errors": {
+      "load": "Error en carregar la informació"
+    }
+  },
+  "fees": {
+    "title": "Gestió de Quotes",
+    "subtitle": "Seguiment de quotes d'alumnes, pagaments i saldos pendents",
+    "addFee": "Afegir Quota",
+    "create": "Crear Quota",
+    "student": "Alumne",
+    "selectStudent": "Selecciona un alumne",
+    "branch": "Seu",
+    "description": "Descripció",
+    "descriptionPlaceholder": "Ex. Matrícula T1, Taxa d'inscripció",
+    "amount": "Import",
+    "currency": "Moneda",
+    "dueDate": "Data límit",
+    "paidDate": "Data de pagament",
+    "paymentMethod": "Mètode de pagament",
+    "statusLabel": "Estat",
+    "notes": "Notes",
+    "allStatuses": "Tots els estats",
+    "search": "Cerca alumne o descripció…",
+    "noFees": "No s'han trobat quotes",
+    "markAsPaid": "Marcar com a pagat",
+    "waive": "Exonerar quota",
+    "confirmPaid": "Confirmar pagament",
+    "created": "Quota creada correctament",
+    "markedPaid": "Quota marcada com a pagada",
+    "waived": "Quota exonerada",
+    "deleted": "Quota eliminada",
+    "deleteTitle": "Eliminar quota",
+    "deleteDesc": "Eliminar la quota '{{description}}' de {{name}}? Aquesta acció no es pot desfer.",
+    "overdueAlert": "{{count}} quota/es vençuda/es per un total de {{amount}} requereixen atenció",
+    "summary": {
+      "total": "Total de quotes",
+      "paid": "Cobrat",
+      "pending": "Pendent",
+      "overdue": "Vençut",
+      "records": "registres"
+    },
+    "status": {
+      "pending": "Pendent",
+      "paid": "Pagat",
+      "overdue": "Vençut",
+      "waived": "Exonerat",
+      "partial": "Parcial"
+    },
+    "methods": {
+      "cash": "Efectiu",
+      "bank_transfer": "Transferència",
+      "card": "Targeta",
+      "other": "Altre"
+    },
+    "errors": {
+      "load": "Error en carregar quotes",
+      "create": "Error en crear quota",
+      "markPaid": "Error en marcar com a pagat",
+      "update": "Error en actualitzar quota",
+      "delete": "Error en eliminar quota",
+      "selectStudent": "Si us plau, selecciona un alumne",
+      "description": "Si us plau, introdueix una descripció",
+      "amount": "L'import ha de ser major que zero"
+    }
   },
   "validation": {
     "required": "Aquest camp és obligatori",

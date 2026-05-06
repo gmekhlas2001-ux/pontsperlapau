@@ -36,6 +36,10 @@ import { Attendance } from '@/pages/Attendance';
 import { Grades } from '@/pages/Grades';
 import { StudentProfile } from '@/pages/StudentProfile';
 import { Timetable } from '@/pages/Timetable';
+import Fees from '@/pages/Fees';
+import ParentDashboard from '@/pages/ParentDashboard';
+import ParentLinks from '@/pages/ParentLinks';
+import CalendarView from '@/pages/CalendarView';
 
 import type { UserRole } from '@/contexts/AuthContext';
 
@@ -158,6 +162,38 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher', 'student']}>
               <Timetable />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="fees"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher']}>
+              <Fees />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="parent-portal"
+          element={
+            <ProtectedRoute requiredRoles={['parent']}>
+              <ParentDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="parent-links"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
+              <ParentLinks />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="calendar"
+          element={
+            <ProtectedRoute requiredRoles={['superadmin', 'admin', 'teacher', 'student']}>
+              <CalendarView />
             </ProtectedRoute>
           }
         />
