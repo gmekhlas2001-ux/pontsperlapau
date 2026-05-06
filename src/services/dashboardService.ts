@@ -68,7 +68,11 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const storedUser = localStorage.getItem('user');
   const currentUserId = storedUser ? JSON.parse(storedUser).id : null;
   const msgQ = currentUserId
-    ? supabase.from('messages').select('id', { count: 'exact', head: true }).is('read_at', null).is('parent_id', null).or(`recipient_id.eq.${currentUserId},recipient_id.is.null`)
+    ? (() => {
+        let q = supabase.from('messages').select('id', { count: 'exact', head: true }).is('read_at', null).is('parent_id', null).or(`recipient_id.eq.${currentUserId},recipient_id.is.null`);
+        if (branchId) q = q.or(`branch_id.eq.${branchId},branch_id.is.null`);
+        return q;
+      })()
     : Promise.resolve({ count: 0 });
 
   const [staffResult, studentsResult, classesResult, booksResult, branchesResult, overdueResult, enrollResult, feesResult, grantsResult, msgResult] = await Promise.all([

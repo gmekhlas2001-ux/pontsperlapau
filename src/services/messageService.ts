@@ -50,7 +50,8 @@ export async function getInbox(
       .is('parent_id', null)        // top-level only
       .order('created_at', { ascending: false });
 
-    if (branchId) q = q.eq('branch_id', branchId);
+    // Branch filter: see own branch + global broadcasts (branch_id IS NULL)
+    if (branchId) q = q.or(`branch_id.eq.${branchId},branch_id.is.null`);
     // Messages addressed to this user OR broadcast (recipient_id IS NULL)
     q = q.or(`recipient_id.eq.${userId},recipient_id.is.null`);
 
@@ -80,7 +81,8 @@ export async function getSent(
       .is('parent_id', null)
       .order('created_at', { ascending: false });
 
-    if (branchId) q = q.eq('branch_id', branchId);
+    // Sender's own messages: their branch + their global broadcasts
+    if (branchId) q = q.or(`branch_id.eq.${branchId},branch_id.is.null`);
 
     const { data, error } = await q;
     if (error) throw error;
@@ -120,8 +122,18 @@ export async function sendMessage(
   msg: SendMessageData,
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
-    const branchId = scopedBranchId();
-    if (!branchId) throw new Error('No branch context');
+    let branchId = scopedBranchId();
+
+    // Superadmin (no branch): if targeting a specific user, inherit their branch.
+    // If broadcasting to everyone, send branch_id = null (global broadcast).
+    if (!branchId && msg.recipientId) {
+      const { data: rec } = await supabase
+        .from('users')
+        .select('branch_id')
+        .eq('id', msg.recipientId)
+        .maybeSingle();
+      branchId = rec?.branch_id ?? null;
+    }
 
     const { data, error } = await supabase
       .from('messages')
@@ -183,7 +195,7 @@ export async function getUnreadCount(
       .is('read_at', null)
       .or(`recipient_id.eq.${userId},recipient_id.is.null`);
 
-    if (branchId) q = q.eq('branch_id', branchId);
+    if (branchId) q = q.or(`branch_id.eq.${branchId},branch_id.is.null`);
     const { count } = await q;
     return count ?? 0;
   } catch {
