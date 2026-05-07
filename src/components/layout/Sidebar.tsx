@@ -84,7 +84,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
         )}
       </div>
 
-      <ScrollArea className="flex-1 py-4">
+      <ScrollArea className="flex-1 min-h-0 py-4">
         <nav className="space-y-1 px-2">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
