@@ -145,7 +145,13 @@ async function rawBooksPatch(bookId: string, body: Record<string, unknown>) {
 
 export async function updateBook(bookId: string, updates: UpdateBookData) {
   try {
-    const data = await rawBooksPatch(bookId, { ...updates, updated_at: new Date().toISOString() });
+    // Normalise empty strings to null for nullable text columns so
+    // UNIQUE constraints (e.g. books_isbn_key) don't reject "" duplicates.
+    const cleaned: Record<string, unknown> = { ...updates };
+    for (const k of ['isbn', 'publisher', 'category', 'description', 'language', 'location_shelf'] as const) {
+      if (cleaned[k] === '') cleaned[k] = null;
+    }
+    const data = await rawBooksPatch(bookId, { ...cleaned, updated_at: new Date().toISOString() });
     logActivity({ action_type: 'UPDATE', table_name: 'books', record_id: bookId, description: `Updated book: ${data?.title ?? bookId}` });
     return { success: true, data: data as BookRow };
   } catch (error: any) {
