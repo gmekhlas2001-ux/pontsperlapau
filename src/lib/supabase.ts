@@ -9,26 +9,32 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 /**
  * The app uses a custom HMAC session-token auth flow (not Supabase Auth).
- * We never want the JS client to attach an Authorization JWT to requests,
- * because:
- *   1. RLS policies are written for the `anon` role.
- *   2. If an `authenticated` JWT slips into the client (e.g. from a stray
- *      auth call or persisted session), every write breaks with
- *      "row-level security policy violation" since no policies cover
- *      `authenticated`.
+ * We never want the JS client to attach an Authorization JWT to requests:
+ *   1. RLS policies are written for the anon role.
+ *   2. If an `authenticated` JWT slips into the client (stale or invalid),
+ *      every write breaks with 401 Unauthorized at the API gateway.
  *
- * Disabling persistSession + autoRefreshToken keeps every request anonymous,
- * matching how the system is designed.
+ * Strategy:
+ *   - Wipe every `sb-*` key in localStorage on import (defensive cleanup).
+ *   - Provide an explicit no-op storage so the client cannot persist or
+ *     read sessions even if it tries.
+ *   - Disable autoRefreshToken / detectSessionInUrl so no automatic
+ *     auth flows kick in.
  */
 
-// One-time cleanup: purge any stale Supabase auth tokens left in localStorage
-// from before this change. Without this, existing users would keep hitting the
-// authenticated-role bug until they manually cleared site data.
+// Defensive: nuke any Supabase Auth state from previous builds.
 if (typeof window !== 'undefined') {
   try {
+    // localStorage
     Object.keys(window.localStorage).forEach((key) => {
-      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+      if (key.startsWith('sb-') || key.startsWith('supabase.auth.')) {
         window.localStorage.removeItem(key);
+      }
+    });
+    // sessionStorage
+    Object.keys(window.sessionStorage).forEach((key) => {
+      if (key.startsWith('sb-') || key.startsWith('supabase.auth.')) {
+        window.sessionStorage.removeItem(key);
       }
     });
   } catch {
@@ -36,10 +42,19 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// No-op storage: pretends to read/write but discards everything.
+// Forces the auth client to behave as if no session ever exists.
+const noopStorage = {
+  getItem: (_: string) => null,
+  setItem: (_: string, __: string) => undefined,
+  removeItem: (_: string) => undefined,
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false,
+    storage: noopStorage as any,
   },
 });
