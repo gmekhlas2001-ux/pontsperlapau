@@ -44,6 +44,7 @@ export interface CreateBookData {
   total_copies: number;
   location_shelf?: string;
   branch_id?: string;
+  cover_image_url?: string | null;
 }
 
 export interface UpdateBookData {
@@ -60,6 +61,7 @@ export interface UpdateBookData {
   location_shelf?: string;
   physical_condition?: 'excellent' | 'good' | 'fair' | 'poor';
   branch_id?: string;
+  cover_image_url?: string | null;
 }
 
 export async function getBooks() {
@@ -103,6 +105,7 @@ export async function createBook(bookData: CreateBookData) {
         total_copies: bookData.total_copies,
         available_copies: bookData.total_copies,
         location_shelf: bookData.location_shelf || null,
+        cover_image_url: bookData.cover_image_url || null,
         branch_id: bookData.branch_id || null,
         added_by: userId,
       })

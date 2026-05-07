@@ -33,6 +33,7 @@ interface UpdateUserRequest {
   dateOfBirth?: string;
   gender?: string;
   passportNumber?: string;
+  profilePictureUrl?: string | null;
   role?: string;
   status?: string;
   staffData?: {
@@ -178,6 +179,7 @@ Deno.serve(async (req: Request) => {
   if (body.dateOfBirth !== undefined)    userUpdates.date_of_birth = body.dateOfBirth || null;
   if (body.gender !== undefined)         userUpdates.gender = body.gender || null;
   if (body.passportNumber !== undefined) userUpdates.passport_number = body.passportNumber || null;
+  if (body.profilePictureUrl !== undefined) userUpdates.profile_picture_url = body.profilePictureUrl;
   if (body.role !== undefined)           userUpdates.role = body.role;
   if (body.status !== undefined)         userUpdates.status = body.status;
 

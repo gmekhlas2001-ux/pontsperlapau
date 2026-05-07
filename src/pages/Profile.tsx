@@ -23,6 +23,7 @@ import {
   User, Lock, Save, Loader as Loader2, Mail, MapPin, Briefcase,
   Calendar, Phone, ShieldCheck, Eye, EyeOff,
 } from 'lucide-react';
+import { ImageUpload } from '@/components/ui-custom/ImageUpload';
 import { cn } from '@/lib/utils';
 
 const ROLE_BADGE_COLORS: Record<string, string> = {
@@ -156,6 +157,7 @@ export function Profile() {
       dateOfBirth: data.dateOfBirth || null,
       gender: data.gender || null,
       passportNumber: data.passportNumber.trim() || null,
+      profilePictureUrl: data.profilePictureUrl || null,
     });
     setSavingProfile(false);
 
@@ -279,6 +281,17 @@ export function Profile() {
                   </div>
                 ) : (
                   <>
+                    {/* Profile picture */}
+                    <div className="space-y-2">
+                      <Label>Profile picture</Label>
+                      <ImageUpload
+                        value={data.profilePictureUrl}
+                        onChange={(url) => update('profilePictureUrl', url ?? '')}
+                        variant="avatar"
+                        folder="users"
+                      />
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">{t('profile.firstName')} *</Label>

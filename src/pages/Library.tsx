@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { DataTable } from '@/components/ui-custom/DataTable';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { StatCard } from '@/components/ui-custom/StatCard';
+import { ImageUpload } from '@/components/ui-custom/ImageUpload';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -142,6 +143,7 @@ export function Library() {
       location_shelf: book.location_shelf || '',
       physical_condition: book.physical_condition || 'good',
       branch_id: book.branch_id || '',
+      cover_image_url: book.cover_image_url ?? null,
     });
     setIsEditDialogOpen(true);
   };
@@ -707,6 +709,15 @@ function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition
           rows={3}
           value={form.description || ''}
           onChange={(e) => onChange('description', e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Book cover</Label>
+        <ImageUpload
+          value={form.cover_image_url ?? null}
+          onChange={(url) => onChange('cover_image_url', url ?? '')}
+          variant="cover"
+          folder="books"
         />
       </div>
       <div className="flex justify-end gap-2 pt-2">
