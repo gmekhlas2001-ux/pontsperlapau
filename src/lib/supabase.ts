@@ -57,4 +57,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
     storage: noopStorage as any,
   },
+  global: {
+    // Force the anon key as Authorization on every request, regardless of
+    // any auth-client state. PostgREST's gateway needs a valid 3-part JWT
+    // here; the anon key always satisfies that.
+    headers: {
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      apikey: supabaseAnonKey,
+    },
+    // Custom fetch wrapper that overrides the Authorization header AFTER
+    // supabase-js sets its own. This is the bulletproof guarantee.
+    fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+      const headers = new Headers(init?.headers ?? {});
+      headers.set('Authorization', `Bearer ${supabaseAnonKey}`);
+      headers.set('apikey', supabaseAnonKey);
+      return fetch(input, { ...init, headers });
+    },
+  },
 });
