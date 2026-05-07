@@ -7,6 +7,26 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      Defensive cleanup: runs before any bundle code. Wipes any stale
+      Supabase Auth tokens (sb-*-auth-token, supabase.auth.*) that older
+      builds may have persisted. Without this, the supabase-js client
+      could still read the stale token and stuff our 2-part HMAC token
+      into the Authorization header, causing 401 across the board.
+    -->
+    <script>
+      (function () {
+        try {
+          var s = window.localStorage;
+          for (var i = s.length - 1; i >= 0; i--) {
+            var k = s.key(i);
+            if (k && (k.indexOf('sb-') === 0 || k.indexOf('supabase.auth.') === 0)) {
+              s.removeItem(k);
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
