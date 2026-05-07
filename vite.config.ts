@@ -11,6 +11,11 @@ export default defineConfig({
     inspectAttr(),
     react(),
     VitePWA({
+      // Selfdestruct mode: actively unregisters any previously-installed SW
+      // and stops registering new ones. Eliminates the SW as a debugging
+      // variable. Re-enable later by switching back to 'autoUpdate' once
+      // we're confident in the runtime behaviour.
+      selfDestroying: true,
       registerType: 'autoUpdate',
       includeAssets: ['image.png', 'favicon.ico'],
       manifest: {
