@@ -120,17 +120,33 @@ export async function createBook(bookData: CreateBookData) {
   }
 }
 
+// Raw PostgREST call — bypasses supabase-js entirely so no internal
+// auth state (stale JWT, in-memory session) can override the anon key.
+async function rawBooksPatch(bookId: string, body: Record<string, unknown>) {
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/books?id=eq.${encodeURIComponent(bookId)}`;
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${anon}`,
+      'apikey': anon,
+      'Prefer': 'return=representation',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`HTTP ${res.status}: ${txt || res.statusText}`);
+  }
+  const rows = await res.json().catch(() => []);
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
 export async function updateBook(bookId: string, updates: UpdateBookData) {
   try {
-    const { data, error } = await supabase
-      .from('books')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', bookId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    logActivity({ action_type: 'UPDATE', table_name: 'books', record_id: bookId, description: `Updated book: ${data.title}` });
+    const data = await rawBooksPatch(bookId, { ...updates, updated_at: new Date().toISOString() });
+    logActivity({ action_type: 'UPDATE', table_name: 'books', record_id: bookId, description: `Updated book: ${data?.title ?? bookId}` });
     return { success: true, data: data as BookRow };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update book' };
@@ -140,13 +156,7 @@ export async function updateBook(bookId: string, updates: UpdateBookData) {
 export async function deleteBook(bookId: string, bookTitle?: string) {
   try {
     // Soft delete — `getBooks` filters on `deleted_at IS NULL`.
-    // Use a hard delete only via DB tooling when truly purging.
-    const { error } = await supabase
-      .from('books')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', bookId);
-
-    if (error) throw error;
+    await rawBooksPatch(bookId, { deleted_at: new Date().toISOString() });
     logActivity({ action_type: 'DELETE', table_name: 'books', record_id: bookId, description: `Deleted book: ${bookTitle ?? bookId}` });
     return { success: true };
   } catch (error: any) {
