@@ -24,7 +24,12 @@ import { getCurrentScope } from '@/lib/scope';
 export type NotificationKind =
   | 'password_reset'
   | 'pending_transaction'
-  | 'overdue_book';
+  | 'overdue_book'
+  | 'new_message'
+  | 'new_survey'
+  | 'fee_due'
+  | 'new_grant'
+  | 'new_user';
 
 export interface Notification {
   id: string;             // unique within the response
@@ -141,7 +146,156 @@ export async function fetchNotifications(): Promise<Notification[]> {
     } catch { /* ignore */ }
   }
 
+  // ── 4. Unread messages (everyone with a user id) ─────────────────
+  if (scope.userId) {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, subject, body, created_at, sender:users!sender_id(first_name, last_name)')
+        .eq('recipient_id', scope.userId)
+        .is('read_at', null)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (!error && data) {
+        for (const m of data as any[]) {
+          const sender = m.sender
+            ? `${m.sender.first_name ?? ''} ${m.sender.last_name ?? ''}`.trim()
+            : 'Someone';
+          const preview = (m.subject || m.body || '').slice(0, 80);
+          out.push({
+            id: `msg:${m.id}`,
+            kind: 'new_message',
+            title: `New message from ${sender || 'a colleague'}`,
+            message: preview || '(no subject)',
+            link: '/messages',
+            createdAt: m.created_at,
+          });
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── 5. New active surveys in last 7 days (admin/superadmin) ──────
+  if (scope.role === 'superadmin' || scope.role === 'admin') {
+    try {
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('surveys')
+        .select('id, title, created_at, status')
+        .eq('status', 'active')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (!error && data) {
+        for (const s of data as any[]) {
+          out.push({
+            id: `srv:${s.id}`,
+            kind: 'new_survey',
+            title: 'New survey published',
+            message: s.title,
+            link: '/surveys',
+            createdAt: s.created_at,
+          });
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── 6. Fees due / overdue (admin/teacher/superadmin) ─────────────
+  if (['superadmin', 'admin', 'teacher'].includes(scope.role)) {
+    try {
+      const horizon = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      let q = supabase
+        .from('student_fees')
+        .select('id, description, amount, currency, due_date, branch_id, student:students!student_id(user:users!user_id(first_name, last_name))')
+        .eq('status', 'pending')
+        .lte('due_date', horizon)
+        .order('due_date', { ascending: true })
+        .limit(5);
+      if (scope.branchId && !scope.isGlobal) q = q.eq('branch_id', scope.branchId);
+
+      const { data, error } = await q;
+      if (!error && data) {
+        const today = new Date().toISOString().slice(0, 10);
+        for (const f of data as any[]) {
+          const name = f.student?.user
+            ? `${f.student.user.first_name ?? ''} ${f.student.user.last_name ?? ''}`.trim()
+            : 'A student';
+          const overdue = f.due_date < today;
+          out.push({
+            id: `fee:${f.id}`,
+            kind: 'fee_due',
+            title: overdue ? 'Fee overdue' : 'Fee due soon',
+            message: `${name}: ${Number(f.amount).toLocaleString()} ${f.currency} — ${f.description}`,
+            link: '/fees',
+            createdAt: f.due_date,
+          });
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── 7. New grants in last 7 days (admin/superadmin) ──────────────
+  if (scope.role === 'superadmin' || scope.role === 'admin') {
+    try {
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      let q = supabase
+        .from('grants')
+        .select('id, title, amount, currency, created_at, branch_id, donor:donors!donor_id(name)')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (scope.branchId && !scope.isGlobal) q = q.eq('branch_id', scope.branchId);
+
+      const { data, error } = await q;
+      if (!error && data) {
+        for (const g of data as any[]) {
+          out.push({
+            id: `grt:${g.id}`,
+            kind: 'new_grant',
+            title: 'New grant recorded',
+            message: `${g.donor?.name ?? 'Donor'}: ${Number(g.amount).toLocaleString()} ${g.currency} — ${g.title}`,
+            link: '/donors',
+            createdAt: g.created_at,
+          });
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── 8. New users registered in last 7 days (admin/superadmin) ────
+  if (scope.role === 'superadmin' || scope.role === 'admin') {
+    try {
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      let q = supabase
+        .from('users_public')
+        .select('id, first_name, last_name, role, created_at, branch_id')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (scope.branchId && !scope.isGlobal) q = q.eq('branch_id', scope.branchId);
+
+      const { data, error } = await q;
+      if (!error && data) {
+        for (const u of data as any[]) {
+          if (u.id === scope.userId) continue; // skip self
+          const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || 'A new account';
+          out.push({
+            id: `usr:${u.id}`,
+            kind: 'new_user',
+            title: `New ${u.role ?? 'user'} added`,
+            message: name,
+            link: u.role === 'student' ? '/students' : '/staff',
+            createdAt: u.created_at,
+          });
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
   // Sort newest first.
   out.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  return out.slice(0, 15);
+  return out.slice(0, 20);
 }

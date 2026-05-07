@@ -26,6 +26,11 @@ import {
   KeyRound,
   ReceiptText,
   BookOpen,
+  MessageSquare,
+  ClipboardList,
+  CircleDollarSign,
+  HandCoins,
+  UserPlus,
 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { fetchNotifications, type Notification, type NotificationKind } from '@/services/notificationsService';
@@ -39,12 +44,22 @@ const KIND_ICON: Record<NotificationKind, React.ElementType> = {
   password_reset: KeyRound,
   pending_transaction: ReceiptText,
   overdue_book: BookOpen,
+  new_message: MessageSquare,
+  new_survey: ClipboardList,
+  fee_due: CircleDollarSign,
+  new_grant: HandCoins,
+  new_user: UserPlus,
 };
 
 const KIND_BG: Record<NotificationKind, string> = {
   password_reset: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   pending_transaction: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   overdue_book: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  new_message: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+  new_survey: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  fee_due: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  new_grant: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  new_user: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
 };
 
 const POLL_MS = 60_000; // refresh notifications every minute
