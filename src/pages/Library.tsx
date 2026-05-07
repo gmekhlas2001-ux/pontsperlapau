@@ -171,8 +171,14 @@ export function Library() {
       toast.error(t('validation.required'));
       return;
     }
+    // Preserve borrowed count when total_copies changes; clamp available
+    // to [0, total] so the valid_available_copies CHECK can't be violated.
+    const oldBorrowed = Math.max(0, selectedBook.total_copies - selectedBook.available_copies);
+    const total = editForm.total_copies ?? selectedBook.total_copies;
+    const available = Math.max(0, Math.min(total, total - oldBorrowed));
+    const payload = { ...editForm, total_copies: total, available_copies: available };
     setSaving(true);
-    const result = await updateBook(selectedBook.id, editForm);
+    const result = await updateBook(selectedBook.id, payload);
     setSaving(false);
     if (result.success) {
       toast.success(t('common.success'));
