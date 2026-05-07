@@ -54,6 +54,7 @@ import {
 } from '@/services/libraryService';
 import { getBranches, type Branch } from '@/services/branchService';
 import { useAuth } from '@/contexts/AuthContext';
+import { scopedBranchId, NO_BRANCH_SENTINEL } from '@/lib/scope';
 
 const EMPTY_FORM: CreateBookData = {
   title: '',
@@ -114,8 +115,24 @@ export function Library() {
       toast.error(t('validation.required'));
       return;
     }
+    // Auto-assign caller's branch when not a superadmin (form doesn't show branch picker for them)
+    const rawBranch = scopedBranchId();
+    const callerBranchId = rawBranch && rawBranch !== NO_BRANCH_SENTINEL ? rawBranch : null;
+    const isSuperadmin = user?.role === 'superadmin';
+    const payload: CreateBookData = {
+      ...addForm,
+      branch_id: isSuperadmin
+        ? (addForm.branch_id || undefined)
+        : (callerBranchId ?? undefined),
+    };
+    if (!payload.branch_id) {
+      toast.error(isSuperadmin
+        ? 'Please select a branch for this book'
+        : 'Your account is not assigned to a branch — ask a superadmin to fix it');
+      return;
+    }
     setSaving(true);
-    const result = await createBook(addForm);
+    const result = await createBook(payload);
     setSaving(false);
     if (result.success) {
       toast.success(t('common.success'));
