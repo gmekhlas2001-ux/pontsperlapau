@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { LayoutDashboard, Users, GraduationCap, BookOpen, Library, Settings, LogOut, Menu, ChevronLeft, ChevronRight, MapPin, ChartBar as BarChart2, ClipboardList, KeyRound, User, ClipboardCheck, CalendarDays, CircleDollarSign, MessageSquare, HandCoins, ShieldCheck } from 'lucide-react';
 
@@ -56,29 +57,31 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
     (item) => user && item.roles.includes(user.role)
   );
 
-  const NavContent = () => (
+  const NavContent = ({ collapsed = isCollapsed }: { collapsed?: boolean }) => (
     <>
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className={cn('flex items-center gap-3', isCollapsed && 'justify-center')}>
-          <img
-            src="/image.png"
-            alt="Ponts per la Pau"
-            className={cn('object-contain flex-shrink-0', isCollapsed ? 'h-8 w-8' : 'h-10 w-10')}
-          />
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-sm">{t('app.name')}</span>
-              <span className="text-xs text-muted-foreground">{t('app.tagline')}</span>
+      <div className="flex items-center justify-between border-b border-sidebar-border/80 p-3">
+        <div className={cn('flex min-w-0 items-center gap-3', collapsed && 'justify-center')}>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-sidebar-border bg-background/70 shadow-sm">
+            <img
+              src="/image.png"
+              alt="Ponts per la Pau"
+              className="h-8 w-8 object-contain"
+            />
+          </div>
+          {!collapsed && (
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-semibold text-sidebar-foreground">{t('app.name')}</span>
+              <span className="truncate text-xs text-muted-foreground">{t('app.tagline')}</span>
             </div>
           )}
         </div>
-        {!isCollapsed && (
-          <Button variant="ghost" size="icon" onClick={onToggle} className="hidden lg:flex">
+        {!collapsed && (
+          <Button variant="ghost" size="icon" onClick={onToggle} className="hidden lg:flex" aria-label="Collapse navigation">
             <ChevronLeft className="h-4 w-4" />
           </Button>
         )}
-        {isCollapsed && (
-          <Button variant="ghost" size="icon" onClick={onToggle} className="hidden lg:flex">
+        {collapsed && (
+          <Button variant="ghost" size="icon" onClick={onToggle} className="hidden lg:flex" aria-label="Expand navigation">
             <ChevronRight className="h-4 w-4" />
           </Button>
         )}
@@ -88,40 +91,57 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
         <nav className="space-y-1 px-2">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive = item.path === '/'
+              ? location.pathname === '/'
+              : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
             
-            return (
+            const navLink = (
               <NavLink
                 key={item.path}
                 to={item.path}
                 onClick={onMobileClose}
+                title={collapsed ? item.label : undefined}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'group relative flex min-h-10 items-center gap-3 overflow-hidden rounded-md px-3 py-2 text-sm font-medium transition-all duration-200',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  isCollapsed && 'justify-center px-2'
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
+                  collapsed && 'justify-center px-2'
                 )}
               >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && <span>{item.label}</span>}
+                {isActive && (
+                  <span className="absolute inset-y-2 start-1 w-1 rounded-full bg-sidebar-primary" />
+                )}
+                <Icon className={cn('h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-105', isActive && 'text-sidebar-primary')} />
+                {!collapsed && <span className="truncate">{item.label}</span>}
               </NavLink>
+            );
+
+            if (!collapsed) return navLink;
+
+            return (
+              <Tooltip key={item.path}>
+                <TooltipTrigger asChild>{navLink}</TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
             );
           })}
         </nav>
       </ScrollArea>
 
-      <div className="p-4 border-t">
+      <div className="border-t border-sidebar-border/80 p-3">
         <Button
           variant="ghost"
           className={cn(
-            'w-full flex items-center gap-3 text-muted-foreground hover:text-foreground',
-            isCollapsed && 'justify-center px-2'
+            'w-full flex items-center gap-3 text-sidebar-foreground/70 hover:text-sidebar-foreground',
+            collapsed && 'justify-center px-2'
           )}
           onClick={logout}
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
-          {!isCollapsed && <span>{t('nav.logout')}</span>}
+          {!collapsed && <span>{t('nav.logout')}</span>}
         </Button>
       </div>
     </>
@@ -131,13 +151,13 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
     <>
       {/* Mobile Sidebar */}
       <Sheet open={isMobileOpen} onOpenChange={onMobileClose}>
-        <SheetContent side="left" className="p-0 w-64">
+        <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
           <VisuallyHidden>
             <SheetTitle>Navigation Menu</SheetTitle>
             <SheetDescription>Navigate to different sections of the application</SheetDescription>
           </VisuallyHidden>
           <div className="flex flex-col h-full">
-            <NavContent />
+            <NavContent collapsed={false} />
           </div>
         </SheetContent>
       </Sheet>
@@ -145,11 +165,11 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          'hidden lg:flex flex-col h-screen border-r bg-background transition-all duration-300',
+          'hidden h-screen flex-col border-r border-sidebar-border bg-sidebar/95 text-sidebar-foreground shadow-[8px_0_30px_hsl(222_47%_11%_/_0.04)] backdrop-blur-xl transition-[width,background-color,border-color] duration-300 ease-out lg:flex',
           isCollapsed ? 'w-16' : 'w-64'
         )}
       >
-        <NavContent />
+        <NavContent collapsed={isCollapsed} />
       </aside>
     </>
   );
@@ -157,7 +177,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
 
 export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button variant="ghost" size="icon" className="lg:hidden" onClick={onClick}>
+    <Button variant="ghost" size="icon" className="lg:hidden" onClick={onClick} aria-label="Open navigation">
       <Menu className="h-5 w-5" />
     </Button>
   );

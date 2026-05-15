@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { languages, type LanguageCode } from '@/i18n';
@@ -68,6 +68,7 @@ const SEEN_KEY = 'notifications_last_seen';
 export function Header({ onMenuClick }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -75,6 +76,35 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   const currentLanguage = languages.find((l) => l.code === i18n.language) || languages[2];
   const unreadCount = notifications.filter((n) => n.createdAt > lastSeen).length;
+  const routeKey = location.pathname.split('/')[1] || 'dashboard';
+  const pageTitle = (() => {
+    const labels: Record<string, string> = {
+      dashboard: t('nav.dashboard'),
+      staff: t('nav.staff'),
+      branches: t('nav.branches'),
+      students: t('nav.students'),
+      classes: t('nav.classes'),
+      attendance: t('nav.attendance'),
+      grades: t('nav.grades'),
+      timetable: t('nav.timetable'),
+      calendar: t('nav.calendar'),
+      fees: t('nav.fees'),
+      'my-profile': t('nav.myGrades'),
+      'parent-portal': t('nav.parentPortal'),
+      'parent-links': t('nav.parentLinks'),
+      messages: t('nav.messages'),
+      donors: t('nav.donors'),
+      library: t('nav.library'),
+      surveys: t('nav.surveys'),
+      reports: t('nav.reports'),
+      'password-resets': t('nav.passwordResets'),
+      'audit-log': t('nav.auditLog'),
+      profile: t('nav.profile'),
+      settings: t('nav.settings'),
+    };
+
+    return labels[routeKey] ?? t('dashboard.title');
+  })();
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -110,17 +140,33 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center gap-4 px-4">
+    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/65">
+      <div className="flex h-16 items-center gap-3 px-3 sm:px-4 lg:px-6">
         <MobileMenuButton onClick={onMenuClick} />
+
+        <div className="min-w-0">
+          <p className="hidden text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:block">
+            {t('app.name')}
+          </p>
+          <h2 className="truncate text-sm font-semibold text-foreground sm:text-base">
+            {pageTitle}
+          </h2>
+        </div>
 
         <div className="flex-1" />
 
-        <div className="flex items-center gap-2">
+        {user && (
+          <div className="hidden items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm lg:flex">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_hsl(160_84%_39%_/_0.12)]" />
+            <span className="capitalize">{t(`roles.${user.role}`)}</span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1 sm:gap-2">
           {/* Theme Toggle */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label={t('settings.theme')} className="border border-transparent hover:border-border/70">
                 {resolvedTheme === 'dark' ? (
                   <Moon className="h-5 w-5" />
                 ) : (
@@ -149,7 +195,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           {/* Language Switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label={t('settings.language')} className="border border-transparent hover:border-border/70">
                 <Globe className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -174,16 +220,16 @@ export function Header({ onMenuClick }: HeaderProps) {
           {/* Notifications */}
           <DropdownMenu onOpenChange={(o) => { if (o) markAllAsSeen(); }}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative" aria-label={t('notifications.title')}>
+              <Button variant="ghost" size="icon" className="relative border border-transparent hover:border-border/70" aria-label={t('notifications.title')}>
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-red-500 text-[10px] font-semibold text-white flex items-center justify-center">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white shadow-sm">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-96 max-h-[500px] overflow-y-auto">
+            <DropdownMenuContent align="end" className="max-h-[500px] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto">
               <div className="flex items-center justify-between px-2 py-2">
                 <DropdownMenuLabel className="p-0">{t('notifications.title')}</DropdownMenuLabel>
                 {notifications.length > 0 && (
@@ -207,7 +253,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   return (
                     <DropdownMenuItem
                       key={n.id}
-                      className="flex items-start gap-3 p-3 cursor-pointer"
+                      className="flex cursor-pointer items-start gap-3 rounded-md p-3"
                       onClick={() => handleNotificationClick(n)}
                     >
                       <div className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${KIND_BG[n.kind]}`}>
@@ -231,13 +277,16 @@ export function Header({ onMenuClick }: HeaderProps) {
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button variant="ghost" className="relative h-9 gap-2 rounded-md border border-transparent px-1.5 hover:border-border/70 sm:w-auto sm:px-2">
                   <AvatarWithFallback
                     src={user.avatar}
                     firstName={user.firstName}
                     lastName={user.lastName}
                     className="h-8 w-8"
                   />
+                  <span className="hidden max-w-32 truncate text-sm font-medium sm:block">
+                    {user.firstName}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

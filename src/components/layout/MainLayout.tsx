@@ -9,7 +9,7 @@ export function MainLayout() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="app-shell flex h-screen overflow-hidden">
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -17,16 +17,15 @@ export function MainLayout() {
         onMobileClose={() => setIsMobileSidebarOpen(false)}
       />
 
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header onMenuClick={() => setIsMobileSidebarOpen(true)} />
         
         <main
           className={cn(
-            'flex-1 overflow-auto p-4 md:p-6 lg:p-8',
-            'bg-background'
+            'app-main flex-1 overflow-auto p-3 sm:p-4 md:p-6 lg:p-7'
           )}
         >
-          <div className="mx-auto max-w-7xl">
+          <div className="page-enter mx-auto w-full max-w-[1480px]">
             <Outlet />
           </div>
         </main>
