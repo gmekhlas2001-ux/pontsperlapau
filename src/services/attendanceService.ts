@@ -13,6 +13,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/edge';
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
@@ -152,54 +153,15 @@ export async function saveAttendance(
   entries: AttendanceEntry[],
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const storedUser = localStorage.getItem('user');
-    const recordedBy = storedUser ? JSON.parse(storedUser).id : null;
-
-    const rows = entries.map((e) => ({
-      class_id: classId,
-      student_id: e.studentId,
-      attendance_date: date,
-      status: e.status,
-      notes: e.notes ?? null,
-      recorded_by: recordedBy,
-    }));
-
-    const { error } = await supabase
-      .from('attendance')
-      .upsert(rows, { onConflict: 'class_id,student_id,attendance_date' });
-
-    if (error) throw error;
-
-    // Recalculate attendance % for each student in this class
-    await recalculateAttendanceStats(classId, entries.map((e) => e.studentId));
-
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'save-attendance',
+      classId,
+      date,
+      entries,
+    });
+    if (!res.ok) throw new Error(res.error || 'Failed to save attendance');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message ?? 'Failed to save attendance' };
-  }
-}
-
-/**
- * Recalculate and persist attendance_percentage on class_enrollments.
- * Called after every save so the value stays accurate.
- */
-async function recalculateAttendanceStats(classId: string, studentIds: string[]) {
-  for (const studentId of studentIds) {
-    const { data: all } = await supabase
-      .from('attendance')
-      .select('status')
-      .eq('class_id', classId)
-      .eq('student_id', studentId);
-
-    if (!all || all.length === 0) continue;
-
-    const present = all.filter((r: any) => r.status === 'present' || r.status === 'late').length;
-    const pct = Math.round((present / all.length) * 100);
-
-    await supabase
-      .from('class_enrollments')
-      .update({ attendance_percentage: pct, attendance_count: present })
-      .eq('class_id', classId)
-      .eq('student_id', studentId);
   }
 }

@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { RefreshCw, ShieldCheck, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { saveRowsAsExcel } from '@/lib/excel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -137,11 +137,12 @@ export default function AuditLog() {
       'Table': r.tableName,
       'Description': r.description ?? '',
     }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    ws['!cols'] = [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 60 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Audit Log');
-    XLSX.writeFile(wb, `audit_log_${new Date().toISOString().split('T')[0]}.xlsx`);
+    void saveRowsAsExcel(
+      data,
+      'Audit Log',
+      `audit_log_${new Date().toISOString().split('T')[0]}.xlsx`,
+      [22, 22, 14, 20, 20, 60],
+    );
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE);

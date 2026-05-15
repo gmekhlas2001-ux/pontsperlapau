@@ -7,6 +7,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { scopedBranchId } from '@/lib/scope';
+import { callEdgeFunction } from '@/lib/edge';
 
 export interface Message {
   id: string;
@@ -118,70 +119,40 @@ export async function getThread(
 // ─── Mutations ─────────────────────────────────────────────────────────────────
 
 export async function sendMessage(
-  senderId: string,
+  _senderId: string,
   msg: SendMessageData,
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  try {
-    let branchId = scopedBranchId();
-
-    // Superadmin (no branch): if targeting a specific user, inherit their branch.
-    // If broadcasting to everyone, send branch_id = null (global broadcast).
-    if (!branchId && msg.recipientId) {
-      const { data: rec } = await supabase
-        .from('users')
-        .select('branch_id')
-        .eq('id', msg.recipientId)
-        .maybeSingle();
-      branchId = rec?.branch_id ?? null;
-    }
-
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
-        sender_id:    senderId,
-        recipient_id: msg.recipientId ?? null,
-        branch_id:    branchId,
-        subject:      msg.subject,
-        body:         msg.body,
-        parent_id:    msg.parentId ?? null,
-      })
-      .select('id')
-      .single();
-
-    if (error) throw error;
-    return { success: true, id: data.id };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to send message' };
-  }
+  const res = await callEdgeFunction<{ success: boolean; id: string }>('app-actions', {
+    operation: 'send-message',
+    recipientId: msg.recipientId ?? null,
+    subject: msg.subject,
+    body: msg.body,
+    parentId: msg.parentId ?? null,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to send message' };
+  return { success: true, id: res.data?.id };
 }
 
 export async function markAsRead(
   messageId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase
-      .from('messages')
-      .update({ read_at: new Date().toISOString() })
-      .eq('id', messageId)
-      .is('read_at', null);
-
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to mark as read' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'mark-message-read',
+    messageId,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to mark as read' };
+  return { success: true };
 }
 
 export async function deleteMessage(
   messageId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase.from('messages').delete().eq('id', messageId);
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to delete message' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'delete-message',
+    messageId,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to delete message' };
+  return { success: true };
 }
 
 export async function getUnreadCount(

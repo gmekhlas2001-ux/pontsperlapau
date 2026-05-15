@@ -14,6 +14,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { scopedBranchId } from '@/lib/scope';
+import { callEdgeFunction } from '@/lib/edge';
 
 export type FeeStatus = 'pending' | 'paid' | 'overdue' | 'waived' | 'partial';
 export type FeePaymentMethod = 'cash' | 'bank_transfer' | 'card' | 'other';
@@ -131,28 +132,20 @@ export async function getFees(filters?: {
 export async function createFee(
   data: CreateFeeData,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const storedUser = localStorage.getItem('user');
-    const recordedBy = storedUser ? JSON.parse(storedUser).id : null;
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'create-fee',
+    studentId: data.studentId,
+    branchId: data.branchId,
+    classId: data.classId ?? null,
+    description: data.description,
+    amount: data.amount,
+    currency: data.currency ?? 'EUR',
+    dueDate: data.dueDate,
+    notes: data.notes ?? null,
+  });
 
-    const { error } = await supabase.from('student_fees').insert({
-      student_id:   data.studentId,
-      branch_id:    data.branchId,
-      class_id:     data.classId ?? null,
-      description:  data.description,
-      amount:       data.amount,
-      currency:     data.currency ?? 'EUR',
-      due_date:     data.dueDate,
-      notes:        data.notes ?? null,
-      recorded_by:  recordedBy,
-      status:       'pending',
-    });
-
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to create fee' };
-  }
+  if (!res.ok) return { success: false, error: res.error || 'Failed to create fee' };
+  return { success: true };
 }
 
 export async function markFeePaid(
@@ -160,22 +153,15 @@ export async function markFeePaid(
   paymentMethod: FeePaymentMethod,
   notes?: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase
-      .from('student_fees')
-      .update({
-        status:          'paid',
-        paid_date:       new Date().toISOString().split('T')[0],
-        payment_method:  paymentMethod,
-        notes:           notes ?? null,
-      })
-      .eq('id', feeId);
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'mark-fee-paid',
+    feeId,
+    paymentMethod,
+    notes: notes ?? null,
+  });
 
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to mark as paid' };
-  }
+  if (!res.ok) return { success: false, error: res.error || 'Failed to mark as paid' };
+  return { success: true };
 }
 
 export async function updateFeeStatus(
@@ -183,27 +169,25 @@ export async function updateFeeStatus(
   status: FeeStatus,
   notes?: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase
-      .from('student_fees')
-      .update({ status, notes: notes ?? undefined })
-      .eq('id', feeId);
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'update-fee-status',
+    feeId,
+    status,
+    notes,
+  });
 
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to update fee' };
-  }
+  if (!res.ok) return { success: false, error: res.error || 'Failed to update fee' };
+  return { success: true };
 }
 
 export async function deleteFee(feeId: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase.from('student_fees').delete().eq('id', feeId);
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to delete fee' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'delete-fee',
+    feeId,
+  });
+
+  if (!res.ok) return { success: false, error: res.error || 'Failed to delete fee' };
+  return { success: true };
 }
 
 // ─── Bulk creation ────────────────────────────────────────────────────────────
@@ -212,25 +196,20 @@ export async function bulkCreateFees(
   studentIds: string[],
   shared: Omit<CreateFeeData, 'studentId'>,
 ): Promise<{ success: boolean; created: number; errors: string[] }> {
-  const storedUser = localStorage.getItem('user');
-  const recordedBy = storedUser ? JSON.parse(storedUser).id : null;
-
-  const rows = studentIds.map((studentId) => ({
-    student_id: studentId,
-    branch_id: shared.branchId,
-    class_id: shared.classId ?? null,
+  const res = await callEdgeFunction<{ success: boolean; created: number }>('app-actions', {
+    operation: 'bulk-create-fees',
+    studentIds,
+    branchId: shared.branchId,
+    classId: shared.classId ?? null,
     description: shared.description,
     amount: shared.amount,
     currency: shared.currency ?? 'EUR',
-    due_date: shared.dueDate,
+    dueDate: shared.dueDate,
     notes: shared.notes ?? null,
-    recorded_by: recordedBy,
-    status: 'pending',
-  }));
+  });
 
-  const { error } = await supabase.from('student_fees').insert(rows);
-  if (error) return { success: false, created: 0, errors: [error.message] };
-  return { success: true, created: rows.length, errors: [] };
+  if (!res.ok) return { success: false, created: 0, errors: [res.error || 'Failed to create fees'] };
+  return { success: true, created: res.data?.created ?? studentIds.length, errors: [] };
 }
 
 // ─── Parent portal helpers ────────────────────────────────────────────────────

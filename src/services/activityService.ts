@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/edge';
 
 /**
  * Activity audit log.
@@ -32,17 +33,14 @@ export async function logActivity(params: {
   description: string;
 }) {
   try {
-    const storedUser = localStorage.getItem('user');
-    const userId = storedUser ? JSON.parse(storedUser).id : null;
-
-    const { error } = await supabase.from('activity_logs').insert({
-      user_id: userId,
-      action_type: params.action_type,
-      table_name: params.table_name,
-      record_id: params.record_id || null,
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'log-activity',
+      actionType: params.action_type,
+      tableName: params.table_name,
+      recordId: params.record_id || null,
       description: params.description,
     });
-    if (error) console.warn('[activity] insert failed:', error.message);
+    if (!res.ok) console.warn('[activity] insert failed:', res.error);
   } catch (err) {
     console.warn('[activity] insert threw:', err);
   }

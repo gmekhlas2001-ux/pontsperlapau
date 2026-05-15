@@ -23,8 +23,8 @@ import {
   ChevronRight,
   RefreshCw,
 } from 'lucide-react';
-import { getMyChildren, type ChildSummary } from '@/services/parentService';
-import { getFeesForStudent, type FeeRecord } from '@/services/feeService';
+import { getMyChildren, getMyChildFees, type ChildSummary } from '@/services/parentService';
+import type { FeeRecord } from '@/services/feeService';
 
 // ─── Child card ────────────────────────────────────────────────────────────────
 
@@ -124,11 +124,10 @@ function ChildFeesList({ studentId }: { studentId: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getFeesForStudent(studentId).then((res) => {
+    getMyChildFees(studentId).then((res) => {
       setLoading(false);
       if (res.success && res.data) {
-        // Only pending/overdue/partial
-        setFees(res.data.filter((f) => ['pending', 'overdue', 'partial'].includes(f.status)));
+        setFees(res.data);
       }
     });
   }, [studentId]);

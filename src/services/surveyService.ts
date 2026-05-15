@@ -11,6 +11,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/edge';
 import { logActivity } from '@/services/activityService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -204,64 +205,33 @@ export async function getBranchSubmission(surveyId: string, branchId: string) {
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export async function createSurvey(payload: CreateSurveyPayload): Promise<{ success: boolean; id?: string; error?: string }> {
-  const storedUser = localStorage.getItem('user');
-  if (!storedUser) return { success: false, error: 'Not authenticated' };
-  const caller = JSON.parse(storedUser);
-
-  // 1. Insert survey
-  const { data: survey, error: sErr } = await supabase
-    .from('surveys')
-    .insert({ title: payload.title, description: payload.description, period: payload.period, status: payload.status, created_by: caller.id })
-    .select()
-    .single();
-  if (sErr || !survey) return { success: false, error: sErr?.message ?? 'Failed to create survey' };
-
-  // 2. Insert sections
-  const sectionIdMap: Record<number, string> = {};
-  if (payload.sections.length > 0) {
-    const { data: sections, error: secErr } = await supabase
-      .from('survey_sections')
-      .insert(payload.sections.map((s, i) => ({ survey_id: survey.id, title: s.title, description: s.description, order_index: i })))
-      .select();
-    if (secErr) return { success: false, error: secErr.message };
-    (sections ?? []).forEach((s: any, i: number) => { sectionIdMap[i] = s.id; });
-  }
-
-  // 3. Insert questions
-  if (payload.questions.length > 0) {
-    const { error: qErr } = await supabase.from('survey_questions').insert(
-      payload.questions.map((q, i) => ({
-        survey_id: survey.id,
-        section_id: q.sectionIndex !== null ? sectionIdMap[q.sectionIndex] ?? null : null,
-        question_text: q.text,
-        order_index: i,
-      }))
-    );
-    if (qErr) return { success: false, error: qErr.message };
-  }
-
-  // 4. Insert options
-  if (payload.options.length > 0) {
-    const { error: oErr } = await supabase.from('survey_response_options').insert(
-      payload.options.map((o, i) => ({ survey_id: survey.id, label: o.label, sentiment: o.sentiment, order_index: i }))
-    );
-    if (oErr) return { success: false, error: oErr.message };
-  }
+  const res = await callEdgeFunction<{ success: boolean; id: string }>('app-actions', {
+    operation: 'create-survey',
+    ...payload,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to create survey' };
 
   logActivity({ action_type: 'INSERT', table_name: 'surveys', description: `Created survey: ${payload.title}` });
-  return { success: true, id: survey.id };
+  return { success: true, id: res.data?.id };
 }
 
 export async function updateSurveyMeta(surveyId: string, fields: { title?: string; description?: string; period?: string; status?: SurveyStatus }) {
-  const { error } = await supabase.from('surveys').update(fields).eq('id', surveyId);
-  if (error) return { success: false, error: error.message };
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'update-survey-meta',
+    surveyId,
+    fields,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to update survey' };
   logActivity({ action_type: 'UPDATE', table_name: 'surveys', description: `Updated survey` });
   return { success: true };
 }
 
 export async function deleteSurvey(surveyId: string) {
-  const { error } = await supabase.from('surveys').delete().eq('id', surveyId);
-  if (error) return { success: false, error: error.message };
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'delete-survey',
+    surveyId,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to delete survey' };
   logActivity({ action_type: 'DELETE', table_name: 'surveys', description: `Deleted survey` });
   return { success: true };
 }
@@ -272,31 +242,14 @@ export async function saveBranchData(
   totalRespondents: number,
   counts: { questionId: string; optionId: string; count: number }[]
 ): Promise<{ success: boolean; error?: string }> {
-  const storedUser = localStorage.getItem('user');
-  const caller = storedUser ? JSON.parse(storedUser) : null;
-
-  // Upsert total respondents
-  const { error: subErr } = await supabase.from('survey_branch_submissions').upsert(
-    { survey_id: surveyId, branch_id: branchId, total_respondents: totalRespondents, submitted_by: caller?.id },
-    { onConflict: 'survey_id,branch_id' }
-  );
-  if (subErr) return { success: false, error: subErr.message };
-
-  // Upsert each count
-  if (counts.length > 0) {
-    const { error: rErr } = await supabase.from('survey_branch_responses').upsert(
-      counts.map((c) => ({
-        survey_id: surveyId,
-        branch_id: branchId,
-        question_id: c.questionId,
-        option_id: c.optionId,
-        count: c.count,
-        entered_by: caller?.id,
-      })),
-      { onConflict: 'survey_id,branch_id,question_id,option_id' }
-    );
-    if (rErr) return { success: false, error: rErr.message };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'save-branch-survey-data',
+    surveyId,
+    branchId,
+    totalRespondents,
+    counts,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to save survey data' };
 
   logActivity({ action_type: 'UPDATE', table_name: 'survey_branch_responses', description: `Submitted survey data for branch` });
   return { success: true };

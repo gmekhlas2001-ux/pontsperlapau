@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { scopedBranchId } from '@/lib/scope';
+import { callEdgeFunction } from '@/lib/edge';
 
 export interface Branch {
   id: string;
@@ -150,23 +151,12 @@ export async function getBranchMembers(branchId: string) {
 
 export async function createBranch(data: CreateBranchData) {
   try {
-    const { data: branch, error } = await supabase
-      .from('branches')
-      .insert({
-        name: data.name,
-        province: data.province,
-        city: data.city || null,
-        address: data.address || null,
-        phone: data.phone || null,
-        email: data.email || null,
-        established_date: data.established_date || null,
-        status: data.status || 'active',
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return { success: true, data: branch as Branch };
+    const res = await callEdgeFunction<{ success: boolean; data: Branch }>('app-actions', {
+      operation: 'create-branch',
+      ...data,
+    });
+    if (!res.ok) return { success: false, error: res.error || 'Failed to create branch' };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create branch' };
   }
@@ -184,15 +174,13 @@ export async function updateBranch(branchId: string, data: UpdateBranchData) {
     if (data.established_date !== undefined) updates.established_date = data.established_date;
     if (data.status !== undefined) updates.status = data.status;
 
-    const { data: branch, error } = await supabase
-      .from('branches')
-      .update(updates)
-      .eq('id', branchId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return { success: true, data: branch as Branch };
+    const res = await callEdgeFunction<{ success: boolean; data: Branch }>('app-actions', {
+      operation: 'update-branch',
+      branchId,
+      updates,
+    });
+    if (!res.ok) return { success: false, error: res.error || 'Failed to update branch' };
+    return { success: true, data: res.data?.data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update branch' };
   }
@@ -200,12 +188,11 @@ export async function updateBranch(branchId: string, data: UpdateBranchData) {
 
 export async function deleteBranch(branchId: string) {
   try {
-    const { error } = await supabase
-      .from('branches')
-      .delete()
-      .eq('id', branchId);
-
-    if (error) throw error;
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'delete-branch',
+      branchId,
+    });
+    if (!res.ok) return { success: false, error: res.error || 'Failed to delete branch' };
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to delete branch' };

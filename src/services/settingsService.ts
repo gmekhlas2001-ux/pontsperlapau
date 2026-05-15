@@ -75,18 +75,11 @@ export async function getOrgSettings(): Promise<{ success: boolean; data?: OrgSe
 
 export async function saveOrgSettings(updates: Partial<OrgSettings>): Promise<{ success: boolean; error?: string }> {
   try {
-    const entries = Object.entries(updates);
-    for (const [key, value] of entries) {
-      // setting_value is jsonb — pass the value directly so it round-trips
-      // as proper JSON (true/false/numbers/strings/objects).
-      const { error } = await supabase
-        .from('organization_settings')
-        .upsert(
-          { setting_key: key, setting_value: value as any },
-          { onConflict: 'setting_key' }
-        );
-      if (error) throw error;
-    }
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'save-org-settings',
+      updates,
+    });
+    if (!res.ok) return { success: false, error: res.error || 'Failed to save settings' };
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -127,12 +120,12 @@ export async function changePassword(
 
 export async function toggle2FA(userId: string, enabled: boolean): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabase
-      .from('users')
-      .update({ two_factor_enabled: enabled })
-      .eq('id', userId);
-
-    if (error) throw error;
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'toggle-2fa',
+      userId,
+      enabled,
+    });
+    if (!res.ok) return { success: false, error: res.error || 'Failed to update 2FA setting' };
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

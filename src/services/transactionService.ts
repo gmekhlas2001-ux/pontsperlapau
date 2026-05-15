@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { scopedBranchId } from '@/lib/scope';
+import { callEdgeFunction } from '@/lib/edge';
 import type { Transaction, CreateTransactionData, TransactionStats } from '@/types';
 
 type ServiceResult<T> = { success: boolean; data?: T; error?: string };
@@ -44,7 +45,7 @@ export async function getTransactions(filters?: {
     const { data, error } = await query;
     if (error) return { success: false, error: error.message };
     return { success: true, data: data as unknown as Transaction[] };
-  } catch (e) {
+  } catch {
     return { success: false, error: 'Failed to fetch transactions' };
   }
 }
@@ -78,85 +79,54 @@ export async function getTransactionStats(): Promise<ServiceResult<TransactionSt
     };
 
     return { success: true, data: stats };
-  } catch (e) {
+  } catch {
     return { success: false, error: 'Failed to fetch transaction stats' };
   }
 }
 
 export async function createTransaction(
   data: CreateTransactionData,
-  createdBy?: string
+  _createdBy?: string
 ): Promise<ServiceResult<Transaction>> {
-  try {
-    const { data: row, error } = await supabase
-      .from('transactions')
-      .insert({
-        sender_branch_id: data.sender_branch_id,
-        receiver_branch_id: data.receiver_branch_id,
-        sender_staff_id: data.sender_staff_id,
-        receiver_staff_id: data.receiver_staff_id,
-        amount: data.amount,
-        currency: data.currency,
-        transfer_method: data.transfer_method,
-        external_reference: data.external_reference || null,
-        notes: data.notes || null,
-        created_by: createdBy || null,
-        status: 'pending',
-      })
-      .select(TRANSACTION_SELECT)
-      .single();
-
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: row as unknown as Transaction };
-  } catch (e) {
-    return { success: false, error: 'Failed to create transaction' };
-  }
+  const res = await callEdgeFunction<{ success: boolean; data: Transaction }>('app-actions', {
+    operation: 'create-transaction',
+    ...data,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to create transaction' };
+  return { success: true, data: res.data?.data };
 }
 
 export async function updateTransactionStatus(
   id: string,
   status: 'completed' | 'cancelled' | 'failed'
 ): Promise<ServiceResult<Transaction>> {
-  try {
-    const { data, error } = await supabase
-      .from('transactions')
-      .update({ status })
-      .eq('id', id)
-      .select(TRANSACTION_SELECT)
-      .single();
-
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: data as unknown as Transaction };
-  } catch (e) {
-    return { success: false, error: 'Failed to update transaction status' };
-  }
+  const res = await callEdgeFunction<{ success: boolean; data: Transaction }>('app-actions', {
+    operation: 'update-transaction-status',
+    id,
+    status,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to update transaction status' };
+  return { success: true, data: res.data?.data };
 }
 
 export async function updateTransaction(
   id: string,
   updates: Partial<CreateTransactionData> & { external_reference?: string; notes?: string }
 ): Promise<ServiceResult<Transaction>> {
-  try {
-    const { data, error } = await supabase
-      .from('transactions')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select(TRANSACTION_SELECT)
-      .single();
-
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: data as unknown as Transaction };
-  } catch (e) {
-    return { success: false, error: 'Failed to update transaction' };
-  }
+  const res = await callEdgeFunction<{ success: boolean; data: Transaction }>('app-actions', {
+    operation: 'update-transaction',
+    id,
+    updates,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to update transaction' };
+  return { success: true, data: res.data?.data };
 }
 
 export async function deleteTransaction(id: string): Promise<ServiceResult<void>> {
-  try {
-    const { error } = await supabase.from('transactions').delete().eq('id', id);
-    if (error) return { success: false, error: error.message };
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: 'Failed to delete transaction' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'delete-transaction',
+    id,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to delete transaction' };
+  return { success: true };
 }

@@ -11,11 +11,11 @@
  */
 
 import { useId, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { callEdgeFunction } from '@/lib/edge';
 
 interface Props {
   value: string | null | undefined;
@@ -29,7 +29,12 @@ interface Props {
   disabled?: boolean;
 }
 
-const BUCKET = 'public-images';
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
 
 export function ImageUpload({
   value,
@@ -57,20 +62,17 @@ export function ImageUpload({
     setUploading(true);
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const filename = `${folder}/${crypto.randomUUID()}.${ext}`;
+      const res = await callEdgeFunction<{ success: boolean; publicUrl: string }>('app-actions', {
+        operation: 'upload-public-image',
+        folder,
+        extension: ext,
+        contentType: file.type,
+        base64: arrayBufferToBase64(await file.arrayBuffer()),
+      });
 
-      const { error } = await supabase.storage
-        .from(BUCKET)
-        .upload(filename, file, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: file.type,
-        });
+      if (!res.ok || !res.data?.publicUrl) throw new Error(res.error || 'Upload failed');
 
-      if (error) throw error;
-
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(filename);
-      onChange(data.publicUrl);
+      onChange(res.data.publicUrl);
       toast.success('Image uploaded');
     } catch (err: any) {
       toast.error(err.message ?? 'Upload failed');

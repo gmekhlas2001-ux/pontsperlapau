@@ -19,7 +19,7 @@ import { authenticateRequest } from "../_shared/auth.ts";
 import { corsHeadersFor, errorResponse, jsonResponse } from "../_shared/cors.ts";
 
 const PROTECTED_ROLES = ["superadmin", "admin"];
-const ALLOWED_ROLES   = ["superadmin", "admin", "teacher", "librarian", "student"];
+const ALLOWED_ROLES   = ["superadmin", "admin", "teacher", "librarian", "student", "parent"];
 
 interface UpdateUserRequest {
   targetUserId: string;

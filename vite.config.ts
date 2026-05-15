@@ -71,4 +71,18 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('/exceljs')) return 'vendor-excel';
+          if (id.includes('/jspdf') || id.includes('/html2canvas') || id.includes('/dompurify')) return 'vendor-pdf';
+          if (id.includes('/recharts') || id.includes('/d3-') || id.includes('/victory-vendor')) return 'vendor-charts';
+          if (id.includes('/@supabase')) return 'vendor-supabase';
+        },
+      },
+    },
+  },
 });

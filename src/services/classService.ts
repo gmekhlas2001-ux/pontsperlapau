@@ -9,6 +9,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { scopedBranchId } from '@/lib/scope';
+import { callEdgeFunction } from '@/lib/edge';
 
 export interface ClassTeacher {
   id: string;
@@ -125,25 +126,11 @@ export async function getClassesList() {
 
 export async function createClass(data: CreateClassData) {
   try {
-    const { error } = await supabase
-      .from('classes')
-      .insert({
-        name: data.name,
-        description: data.description || null,
-        teacher_id: data.teacherId,
-        schedule_day: data.scheduleDays,
-        schedule_time: data.scheduleTime || null,
-        schedule_end_time: data.scheduleEndTime || null,
-        location: data.location || null,
-        max_capacity: data.maxCapacity,
-        academic_year: data.academicYear || null,
-        semester: data.semester || null,
-        branch_id: data.branchId || null,
-        created_by: data.createdBy || null,
-        status: 'active',
-      });
-
-    if (error) throw error;
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'create-class',
+      ...data,
+    });
+    if (!res.ok) throw new Error(res.error || 'Failed to create class');
     return { success: true };
   } catch (error: any) {
     console.error('Error creating class:', error);
@@ -167,12 +154,12 @@ export async function updateClass(classId: string, data: UpdateClassData) {
     if (data.branchId !== undefined) updates.branch_id = data.branchId || null;
     if (data.status !== undefined) updates.status = data.status;
 
-    const { error } = await supabase
-      .from('classes')
-      .update(updates)
-      .eq('id', classId);
-
-    if (error) throw error;
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'update-class',
+      classId,
+      updates,
+    });
+    if (!res.ok) throw new Error(res.error || 'Failed to update class');
     return { success: true };
   } catch (error: any) {
     console.error('Error updating class:', error);
@@ -182,13 +169,11 @@ export async function updateClass(classId: string, data: UpdateClassData) {
 
 export async function deleteClass(classId: string) {
   try {
-    // Soft delete — `getClassesList` filters on `deleted_at IS NULL`.
-    const { error } = await supabase
-      .from('classes')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', classId);
-
-    if (error) throw error;
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'delete-class',
+      classId,
+    });
+    if (!res.ok) throw new Error(res.error || 'Failed to delete class');
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting class:', error);
@@ -293,16 +278,12 @@ export async function getStudentsByBranch(branchId: string) {
 
 export async function enrollStudent(classId: string, studentId: string) {
   try {
-    const { error } = await supabase
-      .from('class_enrollments')
-      .insert({
-        class_id: classId,
-        student_id: studentId,
-        enrollment_date: new Date().toISOString().split('T')[0],
-        status: 'active',
-      });
-
-    if (error) throw error;
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'enroll-student',
+      classId,
+      studentId,
+    });
+    if (!res.ok) throw new Error(res.error || 'Failed to enroll student');
     return { success: true };
   } catch (error: any) {
     console.error('Error enrolling student:', error);
@@ -312,12 +293,11 @@ export async function enrollStudent(classId: string, studentId: string) {
 
 export async function unenrollStudent(enrollmentId: string) {
   try {
-    const { error } = await supabase
-      .from('class_enrollments')
-      .delete()
-      .eq('id', enrollmentId);
-
-    if (error) throw error;
+    const res = await callEdgeFunction('app-actions', {
+      operation: 'unenroll-student',
+      enrollmentId,
+    });
+    if (!res.ok) throw new Error(res.error || 'Failed to remove student');
     return { success: true };
   } catch (error: any) {
     console.error('Error removing enrollment:', error);

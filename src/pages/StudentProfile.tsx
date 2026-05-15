@@ -21,6 +21,7 @@ import {
   type StudentProfileData,
   type StudentProfileClass,
 } from '@/services/studentService';
+import { getMyChildren } from '@/services/parentService';
 import { useAuth } from '@/contexts/AuthContext';
 import { exportReportCardPDF, exportGradesExcel, exportCertificatePDF } from '@/services/exportService';
 import type { GradeStudent } from '@/services/gradesService';
@@ -495,10 +496,25 @@ export function StudentProfile() {
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    getStudentProfile(id).then((res) => {
+    let cancelled = false;
+
+    async function loadProfile() {
+      if (!id) return;
+      setLoading(true);
+
+      if (user?.role === 'parent') {
+        const children = await getMyChildren(user.id);
+        if (cancelled) return;
+        const canView = children.success && children.data?.some((child) => child.studentId === id);
+        if (!canView) {
+          navigate('/parent-portal', { replace: true });
+          return;
+        }
+      }
+
+      const res = await getStudentProfile(id);
+      if (cancelled) return;
       if (res.success && res.data) {
-        // Students can only view their own profile
         if (user?.role === 'student' && res.data.userId !== user.id) {
           navigate('/', { replace: true });
           return;
@@ -508,8 +524,14 @@ export function StudentProfile() {
         toast.error(res.error ?? 'Could not load student profile');
       }
       setLoading(false);
-    });
-  }, [id, user, navigate]);
+    }
+
+    loadProfile();
+    return () => { cancelled = true; };
+  }, [id, user?.id, user?.role, navigate]);
+
+  const backTarget = user?.role === 'parent' ? '/parent-portal' : '/students';
+  const backLabel = user?.role === 'parent' ? 'Parent Portal' : 'Students';
 
   if (loading) {
     return (
@@ -526,22 +548,24 @@ export function StudentProfile() {
       <div className="flex flex-col items-center justify-center h-full py-20 text-muted-foreground">
         <GraduationCap className="h-12 w-12 mb-3 opacity-20" />
         <p className="font-medium">Student not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/students')}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Students
+        <Button variant="outline" className="mt-4" onClick={() => navigate(backTarget)}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to {backLabel}
         </Button>
       </div>
     );
   }
 
   const fullName = `${student.firstName} ${student.lastName}`.trim();
+  const canExportCertificates = user?.role !== 'student' && user?.role !== 'parent';
+  const canSeeDocuments = user?.role === 'superadmin' || user?.role === 'admin';
 
   return (
     <div className="flex flex-col h-full">
       {/* Back bar */}
       <div className="flex items-center gap-3 px-6 py-3 border-b bg-muted/20">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/students')} className="gap-1.5 -ml-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate(backTarget)} className="gap-1.5 -ml-2">
           <ArrowLeft className="h-4 w-4" />
-          Students
+          {backLabel}
         </Button>
         <span className="text-muted-foreground">/</span>
         <span className="text-sm font-medium truncate">{fullName}</span>
@@ -572,7 +596,7 @@ export function StudentProfile() {
                 {student.classes.length} class{student.classes.length !== 1 ? 'es' : ''}
               </span>
             </div>
-            {user?.role !== 'student' && (
+            {canExportCertificates && (
               <div className="flex gap-2 mt-3 flex-wrap">
                 <Button
                   size="sm"
@@ -622,7 +646,7 @@ export function StudentProfile() {
             <TabsTrigger value="personal" className="text-xs gap-1.5">
               <User className="h-3.5 w-3.5" /> Personal
             </TabsTrigger>
-            {user?.role !== 'student' && (
+            {canSeeDocuments && (
               <TabsTrigger value="documents" className="text-xs gap-1.5">
                 <Paperclip className="h-3.5 w-3.5" /> Documents
               </TabsTrigger>
@@ -641,7 +665,7 @@ export function StudentProfile() {
             <TabsContent value="personal" className="mt-0">
               <PersonalTab student={student} />
             </TabsContent>
-            {user?.role !== 'student' && (
+            {canSeeDocuments && (
               <TabsContent value="documents" className="mt-0 p-6">
                 <DocumentsManager userId={student.userId} />
               </TabsContent>

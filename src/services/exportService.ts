@@ -2,7 +2,7 @@
  * Export Service — PDF & Excel generation for school reports.
  *
  * Exports are generated entirely in the browser (no server round-trip).
- * jsPDF + jspdf-autotable handle PDF; SheetJS (xlsx) handles Excel.
+ * jsPDF + jspdf-autotable handle PDF; ExcelJS handles Excel.
  *
  * Available exports
  * ─────────────────
@@ -19,7 +19,7 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import { saveRowsAsExcel, type ExcelRow } from '@/lib/excel';
 import type { GradeStudent } from './gradesService';
 
 // ─── shared helpers ──────────────────────────────────────────────────────────
@@ -290,12 +290,11 @@ export function exportClassRosterExcel(
     'Attendance (%)': s.attendancePct,
   }));
 
-  const ws = XLSX.utils.json_to_sheet(rows);
-  styleExcelHeader(ws, Object.keys(rows[0] ?? {}).length);
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Roster');
-  XLSX.writeFile(wb, `roster_${classInfo.name.replace(/\s+/g, '_')}_${today()}.xlsx`);
+  void saveRowsAsExcel(
+    rows,
+    'Roster',
+    `roster_${classInfo.name.replace(/\s+/g, '_')}_${today()}.xlsx`,
+  );
 }
 
 // ─── Excel: Grades ───────────────────────────────────────────────────────────
@@ -308,7 +307,7 @@ export function exportGradesExcel(
   classInfo: ClassInfo,
   students: GradeStudent[],
 ): void {
-  const rows: object[] = [];
+  const rows: ExcelRow[] = [];
 
   for (const s of students) {
     if (s.entries.length === 0) {
@@ -352,12 +351,11 @@ export function exportGradesExcel(
     }
   }
 
-  const ws = XLSX.utils.json_to_sheet(rows);
-  styleExcelHeader(ws, Object.keys(rows[0] ?? {}).length);
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Grades');
-  XLSX.writeFile(wb, `grades_${classInfo.name.replace(/\s+/g, '_')}_${today()}.xlsx`);
+  void saveRowsAsExcel(
+    rows,
+    'Grades',
+    `grades_${classInfo.name.replace(/\s+/g, '_')}_${today()}.xlsx`,
+  );
 }
 
 // ─── Excel: Attendance ───────────────────────────────────────────────────────
@@ -387,36 +385,12 @@ export function exportAttendanceExcel(
     return row;
   });
 
-  const ws = XLSX.utils.json_to_sheet(data);
-  styleExcelHeader(ws, 2 + dates.length);
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
-  XLSX.writeFile(wb, `attendance_${classInfo.name.replace(/\s+/g, '_')}_${today()}.xlsx`);
-}
-
-// ─── Excel helpers ───────────────────────────────────────────────────────────
-
-/**
- * Apply a teal fill + white bold text to the first (header) row of a sheet.
- * Also sets a sensible default column width.
- */
-function styleExcelHeader(ws: XLSX.WorkSheet, colCount: number) {
-  const range = XLSX.utils.decode_range(ws['!ref'] ?? 'A1');
-
-  // Set column widths
-  ws['!cols'] = Array.from({ length: colCount }, () => ({ wch: 18 }));
-
-  // Style header cells (row 0)
-  for (let c = range.s.c; c <= range.e.c; c++) {
-    const addr = XLSX.utils.encode_cell({ r: 0, c });
-    if (!ws[addr]) continue;
-    ws[addr].s = {
-      fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
-      font: { bold: true, color: { rgb: 'FFFFFF' } },
-      alignment: { horizontal: 'center' },
-    };
-  }
+  void saveRowsAsExcel(
+    data,
+    'Attendance',
+    `attendance_${classInfo.name.replace(/\s+/g, '_')}_${today()}.xlsx`,
+    [24, 18, ...dates.map(() => 12)],
+  );
 }
 
 // ─── PDF: Certificate ────────────────────────────────────────────────────────

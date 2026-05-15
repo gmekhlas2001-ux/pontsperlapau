@@ -33,7 +33,7 @@ export interface CreateStaffData {
   phone?: string;
   position: string;
   department?: string;
-  role: 'superadmin' | 'admin' | 'teacher' | 'librarian';
+  role: 'superadmin' | 'admin' | 'teacher' | 'librarian' | 'parent';
   dateJoined: string;
   branchId?: string;
   bio?: string;
@@ -85,7 +85,7 @@ export interface UpdateStaffData {
   passportNumber?: string;
   position?: string;
   department?: string;
-  role?: 'superadmin' | 'admin' | 'teacher' | 'librarian';
+  role?: 'superadmin' | 'admin' | 'teacher' | 'librarian' | 'parent';
   status?: 'active' | 'inactive';
   dateJoined?: string;
   branchId?: string;

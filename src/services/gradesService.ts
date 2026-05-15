@@ -11,6 +11,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/edge';
 
 export type AssessmentType = 'midterm' | 'final' | 'assignment' | 'quiz' | 'project' | 'other';
 
@@ -126,74 +127,47 @@ export interface CreateGradeEntryData {
 export async function addGradeEntry(
   data: CreateGradeEntryData,
 ): Promise<{ success: boolean; data?: GradeEntry; error?: string }> {
-  try {
-    const storedUser = localStorage.getItem('user');
-    const recordedBy = storedUser ? JSON.parse(storedUser).id : null;
+  const res = await callEdgeFunction<{ success: boolean; data: GradeEntry }>('app-actions', {
+    operation: 'add-grade-entry',
+    classId: data.classId,
+    studentId: data.studentId,
+    assessmentName: data.assessmentName,
+    assessmentType: data.assessmentType,
+    score: data.score ?? null,
+    maxScore: data.maxScore ?? 100,
+    gradeLetter: data.gradeLetter ?? null,
+    notes: data.notes ?? null,
+    assessmentDate: data.assessmentDate,
+  });
 
-    const { data: row, error } = await supabase
-      .from('grade_entries')
-      .insert({
-        class_id: data.classId,
-        student_id: data.studentId,
-        assessment_name: data.assessmentName,
-        assessment_type: data.assessmentType,
-        score: data.score ?? null,
-        max_score: data.maxScore ?? 100,
-        grade_letter: data.gradeLetter ?? null,
-        notes: data.notes ?? null,
-        assessment_date: data.assessmentDate ?? new Date().toISOString().split('T')[0],
-        recorded_by: recordedBy,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    await syncFinalGrade(data.classId, data.studentId);
-    return { success: true, data: row as GradeEntry };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to add grade' };
-  }
+  if (!res.ok) return { success: false, error: res.error || 'Failed to add grade' };
+  return { success: true, data: res.data?.data };
 }
 
 export async function updateGradeEntry(
   entryId: string,
   updates: Partial<Pick<GradeEntry, 'assessment_name' | 'assessment_type' | 'score' | 'max_score' | 'grade_letter' | 'notes' | 'assessment_date'>>,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { data: row, error } = await supabase
-      .from('grade_entries')
-      .update(updates)
-      .eq('id', entryId)
-      .select('class_id, student_id')
-      .single();
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'update-grade-entry',
+    entryId,
+    updates,
+  });
 
-    if (error) throw error;
-    await syncFinalGrade(row.class_id, row.student_id);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to update grade' };
-  }
+  if (!res.ok) return { success: false, error: res.error || 'Failed to update grade' };
+  return { success: true };
 }
 
 export async function deleteGradeEntry(
   entryId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Fetch before delete so we can sync afterwards
-    const { data: row } = await supabase
-      .from('grade_entries')
-      .select('class_id, student_id')
-      .eq('id', entryId)
-      .single();
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'delete-grade-entry',
+    entryId,
+  });
 
-    const { error } = await supabase.from('grade_entries').delete().eq('id', entryId);
-    if (error) throw error;
-
-    if (row) await syncFinalGrade(row.class_id, row.student_id);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to delete grade' };
-  }
+  if (!res.ok) return { success: false, error: res.error || 'Failed to delete grade' };
+  return { success: true };
 }
 
 /** Set the final/overall letter grade on the enrollment row. */
@@ -202,49 +176,13 @@ export async function setFinalGrade(
   studentId: string,
   grade: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase
-      .from('class_enrollments')
-      .update({ grade })
-      .eq('class_id', classId)
-      .eq('student_id', studentId);
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'set-final-grade',
+    classId,
+    studentId,
+    grade,
+  });
 
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to set grade' };
-  }
-}
-
-/**
- * Recalculate the final grade letter from the average and write it to
- * class_enrollments. Skips if there are no scored entries.
- */
-async function syncFinalGrade(classId: string, studentId: string) {
-  const { data: entries } = await supabase
-    .from('grade_entries')
-    .select('score, max_score')
-    .eq('class_id', classId)
-    .eq('student_id', studentId);
-
-  if (!entries || entries.length === 0) return;
-  const scored = entries.filter((e: any) => e.score !== null);
-  if (scored.length === 0) return;
-
-  const avg =
-    (scored.reduce((s: number, e: any) => s + (e.score / e.max_score) * 100, 0) / scored.length);
-
-  // Simple letter-grade mapping
-  let letter: string;
-  if (avg >= 90) letter = 'A';
-  else if (avg >= 80) letter = 'B';
-  else if (avg >= 70) letter = 'C';
-  else if (avg >= 60) letter = 'D';
-  else letter = 'F';
-
-  await supabase
-    .from('class_enrollments')
-    .update({ grade: letter })
-    .eq('class_id', classId)
-    .eq('student_id', studentId);
+  if (!res.ok) return { success: false, error: res.error || 'Failed to set grade' };
+  return { success: true };
 }

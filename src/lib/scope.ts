@@ -25,7 +25,7 @@
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 /** Union of all roles recognized by the access-control system. */
-export type ScopeRole = 'superadmin' | 'admin' | 'teacher' | 'librarian' | 'student';
+export type ScopeRole = 'superadmin' | 'admin' | 'teacher' | 'librarian' | 'student' | 'parent';
 
 /** Resolved scope information for the currently logged-in user. */
 export interface CurrentScope {

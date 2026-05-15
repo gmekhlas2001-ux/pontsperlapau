@@ -7,6 +7,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { scopedBranchId } from '@/lib/scope';
+import { callEdgeFunction } from '@/lib/edge';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -118,37 +119,31 @@ export async function getDonors(): Promise<{ success: boolean; data?: Donor[]; e
 }
 
 export async function createDonor(data: CreateDonorData): Promise<{ success: boolean; id?: string; error?: string }> {
-  try {
-    const { data: row, error } = await supabase
-      .from('donors')
-      .insert({ name: data.name, type: data.type, email: data.email ?? null, phone: data.phone ?? null, country: data.country ?? null, notes: data.notes ?? null })
-      .select('id').single();
-
-    if (error) throw error;
-    return { success: true, id: row.id };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to create donor' };
-  }
+  const res = await callEdgeFunction<{ success: boolean; id: string }>('app-actions', {
+    operation: 'create-donor',
+    ...data,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to create donor' };
+  return { success: true, id: res.data?.id };
 }
 
 export async function updateDonor(id: string, data: Partial<CreateDonorData>): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase.from('donors').update(data).eq('id', id);
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to update donor' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'update-donor',
+    id,
+    ...data,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to update donor' };
+  return { success: true };
 }
 
 export async function deleteDonor(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase.from('donors').delete().eq('id', id);
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to delete donor' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'delete-donor',
+    id,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to delete donor' };
+  return { success: true };
 }
 
 // ─── Grants ────────────────────────────────────────────────────────────────────
@@ -207,42 +202,31 @@ export async function getGrants(donorId?: string): Promise<{ success: boolean; d
 }
 
 export async function createGrant(data: CreateGrantData): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase.from('grants').insert({
-      donor_id: data.donorId,
-      branch_id: data.branchId,
-      title: data.title,
-      description: data.description ?? null,
-      amount: data.amount,
-      currency: data.currency ?? 'EUR',
-      start_date: data.startDate ?? null,
-      end_date: data.endDate ?? null,
-    });
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to create grant' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'create-grant',
+    ...data,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to create grant' };
+  return { success: true };
 }
 
 export async function updateGrantStatus(id: string, status: GrantStatus): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase.from('grants').update({ status }).eq('id', id);
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to update grant' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'update-grant-status',
+    id,
+    status,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to update grant' };
+  return { success: true };
 }
 
 export async function deleteGrant(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase.from('grants').delete().eq('id', id);
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to delete grant' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'delete-grant',
+    id,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to delete grant' };
+  return { success: true };
 }
 
 // ─── Transactions ──────────────────────────────────────────────────────────────
@@ -275,32 +259,19 @@ export async function getGrantTransactions(grantId: string): Promise<{ success: 
 }
 
 export async function createGrantTransaction(data: CreateTxData): Promise<{ success: boolean; error?: string }> {
-  try {
-    const storedUser = localStorage.getItem('user');
-    const recordedBy = storedUser ? JSON.parse(storedUser).id : null;
-
-    const { error } = await supabase.from('grant_transactions').insert({
-      grant_id: data.grantId,
-      description: data.description,
-      amount: data.amount,
-      type: data.type,
-      tx_date: data.txDate ?? new Date().toISOString().split('T')[0],
-      notes: data.notes ?? null,
-      recorded_by: recordedBy,
-    });
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to record transaction' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'create-grant-transaction',
+    ...data,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to record transaction' };
+  return { success: true };
 }
 
 export async function deleteGrantTransaction(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase.from('grant_transactions').delete().eq('id', id);
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to delete transaction' };
-  }
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'delete-grant-transaction',
+    id,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to delete transaction' };
+  return { success: true };
 }
