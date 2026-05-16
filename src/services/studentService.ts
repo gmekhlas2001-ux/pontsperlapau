@@ -221,6 +221,7 @@ export interface StudentProfileData {
   enrollmentDate: string | null;
   status: string;
   branchId: string | null;
+  branchName: string | null;
   profilePictureUrl: string | null;
   parentGuardianName: string | null;
   parentGuardianEmail: string | null;
@@ -289,6 +290,9 @@ export async function getStudentProfile(
     if (studentRes.error) throw studentRes.error;
     const s = studentRes.data as any;
     const u = s.user as any;
+    const branchName = s.branch_id
+      ? ((await supabase.from('branches').select('name').eq('id', s.branch_id).maybeSingle()).data as any)?.name ?? null
+      : null;
 
     const entries = (gradeRes.data ?? []) as any[];
     const attRecords = (attendRes.data ?? []) as any[];
@@ -349,6 +353,7 @@ export async function getStudentProfile(
       enrollmentDate: s.enrollment_date ?? null,
       status: u?.status ?? 'active',
       branchId: s.branch_id ?? null,
+      branchName,
       profilePictureUrl: u?.profile_picture_url ?? null,
       parentGuardianName: s.parent_guardian_name ?? null,
       parentGuardianEmail: s.parent_guardian_email ?? null,

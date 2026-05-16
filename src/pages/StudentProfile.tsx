@@ -156,7 +156,7 @@ function OverviewTab({ student }: { student: StudentProfileData }) {
           <Field icon={Mail} label="Email" value={student.email} />
           <Field icon={Phone} label="Phone" value={student.phone} />
           <Field icon={MapPin} label="Address" value={student.address} />
-          <Field icon={Building2} label="Branch ID" value={student.branchId ?? undefined} />
+          <Field icon={Building2} label="Branch" value={student.branchName ?? student.branchId ?? undefined} />
         </div>
       </div>
 
@@ -572,27 +572,28 @@ export function StudentProfile() {
       </div>
 
       {/* Profile hero */}
-      <div className="bg-gradient-to-br from-teal-600 via-teal-700 to-teal-800 px-6 pt-7 pb-6 text-white shrink-0">
-        <div className="flex items-start gap-5">
+      <div className="shrink-0 border-b bg-gradient-to-br from-primary/10 via-card to-accent/50 px-6 pt-7 pb-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-5">
           <AvatarWithFallback
             src={student.profilePictureUrl ?? undefined}
             firstName={student.firstName}
             lastName={student.lastName}
-            className="h-20 w-20 text-xl ring-4 ring-white/30 shrink-0"
+            className="h-20 w-20 text-xl ring-4 ring-background shadow-md shrink-0"
           />
           <div className="flex-1 min-w-0 pt-1">
-            <h1 className="text-2xl font-bold leading-tight">{fullName}</h1>
+            <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">{fullName}</h1>
             {student.studentCode && (
-              <p className="text-teal-100/70 text-xs font-mono mt-0.5">{student.studentCode}</p>
+              <p className="mt-1 text-xs font-mono text-muted-foreground">{student.studentCode}</p>
             )}
             <div className="flex flex-wrap items-center gap-2 mt-2.5">
               {student.gradeLevel && (
-                <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
                   {student.gradeLevel}
                 </span>
               )}
               <StatusBadge status={student.status as any} />
-              <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">
+              <span className="rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground">
                 {student.classes.length} class{student.classes.length !== 1 ? 'es' : ''}
               </span>
             </div>
@@ -600,8 +601,8 @@ export function StudentProfile() {
               <div className="flex gap-2 mt-3 flex-wrap">
                 <Button
                   size="sm"
-                  variant="secondary"
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 gap-1.5 text-xs"
+                  variant="outline"
+                  className="gap-1.5 border-border/70 bg-background/80 text-xs"
                   onClick={() => exportCertificatePDF({
                     studentFirstName: student.firstName,
                     studentLastName: student.lastName,
@@ -613,8 +614,8 @@ export function StudentProfile() {
                 </Button>
                 <Button
                   size="sm"
-                  variant="secondary"
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 gap-1.5 text-xs"
+                  variant="outline"
+                  className="gap-1.5 border-border/70 bg-background/80 text-xs"
                   onClick={() => exportCertificatePDF({
                     studentFirstName: student.firstName,
                     studentLastName: student.lastName,
@@ -627,13 +628,29 @@ export function StudentProfile() {
               </div>
             )}
           </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 lg:min-w-[320px]">
+            <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
+              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Branch</p>
+              <p className="mt-1 truncate text-sm font-semibold">{student.branchName || '—'}</p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
+              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Enrolled</p>
+              <p className="mt-1 truncate text-sm font-semibold">{formatDate(student.enrollmentDate)}</p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
+              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Classes</p>
+              <p className="mt-1 truncate text-sm font-semibold">{student.classes.length}</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex-1 overflow-hidden">
         <Tabs defaultValue="overview" className="flex flex-col h-full">
-          <TabsList className="rounded-none border-b h-11 bg-background justify-start gap-1 px-4 shrink-0 w-full overflow-x-auto">
+          <TabsList className="h-auto w-full shrink-0 justify-start gap-1 overflow-x-auto rounded-none border-b bg-muted/35 px-4 py-2">
             <TabsTrigger value="overview" className="text-xs gap-1.5">
               <TrendingUp className="h-3.5 w-3.5" /> Overview
             </TabsTrigger>
