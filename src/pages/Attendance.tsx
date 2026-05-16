@@ -331,20 +331,33 @@ export function Attendance() {
     ]);
 
     const records = histRes.data ?? [];
+    const exportDates = Array.from(new Set([...datesArr, date])).sort();
     const studentList = sheetRes.data ?? students;
     const classInfo = { name: selectedClass.name, teacherName: `${selectedClass.teacherFirstName} ${selectedClass.teacherLastName}` };
 
     // Build pivot: one row per student, one record per date
-    const rows = studentList.map((s) => ({
-      studentName: `${s.lastName}, ${s.firstName}`,
-      studentCode: s.studentCode,
-      records: records
-        .filter((r) => r.student_id === s.studentId)
-        .map((r) => ({ date: r.attendance_date, status: r.status })),
-    }));
+    const rows = studentList.map((s) => {
+      const byDate = new Map(
+        records
+          .filter((r) => r.student_id === s.studentId)
+          .map((r) => [r.attendance_date, r.status] as const),
+      );
+      byDate.set(date, draft[s.studentId]?.status ?? s.record?.status ?? 'present');
 
-    if (format === 'pdf') exportAttendanceSheetPDF(classInfo, datesArr, rows);
-    else exportAttendanceExcel(classInfo, datesArr, rows);
+      return {
+        studentName: `${s.lastName}, ${s.firstName}`,
+        studentCode: s.studentCode,
+        records: exportDates
+          .map((attendanceDate) => ({
+            date: attendanceDate,
+            status: byDate.get(attendanceDate),
+          }))
+          .filter((record): record is { date: string; status: AttendanceStatus } => Boolean(record.status)),
+      };
+    });
+
+    if (format === 'pdf') exportAttendanceSheetPDF(classInfo, exportDates, rows);
+    else exportAttendanceExcel(classInfo, exportDates, rows);
   };
 
   return (

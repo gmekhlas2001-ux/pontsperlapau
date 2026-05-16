@@ -29,6 +29,16 @@ function today(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+function safeFilePart(value: string): string {
+  return value.trim().replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '') || 'export';
+}
+
+function formatDateLabel(date: string): string {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 /** Add a standard page header to a jsPDF doc and return the Y cursor. */
 function addPDFHeader(doc: jsPDF, title: string, subtitle?: string): number {
   const pageW = doc.internal.pageSize.getWidth();
@@ -120,7 +130,7 @@ export function exportClassRosterPDF(
     styles: { fontSize: 9 },
   });
 
-  doc.save(`roster_${classInfo.name.replace(/\s+/g, '_')}_${today()}.pdf`);
+  doc.save(`roster_${safeFilePart(classInfo.name)}_${today()}.pdf`);
 }
 
 // ─── PDF: Student Report Card ────────────────────────────────────────────────
@@ -206,29 +216,76 @@ export function exportAttendanceSheetPDF(
   dates: string[],
   rows: AttendanceRow[],
 ): void {
-  // Use landscape if there are many dates
-  const orientation = dates.length > 8 ? 'landscape' : 'portrait';
-  const doc = new jsPDF({ orientation });
-  let y = addPDFHeader(doc, 'Attendance Sheet', classInfo.name);
-
-  // Status abbreviation legend
-  doc.setFontSize(8);
-  doc.setTextColor(80, 80, 80);
-  doc.text('P = Present   A = Absent   L = Late   E = Excused', 14, y + 4);
-  y += 10;
+  const orientation = dates.length > 6 ? 'landscape' : 'portrait';
+  const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  const usableW = pageW - margin * 2;
 
   const statusAbbr: Record<string, string> = {
     present: 'P', absent: 'A', late: 'L', excused: 'E',
   };
 
-  const statusColor: Record<string, [number, number, number]> = {
-    P: [134, 239, 172],  // green
-    A: [252, 165, 165],  // red
-    L: [253, 224, 71],   // yellow
-    E: [147, 197, 253],  // blue
+  const statusStyle: Record<string, { fill: [number, number, number]; text: [number, number, number] }> = {
+    P: { fill: [220, 252, 231], text: [22, 101, 52] },
+    A: { fill: [254, 226, 226], text: [153, 27, 27] },
+    L: { fill: [254, 249, 195], text: [133, 77, 14] },
+    E: { fill: [219, 234, 254], text: [30, 64, 175] },
   };
 
-  const head = [['Student', 'ID', ...dates.map((d) => d.slice(5))]]; // show MM-DD
+  doc.setFillColor(15, 118, 110);
+  doc.rect(0, 0, pageW, 34, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(17);
+  doc.text('Ponts per la Pau', margin, 14);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text('Attendance Sheet', margin, 22);
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.text(classInfo.name, margin, 48);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  const meta = [
+    classInfo.teacherName ? `Teacher: ${classInfo.teacherName}` : '',
+    `Generated: ${new Date().toLocaleString()}`,
+    `${rows.length} students`,
+    `${dates.length} session${dates.length === 1 ? '' : 's'}`,
+  ].filter(Boolean).join('   |   ');
+  doc.text(meta, margin, 55);
+
+  const legendY = 65;
+  const legend = [
+    ['P', 'Present'],
+    ['A', 'Absent'],
+    ['L', 'Late'],
+    ['E', 'Excused'],
+  ] as const;
+  let legendX = margin;
+  legend.forEach(([abbr, label]) => {
+    const style = statusStyle[abbr];
+    doc.setFillColor(...style.fill);
+    doc.roundedRect(legendX, legendY - 4, 6, 6, 1.5, 1.5, 'F');
+    doc.setTextColor(...style.text);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.text(abbr, legendX + 3, legendY + 0.3, { align: 'center' });
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(label, legendX + 8, legendY);
+    legendX += 27;
+  });
+
+  const fixedW = dates.length > 0 ? Math.min(82, usableW * 0.45) : usableW;
+  const studentW = dates.length > 0 ? fixedW - 24 : usableW - 26;
+  const dateW = dates.length > 0 ? Math.max(12, (usableW - fixedW) / dates.length) : 0;
+  const head = [['Student', 'ID', ...dates.map(formatDateLabel)]];
   const body = rows.map((r) =>
     [
       r.studentName,
@@ -241,33 +298,41 @@ export function exportAttendanceSheetPDF(
   );
 
   autoTable(doc, {
-    startY: y,
+    startY: 72,
     head,
     body,
-    headStyles: { fillColor: [13, 148, 136], textColor: 255 },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
-    styles: { fontSize: 8, halign: 'center' },
-    columnStyles: {
-      0: { halign: 'left', cellWidth: 40 },
-      1: { cellWidth: 22 },
+    margin: { left: margin, right: margin },
+    tableWidth: usableW,
+    headStyles: { fillColor: [15, 118, 110], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    styles: {
+      fontSize: dates.length > 10 ? 7 : 8,
+      halign: 'center',
+      valign: 'middle',
+      lineColor: [226, 232, 240],
+      lineWidth: 0.1,
+      cellPadding: 2,
+      textColor: [15, 23, 42],
     },
-    didDrawCell(data) {
+    columnStyles: {
+      0: { halign: 'left', cellWidth: studentW, fontStyle: 'bold' },
+      1: { cellWidth: 24 },
+      ...Object.fromEntries(dates.map((_, index) => [index + 2, { cellWidth: dateW }])),
+    },
+    didParseCell(data) {
       if (data.section === 'body' && data.column.index >= 2) {
         const val = String(data.cell.raw ?? '');
-        const color = statusColor[val];
-        if (color) {
-          const { x, y: cy, width, height } = data.cell;
-          doc.setFillColor(...color);
-          doc.rect(x, cy, width, height, 'F');
-          doc.setTextColor(40, 40, 40);
-          doc.setFontSize(7.5);
-          doc.text(val, x + width / 2, cy + height / 2 + 1, { align: 'center' });
+        const style = statusStyle[val];
+        if (style) {
+          data.cell.styles.fillColor = style.fill;
+          data.cell.styles.textColor = style.text;
+          data.cell.styles.fontStyle = 'bold';
         }
       }
     },
   });
 
-  doc.save(`attendance_${classInfo.name.replace(/\s+/g, '_')}_${today()}.pdf`);
+  doc.save(`attendance_${safeFilePart(classInfo.name)}_${today()}.pdf`);
 }
 
 // ─── Excel: Class Roster ─────────────────────────────────────────────────────
@@ -293,7 +358,7 @@ export function exportClassRosterExcel(
   void saveRowsAsExcel(
     rows,
     'Roster',
-    `roster_${classInfo.name.replace(/\s+/g, '_')}_${today()}.xlsx`,
+    `roster_${safeFilePart(classInfo.name)}_${today()}.xlsx`,
   );
 }
 
@@ -354,7 +419,7 @@ export function exportGradesExcel(
   void saveRowsAsExcel(
     rows,
     'Grades',
-    `grades_${classInfo.name.replace(/\s+/g, '_')}_${today()}.xlsx`,
+    `grades_${safeFilePart(classInfo.name)}_${today()}.xlsx`,
   );
 }
 
@@ -369,28 +434,134 @@ export function exportAttendanceExcel(
   dates: string[],
   rows: AttendanceRow[],
 ): void {
-  const statusAbbr: Record<string, string> = {
-    present: 'P', absent: 'A', late: 'L', excused: 'E',
-  };
+  void (async () => {
+    const ExcelJS = (await import('exceljs')).default;
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Ponts per la Pau';
+    workbook.created = new Date();
 
-  const data = rows.map((r) => {
-    const row: Record<string, string | number> = {
-      'Student Name': r.studentName,
-      'Student ID': r.studentCode,
+    const worksheet = workbook.addWorksheet('Attendance', {
+      views: [{ state: 'frozen', xSplit: 2, ySplit: 5 }],
+      pageSetup: {
+        orientation: dates.length > 5 ? 'landscape' : 'portrait',
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        paperSize: 9,
+      },
+    });
+
+    const statusAbbr: Record<string, string> = {
+      present: 'P', absent: 'A', late: 'L', excused: 'E',
     };
-    for (const d of dates) {
-      const rec = r.records.find((x) => x.date === d);
-      row[d] = rec ? (statusAbbr[rec.status] ?? rec.status) : '—';
-    }
-    return row;
-  });
+    const statusFills: Record<string, { fill: string; font: string }> = {
+      P: { fill: 'FFDCFCE7', font: 'FF166534' },
+      A: { fill: 'FFFEE2E2', font: 'FF991B1B' },
+      L: { fill: 'FFFEF9C3', font: 'FF854D0E' },
+      E: { fill: 'FFDBEAFE', font: 'FF1E40AF' },
+    };
 
-  void saveRowsAsExcel(
-    data,
-    'Attendance',
-    `attendance_${classInfo.name.replace(/\s+/g, '_')}_${today()}.xlsx`,
-    [24, 18, ...dates.map(() => 12)],
-  );
+    const headers = ['Student Name', 'Student ID', ...dates.map(formatDateLabel)];
+    const lastColumn = Math.max(headers.length, 2);
+
+    worksheet.mergeCells(1, 1, 1, lastColumn);
+    worksheet.mergeCells(2, 1, 2, lastColumn);
+    worksheet.mergeCells(3, 1, 3, lastColumn);
+
+    const orgCell = worksheet.getCell('A1');
+    orgCell.value = 'Ponts per la Pau';
+    orgCell.font = { bold: true, size: 18, color: { argb: 'FFFFFFFF' } };
+    orgCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+    orgCell.alignment = { vertical: 'middle' };
+    worksheet.getRow(1).height = 28;
+
+    const titleCell = worksheet.getCell('A2');
+    titleCell.value = `Attendance Sheet - ${classInfo.name}`;
+    titleCell.font = { bold: true, size: 14, color: { argb: 'FF0F172A' } };
+    titleCell.alignment = { vertical: 'middle' };
+    worksheet.getRow(2).height = 24;
+
+    worksheet.getCell('A3').value = [
+      classInfo.teacherName ? `Teacher: ${classInfo.teacherName}` : '',
+      `Generated: ${new Date().toLocaleString()}`,
+      `${rows.length} students`,
+      'P = Present, A = Absent, L = Late, E = Excused',
+    ].filter(Boolean).join('   |   ');
+    worksheet.getCell('A3').font = { color: { argb: 'FF64748B' }, size: 10 };
+    worksheet.getRow(3).height = 22;
+
+    const headerRow = worksheet.getRow(5);
+    headerRow.values = headers;
+    headerRow.height = 22;
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      };
+    });
+
+    rows.forEach((r, rowIndex) => {
+      const values = [
+        r.studentName,
+        r.studentCode,
+        ...dates.map((d) => {
+          const rec = r.records.find((x) => x.date === d);
+          return rec ? (statusAbbr[rec.status] ?? rec.status) : '—';
+        }),
+      ];
+      const row = worksheet.addRow(values);
+      row.height = 21;
+      row.eachCell((cell, colNumber) => {
+        const status = String(cell.value ?? '');
+        const statusStyle = statusFills[status];
+        const isAlternating = rowIndex % 2 === 0;
+        cell.alignment = { horizontal: colNumber <= 2 ? 'left' : 'center', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        };
+        if (colNumber <= 2) {
+          cell.font = { bold: colNumber === 1, color: { argb: 'FF0F172A' } };
+          if (isAlternating) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+          }
+        } else if (statusStyle) {
+          cell.font = { bold: true, color: { argb: statusStyle.font } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: statusStyle.fill } };
+        }
+      });
+    });
+
+    worksheet.columns = [
+      { width: 30 },
+      { width: 16 },
+      ...dates.map(() => ({ width: 13 })),
+    ];
+    worksheet.autoFilter = {
+      from: { row: 5, column: 1 },
+      to: { row: Math.max(5, rows.length + 5), column: lastColumn },
+    };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer as BlobPart], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `attendance_${safeFilePart(classInfo.name)}_${today()}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  })();
 }
 
 // ─── PDF: Certificate ────────────────────────────────────────────────────────
