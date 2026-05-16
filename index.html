@@ -8,16 +8,19 @@
   <body>
     <div id="root"></div>
     <!--
-      Defensive cleanup: runs before any bundle code. Wipes any stale
-      Supabase Auth tokens (sb-*-auth-token, supabase.auth.*) that older
-      builds may have persisted. Without this, the supabase-js client
-      could still read the stale token and stuff our 2-part HMAC token
-      into the Authorization header, causing 401 across the board.
+      Defensive cleanup: runs before any bundle code. It keeps the app
+      light-only and wipes stale Supabase Auth tokens (sb-*-auth-token,
+      supabase.auth.*) that older builds may have persisted. Without this,
+      the supabase-js client could still read the stale token and stuff our
+      2-part HMAC token into the Authorization header, causing 401 across
+      the board.
     -->
     <script>
       (function () {
         try {
+          document.documentElement.classList.remove('dark');
           var s = window.localStorage;
+          s.setItem('theme', 'light');
           for (var i = s.length - 1; i >= 0; i--) {
             var k = s.key(i);
             if (k && (k.indexOf('sb-') === 0 || k.indexOf('supabase.auth.') === 0)) {

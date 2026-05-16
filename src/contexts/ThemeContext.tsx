@@ -1,62 +1,35 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 
-type Theme = 'light' | 'dark' | 'auto';
+type Theme = 'light';
 
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  resolvedTheme: 'light' | 'dark';
+  resolvedTheme: 'light';
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const forceLightTheme = () => {
+  if (typeof window === 'undefined') return;
+
+  window.document.documentElement.classList.remove('dark');
+  window.localStorage.setItem('theme', 'light');
+};
+
+const lightThemeContext: ThemeContextType = {
+  theme: 'light',
+  setTheme: forceLightTheme,
+  resolvedTheme: 'light',
+};
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem('theme') as Theme;
-    return stored || 'auto';
-  });
-
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
-
   useEffect(() => {
-    const root = window.document.documentElement;
-    
-    const updateTheme = () => {
-      let resolved: 'light' | 'dark';
-      
-      if (theme === 'auto') {
-        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      } else {
-        resolved = theme;
-      }
-      
-      setResolvedTheme(resolved);
-      
-      if (resolved === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    };
-
-    updateTheme();
-    
-    localStorage.setItem('theme', theme);
-
-    if (theme === 'auto') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = () => updateTheme();
-      mediaQuery.addEventListener('change', handler);
-      return () => mediaQuery.removeEventListener('change', handler);
-    }
-  }, [theme]);
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-  };
+    forceLightTheme();
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider value={lightThemeContext}>
       {children}
     </ThemeContext.Provider>
   );

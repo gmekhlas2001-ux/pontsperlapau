@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
 import { languages, type LanguageCode } from '@/i18n';
 import { getFullName } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -17,8 +16,6 @@ import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 import { MobileMenuButton } from './Sidebar';
 import {
   Bell,
-  Moon,
-  Sun,
   Globe,
   Check,
   User,
@@ -70,7 +67,6 @@ export function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { theme, setTheme, resolvedTheme } = useTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [lastSeen, setLastSeen] = useState<string>(() => localStorage.getItem(SEEN_KEY) ?? '1970-01-01');
 
@@ -163,35 +159,6 @@ export function Header({ onMenuClick }: HeaderProps) {
         )}
 
         <div className="flex items-center gap-1 sm:gap-2">
-          {/* Theme Toggle */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={t('settings.theme')} className="border border-transparent hover:border-border/70">
-                {resolvedTheme === 'dark' ? (
-                  <Moon className="h-5 w-5" />
-                ) : (
-                  <Sun className="h-5 w-5" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t('settings.theme')}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setTheme('light')}>
-                {t('settings.light')}
-                {theme === 'light' && <Check className="ml-auto h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme('dark')}>
-                {t('settings.dark')}
-                {theme === 'dark' && <Check className="ml-auto h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme('auto')}>
-                {t('settings.auto')}
-                {theme === 'auto' && <Check className="ml-auto h-4 w-4" />}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {/* Language Switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

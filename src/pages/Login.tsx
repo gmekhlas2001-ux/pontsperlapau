@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
 import { languages, type LanguageCode } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,14 +23,13 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { submitPasswordResetRequest } from '@/services/passwordResetService';
-import { Globe, Moon, Sun, Loader as Loader2, CircleCheck as CheckCircle2 } from 'lucide-react';
+import { Globe, Loader as Loader2, CircleCheck as CheckCircle2 } from 'lucide-react';
 // Login page component
 
 export function Login() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { setTheme, resolvedTheme } = useTheme();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -91,31 +89,8 @@ export function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      {/* Theme and Language Controls */}
+      {/* Language Controls */}
       <div className="fixed top-4 right-4 flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              {resolvedTheme === 'dark' ? (
-                <Moon className="h-5 w-5" />
-              ) : (
-                <Sun className="h-5 w-5" />
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setTheme('light')}>
-              {t('settings.light')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme('dark')}>
-              {t('settings.dark')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme('auto')}>
-              {t('settings.auto')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">

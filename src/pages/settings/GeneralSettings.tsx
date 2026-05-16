@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '@/contexts/ThemeContext';
 import { languages, type LanguageCode } from '@/i18n';
 import { toast } from 'sonner';
 import { saveOrgSettings, type OrgSettings } from '@/services/settingsService';
@@ -16,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Save, Building2, Globe, Palette, Moon, Sun, Monitor } from 'lucide-react';
+import { Save, Building2, Globe } from 'lucide-react';
 
 const TIMEZONES = [
   'Europe/Madrid',
@@ -41,7 +40,6 @@ interface Props {
 
 export function GeneralSettings({ settings, onSettingsChange }: Props) {
   const { t, i18n } = useTranslation();
-  const { theme, setTheme } = useTheme();
   const [saving, setSaving] = useState(false);
 
   const currentLanguage = languages.find((l) => l.code === i18n.language) || languages[0];
@@ -75,12 +73,6 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
       toast.error(res.error || t('common.error'));
     }
   };
-
-  const themeOptions = [
-    { value: 'light', label: t('settings.light'), icon: Sun },
-    { value: 'dark', label: t('settings.dark'), icon: Moon },
-    { value: 'auto', label: t('settings.auto'), icon: Monitor },
-  ];
 
   return (
     <div className="space-y-6">
@@ -207,44 +199,6 @@ export function GeneralSettings({ settings, onSettingsChange }: Props) {
                 <span>{lang.name}</span>
               </button>
             ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Palette className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <CardTitle>{t('settings.theme')}</CardTitle>
-              <CardDescription>{t('settings.themeDescription')}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-3">
-            {themeOptions.map((opt) => {
-              const Icon = opt.icon;
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => setTheme(opt.value as 'light' | 'dark' | 'auto')}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                    theme === opt.value
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/40 hover:bg-muted/30'
-                  }`}
-                >
-                  <Icon className={`h-6 w-6 ${theme === opt.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm font-medium ${theme === opt.value ? 'text-primary' : 'text-muted-foreground'}`}>
-                    {opt.label}
-                  </span>
-                  {theme === opt.value && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  )}
-                </button>
-              );
-            })}
           </div>
         </CardContent>
       </Card>
