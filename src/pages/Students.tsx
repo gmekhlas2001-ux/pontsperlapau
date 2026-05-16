@@ -797,55 +797,55 @@ export function Students() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+        <DialogContent className="w-[min(56rem,calc(100vw-2rem))] sm:max-w-4xl p-0 overflow-hidden">
           <DialogTitle className="sr-only">Student Profile</DialogTitle>
           <DialogDescription className="sr-only">Full details for this student</DialogDescription>
           {selectedStudent && (
             <div className="flex flex-col max-h-[88vh] overflow-hidden">
               <div className="shrink-0 border-b bg-gradient-to-br from-primary/10 via-card to-accent/50 px-6 pt-7 pb-5">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-5">
                   <div className="flex items-start gap-4">
-                  <AvatarWithFallback
-                    src={selectedStudent.avatar}
-                    firstName={selectedStudent.firstName}
-                    lastName={selectedStudent.lastName}
-                    className="h-20 w-20 text-xl ring-4 ring-background shadow-md shrink-0"
-                  />
-                  <div className="flex-1 min-w-0 pt-1">
-                    <h2 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
-                      {getFullName(selectedStudent.firstName, selectedStudent.lastName)}
-                    </h2>
-                    {selectedStudent.studentId && (
-                      <p className="mt-1 text-xs font-mono text-muted-foreground">{selectedStudent.studentId}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      {selectedStudent.gradeLevel && (
-                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                          {selectedStudent.gradeLevel}
-                        </span>
+                    <AvatarWithFallback
+                      src={selectedStudent.avatar}
+                      firstName={selectedStudent.firstName}
+                      lastName={selectedStudent.lastName}
+                      className="h-20 w-20 text-xl ring-4 ring-background shadow-md shrink-0"
+                    />
+                    <div className="flex-1 min-w-0 pt-1">
+                      <h2 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
+                        {getFullName(selectedStudent.firstName, selectedStudent.lastName)}
+                      </h2>
+                      {selectedStudent.studentId && (
+                        <p className="mt-1 text-xs font-mono text-muted-foreground">{selectedStudent.studentId}</p>
                       )}
-                      <StatusBadge status={selectedStudent.status} />
-                      {selectedStudent.attendanceRate !== undefined && (
-                        <span className="rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                          {selectedStudent.attendanceRate}% Attendance
-                        </span>
-                      )}
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        {selectedStudent.gradeLevel && (
+                          <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                            {selectedStudent.gradeLevel}
+                          </span>
+                        )}
+                        <StatusBadge status={selectedStudent.status} />
+                        {selectedStudent.attendanceRate !== undefined && (
+                          <span className="rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                            {selectedStudent.attendanceRate}% Attendance
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-2 lg:min-w-[300px]">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
                       <p className="text-[11px] font-semibold uppercase text-muted-foreground">Grade</p>
-                      <p className="mt-1 truncate text-sm font-semibold">{selectedStudent.gradeLevel || '—'}</p>
+                      <p className="mt-1 break-words text-sm font-semibold">{selectedStudent.gradeLevel || '—'}</p>
                     </div>
                     <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
                       <p className="text-[11px] font-semibold uppercase text-muted-foreground">Branch</p>
-                      <p className="mt-1 truncate text-sm font-semibold">{branches.find(b => b.id === selectedStudent.branchId)?.name || '—'}</p>
+                      <p className="mt-1 break-words text-sm font-semibold">{branches.find(b => b.id === selectedStudent.branchId)?.name || '—'}</p>
                     </div>
                     <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
                       <p className="text-[11px] font-semibold uppercase text-muted-foreground">Attendance</p>
-                      <p className="mt-1 truncate text-sm font-semibold">{selectedStudent.attendanceRate !== undefined ? `${selectedStudent.attendanceRate}%` : '—'}</p>
+                      <p className="mt-1 break-words text-sm font-semibold">{selectedStudent.attendanceRate !== undefined ? `${selectedStudent.attendanceRate}%` : '—'}</p>
                     </div>
                   </div>
                 </div>

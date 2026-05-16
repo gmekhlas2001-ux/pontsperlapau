@@ -687,54 +687,54 @@ export function Staff() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+        <DialogContent className="w-[min(56rem,calc(100vw-2rem))] sm:max-w-4xl p-0 overflow-hidden">
           <DialogTitle className="sr-only">Staff Profile</DialogTitle>
           <DialogDescription className="sr-only">Full details for this staff member</DialogDescription>
           {selectedStaff && (
             <div className="flex flex-col max-h-[88vh] overflow-hidden">
               <div className="shrink-0 border-b bg-gradient-to-br from-primary/10 via-card to-accent/50 px-6 pt-7 pb-5">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-5">
                   <div className="flex items-start gap-4">
-                  <AvatarWithFallback
-                    src={selectedStaff.avatar}
-                    firstName={selectedStaff.firstName}
-                    lastName={selectedStaff.lastName}
-                    className="h-20 w-20 text-xl ring-4 ring-background shadow-md shrink-0"
-                  />
-                  <div className="flex-1 min-w-0 pt-1">
-                    <h2 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
-                      {getFullName(selectedStaff.firstName, selectedStaff.lastName)}
-                    </h2>
-                    <p className="mt-1 text-sm font-medium text-muted-foreground">{selectedStaff.position || 'Staff member'}</p>
-                    {selectedStaff.employeeId && (
-                      <p className="mt-1 text-xs font-mono text-muted-foreground">{selectedStaff.employeeId}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                        {t(`roles.${selectedStaff.role}`)}
-                      </span>
-                      <StatusBadge status={selectedStaff.status} />
-                      {selectedStaff.employmentType && (
-                        <span className="rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs font-medium capitalize text-muted-foreground">
-                          {selectedStaff.employmentType.replace(/_/g, ' ')}
-                        </span>
+                    <AvatarWithFallback
+                      src={selectedStaff.avatar}
+                      firstName={selectedStaff.firstName}
+                      lastName={selectedStaff.lastName}
+                      className="h-20 w-20 text-xl ring-4 ring-background shadow-md shrink-0"
+                    />
+                    <div className="flex-1 min-w-0 pt-1">
+                      <h2 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
+                        {getFullName(selectedStaff.firstName, selectedStaff.lastName)}
+                      </h2>
+                      <p className="mt-1 text-sm font-medium text-muted-foreground">{selectedStaff.position || 'Staff member'}</p>
+                      {selectedStaff.employeeId && (
+                        <p className="mt-1 text-xs font-mono text-muted-foreground">{selectedStaff.employeeId}</p>
                       )}
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                          {t(`roles.${selectedStaff.role}`)}
+                        </span>
+                        <StatusBadge status={selectedStaff.status} />
+                        {selectedStaff.employmentType && (
+                          <span className="rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs font-medium capitalize text-muted-foreground">
+                            {selectedStaff.employmentType.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-2 lg:min-w-[300px]">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
                       <p className="text-[11px] font-semibold uppercase text-muted-foreground">Role</p>
-                      <p className="mt-1 truncate text-sm font-semibold">{t(`roles.${selectedStaff.role}`)}</p>
+                      <p className="mt-1 break-words text-sm font-semibold">{t(`roles.${selectedStaff.role}`)}</p>
                     </div>
                     <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
                       <p className="text-[11px] font-semibold uppercase text-muted-foreground">Branch</p>
-                      <p className="mt-1 truncate text-sm font-semibold">{branches.find(b => b.id === selectedStaff.branchId)?.name || '—'}</p>
+                      <p className="mt-1 break-words text-sm font-semibold">{branches.find(b => b.id === selectedStaff.branchId)?.name || '—'}</p>
                     </div>
                     <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
                       <p className="text-[11px] font-semibold uppercase text-muted-foreground">Joined</p>
-                      <p className="mt-1 truncate text-sm font-semibold">{formatDate(selectedStaff.dateJoined)}</p>
+                      <p className="mt-1 break-words text-sm font-semibold">{formatDate(selectedStaff.dateJoined)}</p>
                     </div>
                   </div>
                 </div>
