@@ -171,6 +171,7 @@ Deno.serve(async (req: Request) => {
 
   // Build user-level updates.
   const userUpdates: Record<string, any> = {};
+  let passwordWasChanged = false;
   if (body.email)                userUpdates.email = body.email.toLowerCase();
   if (body.firstName !== undefined)      userUpdates.first_name = body.firstName;
   if (body.lastName !== undefined)       userUpdates.last_name = body.lastName;
@@ -193,11 +194,28 @@ Deno.serve(async (req: Request) => {
       return errorResponse(req, 500, "Failed to set password", hashError);
     }
     userUpdates.password_hash = hashData as string;
+    passwordWasChanged = true;
   }
 
   if (Object.keys(userUpdates).length > 0) {
     const { error } = await supabase.from("users").update(userUpdates).eq("id", targetUserId);
     if (error) return errorResponse(req, 400, "Failed to update user", error);
+  }
+
+  if (passwordWasChanged) {
+    const { error } = await supabase
+      .from("password_reset_requests")
+      .update({
+        status: "resolved",
+        resolved_by: callerUser.id,
+        resolved_at: new Date().toISOString(),
+        resolved_note: "Password changed by an administrator.",
+      })
+      .eq("user_id", targetUserId)
+      .eq("status", "pending");
+    if (error) {
+      return errorResponse(req, 500, "Password updated, but failed to close reset request", error);
+    }
   }
 
   // Staff updates.

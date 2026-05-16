@@ -124,7 +124,7 @@ export function PasswordResets() {
             {items.map((req) => (
               <Card key={req.id} className="border shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className={cn('text-xs font-medium border', STATUS_STYLES[req.status])}>
@@ -178,16 +178,17 @@ export function PasswordResets() {
                       )}
                     </div>
                     {req.status === 'pending' && req.user && (
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center xl:w-auto">
                         <Button
                           variant="outline"
                           size="sm"
+                          className="justify-center"
                           onClick={() => setRejectTarget(req)}
                         >
                           <XCircle className="h-4 w-4 mr-1.5" />
                           {t('passwordResets.reject')}
                         </Button>
-                        <Button size="sm" onClick={() => setResolveTarget(req)}>
+                        <Button size="sm" className="justify-center" onClick={() => setResolveTarget(req)}>
                           <CheckCircle2 className="h-4 w-4 mr-1.5" />
                           {t('passwordResets.setNewPassword')}
                         </Button>
