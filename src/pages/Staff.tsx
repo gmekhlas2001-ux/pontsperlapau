@@ -64,12 +64,14 @@ function calculateAge(dob: string): number {
 function ProfileField({ icon: Icon, label, value, className }: { icon: LucideIcon; label: string; value?: string | null; className?: string }) {
   const { t } = useTranslation();
   return (
-    <div className={`flex items-start gap-2.5${className ? ' ' + className : ''}`}>
-      <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+    <div className={`flex min-h-[76px] items-start gap-3 rounded-lg border border-border/70 bg-card/80 p-3 shadow-xs transition-colors hover:border-primary/25${className ? ' ' + className : ''}`}>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide leading-none mb-1">{label}</p>
+        <p className="mb-1 text-[11px] font-semibold uppercase leading-none text-muted-foreground">{label}</p>
         {value ? (
-          <p className="text-sm break-words">{value}</p>
+          <p className="break-words text-sm font-medium text-foreground">{value}</p>
         ) : (
           <p className="text-sm text-muted-foreground/40 italic">{t('common.notProvided')}</p>
         )}
@@ -685,38 +687,54 @@ export function Staff() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
           <DialogTitle className="sr-only">Staff Profile</DialogTitle>
           <DialogDescription className="sr-only">Full details for this staff member</DialogDescription>
           {selectedStaff && (
             <div className="flex flex-col max-h-[88vh] overflow-hidden">
-              {/* Gradient header */}
-              <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 px-6 pt-7 pb-5 text-white shrink-0">
-                <div className="flex items-start gap-4">
+              <div className="shrink-0 border-b bg-gradient-to-br from-primary/10 via-card to-accent/50 px-6 pt-7 pb-5">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex items-start gap-4">
                   <AvatarWithFallback
                     src={selectedStaff.avatar}
                     firstName={selectedStaff.firstName}
                     lastName={selectedStaff.lastName}
-                    className="h-20 w-20 text-xl ring-4 ring-white/30 shrink-0"
+                    className="h-20 w-20 text-xl ring-4 ring-background shadow-md shrink-0"
                   />
                   <div className="flex-1 min-w-0 pt-1">
-                    <h2 className="text-xl font-bold leading-tight">
+                    <h2 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
                       {getFullName(selectedStaff.firstName, selectedStaff.lastName)}
                     </h2>
-                    <p className="text-emerald-100/90 text-sm mt-0.5">{selectedStaff.position}</p>
+                    <p className="mt-1 text-sm font-medium text-muted-foreground">{selectedStaff.position || 'Staff member'}</p>
                     {selectedStaff.employeeId && (
-                      <p className="text-emerald-100/60 text-xs font-mono mt-0.5">{selectedStaff.employeeId}</p>
+                      <p className="mt-1 text-xs font-mono text-muted-foreground">{selectedStaff.employeeId}</p>
                     )}
                     <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">
+                      <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
                         {t(`roles.${selectedStaff.role}`)}
                       </span>
                       <StatusBadge status={selectedStaff.status} />
                       {selectedStaff.employmentType && (
-                        <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium capitalize">
+                        <span className="rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs font-medium capitalize text-muted-foreground">
                           {selectedStaff.employmentType.replace(/_/g, ' ')}
                         </span>
                       )}
+                    </div>
+                  </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 lg:min-w-[300px]">
+                    <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
+                      <p className="text-[11px] font-semibold uppercase text-muted-foreground">Role</p>
+                      <p className="mt-1 truncate text-sm font-semibold">{t(`roles.${selectedStaff.role}`)}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
+                      <p className="text-[11px] font-semibold uppercase text-muted-foreground">Branch</p>
+                      <p className="mt-1 truncate text-sm font-semibold">{branches.find(b => b.id === selectedStaff.branchId)?.name || '—'}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
+                      <p className="text-[11px] font-semibold uppercase text-muted-foreground">Joined</p>
+                      <p className="mt-1 truncate text-sm font-semibold">{formatDate(selectedStaff.dateJoined)}</p>
                     </div>
                   </div>
                 </div>
@@ -724,7 +742,7 @@ export function Staff() {
 
               {/* Tabbed content */}
               <Tabs defaultValue="overview" className="flex flex-col flex-1 min-h-0">
-                <TabsList className="rounded-none border-b px-4 h-11 bg-background justify-start gap-1 shrink-0 w-full">
+                <TabsList className="h-auto w-full shrink-0 justify-start gap-1 rounded-none border-b bg-muted/35 px-4 py-2">
                   <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
                   <TabsTrigger value="personal" className="text-xs">Personal</TabsTrigger>
                 </TabsList>
@@ -732,7 +750,7 @@ export function Staff() {
                   <TabsContent value="overview" className="p-6 m-0 space-y-5">
                     <div>
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contact</p>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <ProfileField icon={Mail} label="Email" value={selectedStaff.email} />
                         <ProfileField icon={Phone} label="Phone" value={selectedStaff.phone} />
                       </div>
@@ -740,7 +758,7 @@ export function Staff() {
                     <Separator />
                     <div>
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Employment</p>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <ProfileField icon={Briefcase} label="Position" value={selectedStaff.position} />
                         <ProfileField icon={Building2} label="Department" value={selectedStaff.department} />
                         <ProfileField icon={Calendar} label="Date Joined" value={formatDate(selectedStaff.dateJoined)} />
@@ -754,7 +772,7 @@ export function Staff() {
                   </TabsContent>
 
                   <TabsContent value="personal" className="p-6 m-0 space-y-5">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <ProfileField
                         icon={Calendar}
                         label="Date of Birth"
@@ -786,7 +804,7 @@ export function Staff() {
               </Tabs>
 
               {/* Footer */}
-              <div className="border-t px-6 py-4 flex justify-end gap-2 shrink-0 bg-background">
+              <div className="border-t bg-muted/25 px-6 py-4 flex justify-end gap-2 shrink-0">
                 <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
                   {t('common.close')}
                 </Button>

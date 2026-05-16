@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Inbox, Search, SearchX } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
@@ -85,7 +85,7 @@ export function DataTable<T>({
     });
   }, [filteredData, sortConfig]);
 
-  const totalPages = Math.ceil(sortedData.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
   const paginatedData = sortedData.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
@@ -103,8 +103,9 @@ export function DataTable<T>({
     });
   };
 
-  const startEntry = (currentPage - 1) * pageSize + 1;
+  const startEntry = sortedData.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endEntry = Math.min(currentPage * pageSize, sortedData.length);
+  const isFilteredEmpty = data.length > 0 && filteredData.length === 0;
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -125,14 +126,14 @@ export function DataTable<T>({
         </div>
       )}
 
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-lg border border-border/70 bg-card/80 shadow-xs">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-muted/45 hover:bg-muted/45">
               {columns.map((column) => (
                 <TableHead
                   key={column.key}
-                  className={cn(column.sortable && 'cursor-pointer')}
+                  className={cn('font-semibold text-foreground', column.sortable && 'cursor-pointer select-none')}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
                   {column.header}
@@ -150,14 +151,26 @@ export function DataTable<T>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
+                  className="h-56 text-center"
                 >
-                  {t('common.noData')}
+                  <div className="mx-auto flex max-w-sm flex-col items-center px-6">
+                    <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      {isFilteredEmpty ? <SearchX className="h-5 w-5" /> : <Inbox className="h-5 w-5" />}
+                    </span>
+                    <p className="text-sm font-semibold text-foreground">
+                      {isFilteredEmpty ? t('common.noMatchingResults') : t('common.noData')}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {isFilteredEmpty
+                        ? t('common.noMatchingResultsDescription')
+                        : t('common.emptyTableDescription')}
+                    </p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               paginatedData.map((item) => (
-                <TableRow key={keyExtractor(item)}>
+                <TableRow key={keyExtractor(item)} className="transition-colors hover:bg-muted/35">
                   {columns.map((column) => (
                     <TableCell key={`${keyExtractor(item)}-${column.key}`}>
                       {column.cell(item)}

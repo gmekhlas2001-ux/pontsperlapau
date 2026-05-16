@@ -78,6 +78,7 @@ import {
   GraduationCap,
   Building2,
   Shield,
+  ExternalLink,
 } from 'lucide-react';
 import { formatDate, getFullName } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -96,12 +97,14 @@ function calculateAge(dob: string): number {
 function ProfileField({ icon: Icon, label, value, className }: { icon: LucideIcon; label: string; value?: string | null; className?: string }) {
   const { t } = useTranslation();
   return (
-    <div className={`flex items-start gap-2.5${className ? ' ' + className : ''}`}>
-      <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+    <div className={`flex min-h-[76px] items-start gap-3 rounded-lg border border-border/70 bg-card/80 p-3 shadow-xs transition-colors hover:border-primary/25${className ? ' ' + className : ''}`}>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide leading-none mb-1">{label}</p>
+        <p className="mb-1 text-[11px] font-semibold uppercase leading-none text-muted-foreground">{label}</p>
         {value ? (
-          <p className="text-sm break-words">{value}</p>
+          <p className="break-words text-sm font-medium text-foreground">{value}</p>
         ) : (
           <p className="text-sm text-muted-foreground/40 italic">{t('common.notProvided')}</p>
         )}
@@ -794,39 +797,55 @@ export function Students() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
           <DialogTitle className="sr-only">Student Profile</DialogTitle>
           <DialogDescription className="sr-only">Full details for this student</DialogDescription>
           {selectedStudent && (
             <div className="flex flex-col max-h-[88vh] overflow-hidden">
-              {/* Gradient header */}
-              <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-700 px-6 pt-7 pb-5 text-white shrink-0">
-                <div className="flex items-start gap-4">
+              <div className="shrink-0 border-b bg-gradient-to-br from-primary/10 via-card to-accent/50 px-6 pt-7 pb-5">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex items-start gap-4">
                   <AvatarWithFallback
                     src={selectedStudent.avatar}
                     firstName={selectedStudent.firstName}
                     lastName={selectedStudent.lastName}
-                    className="h-20 w-20 text-xl ring-4 ring-white/30 shrink-0"
+                    className="h-20 w-20 text-xl ring-4 ring-background shadow-md shrink-0"
                   />
                   <div className="flex-1 min-w-0 pt-1">
-                    <h2 className="text-xl font-bold leading-tight">
+                    <h2 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
                       {getFullName(selectedStudent.firstName, selectedStudent.lastName)}
                     </h2>
                     {selectedStudent.studentId && (
-                      <p className="text-blue-100/80 text-xs font-mono mt-0.5">{selectedStudent.studentId}</p>
+                      <p className="mt-1 text-xs font-mono text-muted-foreground">{selectedStudent.studentId}</p>
                     )}
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       {selectedStudent.gradeLevel && (
-                        <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">
+                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
                           {selectedStudent.gradeLevel}
                         </span>
                       )}
                       <StatusBadge status={selectedStudent.status} />
                       {selectedStudent.attendanceRate !== undefined && (
-                        <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">
+                        <span className="rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground">
                           {selectedStudent.attendanceRate}% Attendance
                         </span>
                       )}
+                    </div>
+                  </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 lg:min-w-[300px]">
+                    <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
+                      <p className="text-[11px] font-semibold uppercase text-muted-foreground">Grade</p>
+                      <p className="mt-1 truncate text-sm font-semibold">{selectedStudent.gradeLevel || '—'}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
+                      <p className="text-[11px] font-semibold uppercase text-muted-foreground">Branch</p>
+                      <p className="mt-1 truncate text-sm font-semibold">{branches.find(b => b.id === selectedStudent.branchId)?.name || '—'}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
+                      <p className="text-[11px] font-semibold uppercase text-muted-foreground">Attendance</p>
+                      <p className="mt-1 truncate text-sm font-semibold">{selectedStudent.attendanceRate !== undefined ? `${selectedStudent.attendanceRate}%` : '—'}</p>
                     </div>
                   </div>
                 </div>
@@ -834,7 +853,7 @@ export function Students() {
 
               {/* Tabbed content */}
               <Tabs defaultValue="overview" className="flex flex-col flex-1 min-h-0">
-                <TabsList className="rounded-none border-b px-4 h-11 bg-background justify-start gap-1 shrink-0 w-full">
+                <TabsList className="h-auto w-full shrink-0 justify-start gap-1 rounded-none border-b bg-muted/35 px-4 py-2">
                   <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
                   <TabsTrigger value="personal" className="text-xs">Personal</TabsTrigger>
                   <TabsTrigger value="family" className="text-xs">Family & Health</TabsTrigger>
@@ -843,7 +862,7 @@ export function Students() {
                   <TabsContent value="overview" className="p-6 m-0 space-y-5">
                     <div>
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contact</p>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <ProfileField icon={Mail} label="Email" value={selectedStudent.email} />
                         <ProfileField icon={Phone} label="Phone" value={selectedStudent.phone} />
                       </div>
@@ -851,7 +870,7 @@ export function Students() {
                     <Separator />
                     <div>
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Academic</p>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <ProfileField icon={GraduationCap} label="Grade Level" value={selectedStudent.gradeLevel} />
                         <ProfileField icon={Calendar} label="Enrolled" value={formatDate(selectedStudent.enrollmentDate)} />
                         <ProfileField icon={Building2} label="Branch" value={branches.find(b => b.id === selectedStudent.branchId)?.name} />
@@ -878,7 +897,7 @@ export function Students() {
                   </TabsContent>
 
                   <TabsContent value="personal" className="p-6 m-0">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <ProfileField
                         icon={Calendar}
                         label="Date of Birth"
@@ -903,7 +922,7 @@ export function Students() {
                   <TabsContent value="family" className="p-6 m-0 space-y-5">
                     <div>
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Parent / Guardian</p>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <ProfileField icon={Users} label="Full Name" value={selectedStudent.parentGuardianName} />
                         <ProfileField icon={Phone} label="Phone" value={selectedStudent.parentGuardianPhone} />
                         <ProfileField icon={Mail} label="Email" value={selectedStudent.parentGuardianEmail} />
@@ -912,7 +931,7 @@ export function Students() {
                     <Separator />
                     <div>
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Emergency Contact</p>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <ProfileField icon={Users} label="Full Name" value={selectedStudent.emergencyContactName} />
                         <ProfileField icon={Phone} label="Phone" value={selectedStudent.emergencyContactPhone} />
                         <ProfileField icon={Heart} label="Relationship" value={selectedStudent.emergencyContactRelationship} />
@@ -931,9 +950,13 @@ export function Students() {
               </Tabs>
 
               {/* Footer */}
-              <div className="border-t px-6 py-4 flex justify-end gap-2 shrink-0 bg-background">
+              <div className="border-t bg-muted/25 px-6 py-4 flex flex-wrap justify-end gap-2 shrink-0">
                 <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
                   {t('common.close')}
+                </Button>
+                <Button variant="outline" onClick={() => { setIsViewDialogOpen(false); navigate(`/students/${selectedStudent.id}`); }}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Full profile
                 </Button>
                 <Button onClick={() => { setIsViewDialogOpen(false); handleEditStudent(selectedStudent); }}>
                   <Pencil className="mr-2 h-4 w-4" />
