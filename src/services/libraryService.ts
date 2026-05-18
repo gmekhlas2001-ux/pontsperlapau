@@ -65,6 +65,39 @@ export interface UpdateBookData {
   cover_image_url?: string | null;
 }
 
+function cleanOptionalString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function cleanOptionalYear(value: unknown): number | null {
+  const year = Number(value);
+  if (!Number.isInteger(year) || year <= 0) return null;
+  return year;
+}
+
+function cleanBookPayload<T extends CreateBookData | UpdateBookData>(payload: T): T {
+  const cleaned: Record<string, unknown> = { ...payload };
+
+  for (const key of ['isbn', 'publisher', 'category', 'description', 'language', 'location_shelf', 'branch_id'] as const) {
+    if (key in cleaned) cleaned[key] = cleanOptionalString(cleaned[key]);
+  }
+
+  if ('cover_image_url' in cleaned) {
+    cleaned.cover_image_url = cleanOptionalString(cleaned.cover_image_url);
+  }
+  if ('publication_year' in cleaned) {
+    cleaned.publication_year = cleanOptionalYear(cleaned.publication_year);
+  }
+  if ('total_copies' in cleaned) {
+    cleaned.total_copies = Math.max(1, Number(cleaned.total_copies) || 1);
+  }
+  if ('available_copies' in cleaned) {
+    cleaned.available_copies = Math.max(0, Number(cleaned.available_copies) || 0);
+  }
+
+  return cleaned as T;
+}
+
 export async function getBooks() {
   try {
     const branchId = scopedBranchId();
@@ -91,7 +124,7 @@ export async function createBook(bookData: CreateBookData) {
   try {
     const res = await callEdgeFunction<{ success: boolean; data: BookRow }>('app-actions', {
       operation: 'create-book',
-      ...bookData,
+      ...cleanBookPayload(bookData),
     });
     if (!res.ok || !res.data?.data) throw new Error(res.error || 'Failed to create book');
     const data = res.data.data;
@@ -104,16 +137,10 @@ export async function createBook(bookData: CreateBookData) {
 
 export async function updateBook(bookId: string, updates: UpdateBookData) {
   try {
-    // Normalise empty strings to null for nullable text columns so
-    // UNIQUE constraints (e.g. books_isbn_key) don't reject "" duplicates.
-    const cleaned: Record<string, unknown> = { ...updates };
-    for (const k of ['isbn', 'publisher', 'category', 'description', 'language', 'location_shelf'] as const) {
-      if (cleaned[k] === '') cleaned[k] = null;
-    }
     const res = await callEdgeFunction<{ success: boolean; data: BookRow }>('app-actions', {
       operation: 'update-book',
       bookId,
-      updates: cleaned,
+      updates: cleanBookPayload(updates),
     });
     if (!res.ok || !res.data?.data) throw new Error(res.error || 'Failed to update book');
     const data = res.data.data;

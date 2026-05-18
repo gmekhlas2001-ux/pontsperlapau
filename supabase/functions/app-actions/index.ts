@@ -49,6 +49,41 @@ function cleanString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function cleanPositiveInt(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) return null;
+  return parsed;
+}
+
+function cleanPublicationYear(value: unknown): number | null | "invalid" {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number(value);
+  if (parsed <= 0) return null;
+  const currentYear = new Date().getFullYear();
+  if (!Number.isInteger(parsed) || parsed < 1000 || parsed > currentYear) return "invalid";
+  return parsed;
+}
+
+function bookWriteMessage(error: any, fallback: string): string {
+  const message = String(error?.message ?? "");
+  const details = String(error?.details ?? "");
+  const combined = `${message} ${details}`;
+
+  if (error?.code === "23505" && combined.includes("books_isbn")) {
+    return "A book with this ISBN already exists";
+  }
+  if (error?.code === "23514" && combined.includes("valid_publication_year")) {
+    return "Publication year must be between 1000 and the current year";
+  }
+  if (error?.code === "23514" && combined.includes("valid_copies")) {
+    return "Total copies must be at least 1";
+  }
+  if (error?.code === "23514" && combined.includes("valid_available_copies")) {
+    return "Available copies cannot be greater than total copies";
+  }
+  return fallback;
+}
+
 function decodeBase64(value: string): Uint8Array {
   const raw = atob(value);
   const bytes = new Uint8Array(raw.length);
@@ -978,26 +1013,31 @@ Deno.serve(async (req: Request) => {
         const branchId = cleanString(body.branch_id);
         const branchError = assertBranch(req, caller, branchId);
         if (branchError) return branchError;
-        if (!branchId || !body.title || !body.author || Number(body.total_copies) < 0) {
+        const totalCopies = cleanPositiveInt(body.total_copies);
+        const publicationYear = cleanPublicationYear(body.publication_year);
+        if (!branchId || !cleanString(body.title) || !cleanString(body.author) || !totalCopies) {
           return errorResponse(req, 400, "Invalid book payload");
         }
+        if (publicationYear === "invalid") {
+          return errorResponse(req, 400, "Publication year must be between 1000 and the current year");
+        }
         const { data, error } = await supabase.from("books").insert({
-          title: String(body.title),
-          author: String(body.author),
+          title: cleanString(body.title),
+          author: cleanString(body.author),
           isbn: cleanString(body.isbn),
           publisher: cleanString(body.publisher),
-          publication_year: body.publication_year ?? null,
+          publication_year: publicationYear,
           category: cleanString(body.category),
           description: cleanString(body.description),
           language: cleanString(body.language) ?? "English",
-          total_copies: Number(body.total_copies),
-          available_copies: Number(body.total_copies),
+          total_copies: totalCopies,
+          available_copies: totalCopies,
           location_shelf: cleanString(body.location_shelf),
           cover_image_url: cleanString(body.cover_image_url),
           branch_id: branchId,
           added_by: caller.id,
         }).select().single();
-        if (error) return errorResponse(req, 400, "Failed to create book", error);
+        if (error) return errorResponse(req, 400, bookWriteMessage(error, "Failed to create book"), error);
         return jsonResponse(req, { success: true, data });
       }
 
@@ -1020,13 +1060,40 @@ Deno.serve(async (req: Request) => {
         return jsonResponse(req, { success: true });
       }
 
-      const updates = { ...(body.updates ?? {}), updated_at: new Date().toISOString() };
+      const rawUpdates = body.updates ?? {};
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      for (const key of ["title", "author", "isbn", "publisher", "category", "description", "language", "location_shelf", "cover_image_url"] as const) {
+        if (key in rawUpdates) updates[key] = cleanString(rawUpdates[key]);
+      }
+      if ("publication_year" in rawUpdates) {
+        const publicationYear = cleanPublicationYear(rawUpdates.publication_year);
+        if (publicationYear === "invalid") {
+          return errorResponse(req, 400, "Publication year must be between 1000 and the current year");
+        }
+        updates.publication_year = publicationYear;
+      }
+      if ("total_copies" in rawUpdates) {
+        const totalCopies = cleanPositiveInt(rawUpdates.total_copies);
+        if (!totalCopies) return errorResponse(req, 400, "Total copies must be at least 1");
+        updates.total_copies = totalCopies;
+      }
+      if ("available_copies" in rawUpdates) {
+        const availableCopies = Number(rawUpdates.available_copies);
+        if (!Number.isInteger(availableCopies) || availableCopies < 0) {
+          return errorResponse(req, 400, "Available copies cannot be negative");
+        }
+        updates.available_copies = availableCopies;
+      }
+      if ("physical_condition" in rawUpdates && isOneOf(rawUpdates.physical_condition, ["excellent", "good", "fair", "poor"])) {
+        updates.physical_condition = rawUpdates.physical_condition;
+      }
+      if ("branch_id" in rawUpdates) updates.branch_id = cleanString(rawUpdates.branch_id);
       if (updates.branch_id) {
         const newBranchError = assertBranch(req, caller, updates.branch_id);
         if (newBranchError) return newBranchError;
       }
       const { data, error } = await supabase.from("books").update(updates).eq("id", bookId).select().single();
-      if (error) return errorResponse(req, 500, "Failed to update book", error);
+      if (error) return errorResponse(req, 500, bookWriteMessage(error, "Failed to update book"), error);
       return jsonResponse(req, { success: true, data });
     }
 

@@ -602,7 +602,7 @@ export function Library() {
 
 interface BookFormProps {
   form: CreateBookData;
-  onChange: (key: string, value: string | number) => void;
+  onChange: (key: string, value: string | number | null | undefined) => void;
   onSubmit: () => void;
   onCancel: () => void;
   saving: boolean;
@@ -667,7 +667,7 @@ function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition
             id="publication_year"
             type="number"
             value={form.publication_year || ''}
-            onChange={(e) => onChange('publication_year', parseInt(e.target.value) || 0)}
+            onChange={(e) => onChange('publication_year', e.target.value ? parseInt(e.target.value, 10) : undefined)}
           />
         </div>
       </div>
