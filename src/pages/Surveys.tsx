@@ -260,7 +260,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         showCloseButton={false}
-        className="fixed inset-0 left-0 top-0 z-50 flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-0 p-0 shadow-none"
+        className="!fixed !inset-0 !left-0 !top-0 z-50 flex !h-dvh !w-screen !max-w-none !translate-x-0 !translate-y-0 flex-col gap-0 overflow-hidden !rounded-none border-0 p-0 shadow-none sm:!max-w-none"
       >
         <DialogHeader className="shrink-0 border-b bg-background px-4 py-3 text-left sm:px-6 lg:px-8">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4">
@@ -1339,40 +1339,57 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
       : 0;
     return { name: b.branchName, satisfaction: Math.round(avg * 100), respondents: b.totalRespondents };
   });
+  const hasResultData = results.length > 0 && (totalRespondents > 0 || questionAggregates.some((q) => q.grandTotal > 0));
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            Survey Results
-          </DialogTitle>
-          <DialogDescription>
-            {survey.title}
-            {survey.period ? ` · ${survey.period}` : ''}
-            {survey.survey_date ? ` · ${new Date(`${survey.survey_date}T00:00:00`).toLocaleDateString(i18n.language)}` : ''}
-          </DialogDescription>
+      <DialogContent
+        showCloseButton={false}
+        className="!fixed !inset-0 !left-0 !top-0 z-50 flex !h-dvh !w-screen !max-w-none !translate-x-0 !translate-y-0 flex-col gap-0 overflow-hidden !rounded-none border-0 p-0 shadow-none sm:!max-w-none"
+      >
+        <DialogHeader className="shrink-0 border-b bg-background px-4 py-3 text-left sm:px-6 lg:px-8">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <BarChart3 className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="truncate text-lg font-semibold">
+                  Survey Results
+                </DialogTitle>
+                <DialogDescription className="truncate">
+                  {survey.title}
+                  {survey.period ? ` · ${survey.period}` : ''}
+                  {survey.survey_date ? ` · ${new Date(`${survey.survey_date}T00:00:00`).toLocaleDateString(i18n.language)}` : ''}
+                </DialogDescription>
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close survey results">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogHeader>
 
         {loading ? (
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-3 gap-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20" />)}</div>
+          <div className="mx-auto w-full max-w-7xl space-y-4 p-4 sm:p-6 lg:p-8">
+            <div className="grid gap-4 sm:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
             <Skeleton className="h-48 w-full" />
           </div>
         ) : (
           <Tabs value={tab} onValueChange={setTab} className="flex flex-col flex-1 min-h-0">
-            <TabsList className="rounded-none border-b h-11 bg-background justify-start gap-1 px-4 shrink-0 w-full">
-              <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-              <TabsTrigger value="questions" className="text-xs">By Question</TabsTrigger>
-              <TabsTrigger value="branches" className="text-xs">By Branch</TabsTrigger>
-            </TabsList>
+            <div className="shrink-0 border-b bg-muted/20 px-4 sm:px-6 lg:px-8">
+              <TabsList className="mx-auto flex h-auto w-full max-w-7xl justify-start gap-1 rounded-none bg-transparent p-0">
+                <TabsTrigger value="overview" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">Overview</TabsTrigger>
+                <TabsTrigger value="questions" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">By Question</TabsTrigger>
+                <TabsTrigger value="branches" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">By Branch</TabsTrigger>
+              </TabsList>
+            </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto bg-muted/10">
               {/* Overview */}
-              <TabsContent value="overview" className="p-6 m-0 space-y-6">
+              <TabsContent value="overview" className="m-0 mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
                 {/* KPI cards */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid gap-4 md:grid-cols-3">
                   {[
                     { label: 'Total Respondents', value: totalRespondents.toLocaleString(i18n.language), icon: Users, color: 'text-blue-600' },
                     { label: 'Branches Submitted', value: `${submittedBranches} / ${results.length}`, icon: Building2, color: 'text-emerald-600' },
@@ -1393,37 +1410,49 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                 </div>
 
                 {/* Charts */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm font-semibold mb-3">Overall Response Distribution</p>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <PieChart>
-                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
-                          {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
-                        </Pie>
-                        <Tooltip formatter={(v) => `${v}%`} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+                {hasResultData ? (
+                  <div className="grid gap-6 xl:grid-cols-2">
+                    <div className="rounded-lg border bg-background p-4">
+                      <p className="mb-3 text-sm font-semibold">Overall Response Distribution</p>
+                      <ResponsiveContainer width="100%" height={320}>
+                        <PieChart>
+                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={75} outerRadius={115} paddingAngle={3} dataKey="value">
+                            {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
+                          </Pie>
+                          <Tooltip formatter={(v) => `${v}%`} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="rounded-lg border bg-background p-4">
+                      <p className="mb-3 text-sm font-semibold">Satisfaction by Branch</p>
+                      <ResponsiveContainer width="100%" height={320}>
+                        <BarChart data={branchBarData} layout="vertical" margin={{ left: 12, right: 18 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
+                          <Tooltip formatter={(v) => `${v}%`} />
+                          <Bar dataKey="satisfaction" fill="#10b981" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold mb-3">Satisfaction by Branch</p>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={branchBarData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={70} />
-                        <Tooltip formatter={(v) => `${v}%`} />
-                        <Bar dataKey="satisfaction" fill="#10b981" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                ) : (
+                  <div className="rounded-lg border bg-background p-8 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                      <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold">No results submitted yet</h3>
+                    <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                      Once a branch enters survey data, this page will show response distribution, satisfaction by branch, question-level results, and export-ready summaries.
+                    </p>
                   </div>
-                </div>
+                )}
               </TabsContent>
 
               {/* By Question */}
-              <TabsContent value="questions" className="p-6 m-0 space-y-3">
-                {questionAggregates.map((qa, idx) => (
+              <TabsContent value="questions" className="m-0 mx-auto w-full max-w-7xl space-y-3 p-4 sm:p-6 lg:p-8">
+                {questionAggregates.length > 0 ? questionAggregates.map((qa, idx) => (
                   <div key={qa.question.id} className="p-4 border rounded-lg space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-sm leading-snug flex-1">
@@ -1451,12 +1480,16 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       <span className="ml-auto">{qa.grandTotal.toLocaleString(i18n.language)} responses</span>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="rounded-lg border bg-background p-8 text-center text-sm text-muted-foreground">
+                    This survey has no questions configured.
+                  </div>
+                )}
               </TabsContent>
 
               {/* By Branch */}
-              <TabsContent value="branches" className="p-6 m-0">
-                <div className="overflow-x-auto">
+              <TabsContent value="branches" className="m-0 mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+                <div className="overflow-x-auto rounded-lg border bg-background">
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="bg-muted/50">
@@ -1511,7 +1544,8 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
           </Tabs>
         )}
 
-        <div className="border-t px-6 py-4 shrink-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="shrink-0 border-t bg-background px-4 py-3 sm:px-6 lg:px-8">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               variant="outline"
@@ -1538,6 +1572,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
             </Button>
           </div>
           <Button variant="outline" onClick={onClose}>Close</Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
