@@ -26,6 +26,8 @@ const TX_STATUSES = ["completed", "cancelled", "failed"];
 const ASSESSMENT_TYPES = ["midterm", "final", "assignment", "quiz", "project", "other"];
 const SURVEY_STATUSES = ["draft", "active", "closed"];
 const SENTIMENTS = ["positive", "negative", "neutral"];
+const SURVEY_RESPONDENT_TYPES = ["students", "staff", "students_staff"];
+const SURVEY_RESPONDENT_KINDS = ["student", "staff"];
 
 type Caller = {
   id: string;
@@ -674,13 +676,27 @@ Deno.serve(async (req: Request) => {
         if (!body.title || !isOneOf(body.status, SURVEY_STATUSES)) {
           return errorResponse(req, 400, "Invalid survey payload");
         }
-        const { data: survey, error: sErr } = await supabase.from("surveys").insert({
+        const surveyBranchId = caller.role === "superadmin"
+          ? cleanString(body.branchId)
+          : caller.branch_id;
+        if (!surveyBranchId) return errorResponse(req, 400, "Survey branch is required");
+        const branchError = assertBranch(req, caller, surveyBranchId);
+        if (branchError) return branchError;
+        const respondentType = isOneOf(body.respondentType, SURVEY_RESPONDENT_TYPES)
+          ? body.respondentType
+          : "students";
+        const surveyInsert: Record<string, unknown> = {
           title: String(body.title),
           description: cleanString(body.description),
           period: cleanString(body.period),
+          branch_id: surveyBranchId,
+          respondent_type: respondentType,
           status: body.status,
           created_by: caller.id,
-        }).select().single();
+        };
+        const surveyDate = cleanString(body.surveyDate);
+        if (surveyDate) surveyInsert.survey_date = surveyDate;
+        const { data: survey, error: sErr } = await supabase.from("surveys").insert(surveyInsert).select().single();
         if (sErr || !survey) return errorResponse(req, 400, "Failed to create survey", sErr);
 
         const sections = Array.isArray(body.sections) ? body.sections : [];
@@ -735,6 +751,47 @@ Deno.serve(async (req: Request) => {
           }
         }
 
+        const respondentIds = Array.isArray(body.respondentIds) ? body.respondentIds : [];
+        if (respondentIds.length > 0) {
+          const allowedKinds = respondentType === "students"
+            ? ["student"]
+            : respondentType === "staff"
+              ? ["staff"]
+              : SURVEY_RESPONDENT_KINDS;
+          const rows = respondentIds
+            .filter((respondent: any) => isOneOf(respondent.type, allowedKinds) && cleanString(respondent.id) && cleanString(respondent.name))
+            .map((respondent: any) => ({
+              survey_id: survey.id,
+              branch_id: surveyBranchId,
+              respondent_type: respondent.type,
+              respondent_id: cleanString(respondent.id),
+              respondent_name: cleanString(respondent.name),
+            }));
+          if (rows.length > 0) {
+            const studentIds = rows.filter((row) => row.respondent_type === "student").map((row) => row.respondent_id);
+            const staffIds = rows.filter((row) => row.respondent_type === "staff").map((row) => row.respondent_id);
+            if (studentIds.length > 0) {
+              const { data, error } = await supabase.from("students").select("id, branch_id").in("id", studentIds);
+              if (error || (data ?? []).some((student: any) => student.branch_id !== surveyBranchId) || (data ?? []).length !== studentIds.length) {
+                await supabase.from("surveys").delete().eq("id", survey.id);
+                return errorResponse(req, 403, "One or more selected students are outside the survey branch", error);
+              }
+            }
+            if (staffIds.length > 0) {
+              const { data, error } = await supabase.from("staff").select("id, branch_id").in("id", staffIds);
+              if (error || (data ?? []).some((member: any) => member.branch_id !== surveyBranchId) || (data ?? []).length !== staffIds.length) {
+                await supabase.from("surveys").delete().eq("id", survey.id);
+                return errorResponse(req, 403, "One or more selected staff are outside the survey branch", error);
+              }
+            }
+            const { error } = await supabase.from("survey_respondents").insert(rows);
+            if (error) {
+              await supabase.from("surveys").delete().eq("id", survey.id);
+              return errorResponse(req, 400, "Failed to save survey respondents", error);
+            }
+          }
+        }
+
         return jsonResponse(req, { success: true, id: survey.id });
       }
 
@@ -744,6 +801,9 @@ Deno.serve(async (req: Request) => {
         const fields = body.fields ?? {};
         if (fields.status && !isOneOf(fields.status, SURVEY_STATUSES)) {
           return errorResponse(req, 400, "Invalid survey status");
+        }
+        if ("survey_date" in fields) {
+          fields.survey_date = cleanString(fields.survey_date);
         }
         const { error } = await supabase.from("surveys").update(fields).eq("id", surveyId);
         if (error) return errorResponse(req, 500, "Failed to update survey", error);

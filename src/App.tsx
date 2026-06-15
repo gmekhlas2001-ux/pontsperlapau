@@ -31,6 +31,7 @@ const Library = lazy(() => import('@/pages/Library').then((m) => ({ default: m.L
 const Settings = lazy(() => import('@/pages/Settings').then((m) => ({ default: m.Settings })));
 const Reports = lazy(() => import('@/pages/Reports').then((m) => ({ default: m.Reports })));
 const Surveys = lazy(() => import('@/pages/Surveys').then((m) => ({ default: m.Surveys })));
+const SurveyCreatePage = lazy(() => import('@/pages/Surveys').then((m) => ({ default: m.SurveyCreatePage })));
 const PasswordResets = lazy(() => import('@/pages/PasswordResets').then((m) => ({ default: m.PasswordResets })));
 const Profile = lazy(() => import('@/pages/Profile').then((m) => ({ default: m.Profile })));
 const Attendance = lazy(() => import('@/pages/Attendance').then((m) => ({ default: m.Attendance })));
@@ -237,6 +238,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
                 <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="surveys/new"
+            element={
+              <ProtectedRoute requiredRoles={['superadmin', 'admin']}>
+                <SurveyCreatePage />
               </ProtectedRoute>
             }
           />

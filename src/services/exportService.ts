@@ -21,6 +21,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveRowsAsExcel, type ExcelRow } from '@/lib/excel';
 import type { GradeStudent } from './gradesService';
+import type { BranchResult, SurveyFull } from './surveyService';
 
 // ─── shared helpers ──────────────────────────────────────────────────────────
 
@@ -31,6 +32,17 @@ function today(): string {
 
 function safeFilePart(value: string): string {
   return value.trim().replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '') || 'export';
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function formatDateLabel(date: string): string {
@@ -75,6 +87,295 @@ function addPDFHeader(doc: jsPDF, title: string, subtitle?: string): number {
 
   doc.setTextColor(40, 40, 40);
   return y;
+}
+
+function formatSurveyDate(date?: string): string {
+  if (!date) return '';
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function surveyQuestionAggregates(survey: SurveyFull, results: BranchResult[]) {
+  return survey.questions.map((q) => {
+    let positiveTotal = 0;
+    let negativeTotal = 0;
+    let neutralTotal = 0;
+    let grandTotal = 0;
+
+    results.forEach((b) => {
+      const qr = b.questionResults.find((r) => r.questionId === q.id);
+      if (!qr) return;
+      qr.counts.forEach((c) => {
+        grandTotal += c.count;
+        if (c.sentiment === 'positive') positiveTotal += c.count;
+        else if (c.sentiment === 'negative') negativeTotal += c.count;
+        else neutralTotal += c.count;
+      });
+    });
+
+    return {
+      question: q,
+      positiveTotal,
+      negativeTotal,
+      neutralTotal,
+      grandTotal,
+      positiveRate: grandTotal > 0 ? positiveTotal / grandTotal : 0,
+      negativeRate: grandTotal > 0 ? negativeTotal / grandTotal : 0,
+      neutralRate: grandTotal > 0 ? neutralTotal / grandTotal : 0,
+    };
+  });
+}
+
+function pct(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
+// ─── PDF / Excel: Survey Results ─────────────────────────────────────────────
+
+export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult[]): void {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  let y = addPDFHeader(doc, 'Survey Results', survey.title);
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  const usableW = pageW - margin * 2;
+
+  const aggregates = surveyQuestionAggregates(survey, results);
+  const totalRespondents = results.reduce((sum, branch) => sum + branch.totalRespondents, 0);
+  const submittedBranches = results.filter((branch) => branch.submitted).length;
+  const targetStudents = survey.respondents.filter((respondent) => respondent.respondent_type === 'student').length;
+  const targetStaff = survey.respondents.filter((respondent) => respondent.respondent_type === 'staff').length;
+  const avgSatisfaction = aggregates.length > 0
+    ? aggregates.reduce((sum, q) => sum + q.positiveRate, 0) / aggregates.length
+    : 0;
+
+  const meta = [
+    survey.period,
+    survey.survey_date ? `Date: ${formatSurveyDate(survey.survey_date)}` : '',
+    `Status: ${survey.status}`,
+  ].filter(Boolean).join('   |   ');
+  if (meta) {
+    doc.setFontSize(9);
+    doc.setTextColor(90, 90, 90);
+    doc.text(meta, margin, y);
+    y += 7;
+  }
+
+  const kpis = [
+    ['Total Respondents', totalRespondents.toLocaleString()],
+    ['Target Students / Staff', `${targetStudents} / ${targetStaff}`],
+    ['Average Positive', pct(avgSatisfaction)],
+  ];
+  const cardW = (usableW - 8) / 3;
+  kpis.forEach(([label, value], index) => {
+    const x = margin + index * (cardW + 4);
+    doc.setFillColor(240, 253, 250);
+    doc.roundedRect(x, y, cardW, 20, 3, 3, 'F');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(label, x + 5, y + 7);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(15, 118, 110);
+    doc.text(value, x + 5, y + 15);
+    doc.setFont('helvetica', 'normal');
+  });
+  y += 30;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Satisfaction by Branch', margin, y);
+  y += 7;
+
+  const branchRows = results.slice(0, 8);
+  branchRows.forEach((branch) => {
+    const avg = branch.questionResults.length > 0
+      ? branch.questionResults.reduce((sum, q) => sum + q.positiveRate, 0) / branch.questionResults.length
+      : 0;
+    const barW = Math.max(1, Math.round((usableW - 62) * avg));
+    doc.setFontSize(8);
+    doc.setTextColor(51, 65, 85);
+    doc.text(branch.branchName.slice(0, 32), margin, y + 3);
+    doc.setFillColor(226, 232, 240);
+    doc.roundedRect(margin + 50, y - 1, usableW - 62, 5, 2, 2, 'F');
+    doc.setFillColor(avg >= 0.75 ? 16 : avg >= 0.5 ? 245 : 239, avg >= 0.75 ? 185 : avg >= 0.5 ? 158 : 68, avg >= 0.75 ? 129 : avg >= 0.5 ? 11 : 68);
+    doc.roundedRect(margin + 50, y - 1, barW, 5, 2, 2, 'F');
+    doc.text(pct(avg), pageW - margin - 10, y + 3, { align: 'right' });
+    y += 8;
+  });
+
+  y += 5;
+  autoTable(doc, {
+    startY: y,
+    head: [['#', 'Question', 'Positive', 'Negative', 'Neutral', 'Responses']],
+    body: aggregates.map((qa, index) => [
+      String(index + 1),
+      qa.question.question_text,
+      pct(qa.positiveRate),
+      pct(qa.negativeRate),
+      pct(qa.neutralRate),
+      qa.grandTotal.toLocaleString(),
+    ]),
+    headStyles: { fillColor: [13, 148, 136], textColor: 255 },
+    alternateRowStyles: { fillColor: [240, 253, 250] },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 10 },
+      2: { halign: 'center' },
+      3: { halign: 'center' },
+      4: { halign: 'center' },
+      5: { halign: 'center' },
+    },
+    styles: { fontSize: 8, cellPadding: 2 },
+  });
+
+  doc.addPage();
+  y = addPDFHeader(doc, 'Survey Results - Branch Detail', survey.title);
+  doc.setFontSize(9);
+  doc.setTextColor(90, 90, 90);
+  doc.text(`Branches submitted: ${submittedBranches} / ${results.length}`, margin, y);
+  y += 7;
+  autoTable(doc, {
+    startY: y + 2,
+    head: [['Branch', 'Respondents', 'Average Positive', ...survey.questions.map((_, index) => `Q${index + 1}`)]],
+    body: results.map((branch) => {
+      const avg = branch.questionResults.length > 0
+        ? branch.questionResults.reduce((sum, q) => sum + q.positiveRate, 0) / branch.questionResults.length
+        : 0;
+      return [
+        branch.branchName,
+        String(branch.totalRespondents),
+        pct(avg),
+        ...branch.questionResults.map((q) => pct(q.positiveRate)),
+      ];
+    }),
+    headStyles: { fillColor: [13, 148, 136], textColor: 255 },
+    alternateRowStyles: { fillColor: [240, 253, 250] },
+    styles: { fontSize: 7, cellPadding: 1.8 },
+  });
+
+  if (survey.respondents.length > 0) {
+    doc.addPage();
+    y = addPDFHeader(doc, 'Survey Target Respondents', survey.title);
+    autoTable(doc, {
+      startY: y + 2,
+      head: [['Type', 'Name']],
+      body: survey.respondents.map((respondent) => [
+        respondent.respondent_type === 'student' ? 'Student' : 'Staff',
+        respondent.respondent_name,
+      ]),
+      headStyles: { fillColor: [13, 148, 136], textColor: 255 },
+      alternateRowStyles: { fillColor: [240, 253, 250] },
+      styles: { fontSize: 8, cellPadding: 2 },
+    });
+  }
+
+  doc.save(`survey_results_${safeFilePart(survey.title)}_${today()}.pdf`);
+}
+
+export async function exportSurveyResultsExcel(survey: SurveyFull, results: BranchResult[]): Promise<void> {
+  const ExcelJS = (await import('exceljs')).default;
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Ponts per la Pau';
+  workbook.created = new Date();
+
+  const aggregates = surveyQuestionAggregates(survey, results);
+  const totalRespondents = results.reduce((sum, branch) => sum + branch.totalRespondents, 0);
+  const submittedBranches = results.filter((branch) => branch.submitted).length;
+  const targetStudents = survey.respondents.filter((respondent) => respondent.respondent_type === 'student').length;
+  const targetStaff = survey.respondents.filter((respondent) => respondent.respondent_type === 'staff').length;
+  const avgSatisfaction = aggregates.length > 0
+    ? aggregates.reduce((sum, q) => sum + q.positiveRate, 0) / aggregates.length
+    : 0;
+
+  const addSheet = (name: string, rows: Array<Record<string, string | number>>) => {
+    const sheet = workbook.addWorksheet(name);
+    const headers = Object.keys(rows[0] ?? { Empty: '' });
+    sheet.columns = headers.map((header) => ({ header, key: header, width: Math.max(14, Math.min(55, header.length + 6)) }));
+    rows.forEach((row) => sheet.addRow(row));
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.alignment = { horizontal: 'center' };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+    sheet.columns.forEach((column, index) => {
+      let max = headers[index]?.length ?? 10;
+      column.eachCell?.({ includeEmpty: true }, (cell) => {
+        max = Math.max(max, String(cell.value ?? '').length);
+      });
+      column.width = Math.max(12, Math.min(60, max + 2));
+    });
+    return sheet;
+  };
+
+  addSheet('Overview', [
+    { Metric: 'Survey Title', Value: survey.title },
+    { Metric: 'Period', Value: survey.period ?? '' },
+    { Metric: 'Survey Date', Value: formatSurveyDate(survey.survey_date) },
+    { Metric: 'Status', Value: survey.status },
+    { Metric: 'Target Group', Value: survey.respondent_type ?? '' },
+    { Metric: 'Target Students', Value: targetStudents },
+    { Metric: 'Target Staff', Value: targetStaff },
+    { Metric: 'Target Total', Value: survey.respondents.length },
+    { Metric: 'Total Respondents', Value: totalRespondents },
+    { Metric: 'Branches Submitted', Value: submittedBranches },
+    { Metric: 'Branches With Data', Value: results.length },
+    { Metric: 'Average Positive Rate', Value: pct(avgSatisfaction) },
+  ]);
+
+  addSheet('Question Summary', aggregates.map((qa, index) => ({
+    '#': index + 1,
+    Question: qa.question.question_text,
+    Responses: qa.grandTotal,
+    Positive: qa.positiveTotal,
+    'Positive %': pct(qa.positiveRate),
+    Negative: qa.negativeTotal,
+    'Negative %': pct(qa.negativeRate),
+    Neutral: qa.neutralTotal,
+    'Neutral %': pct(qa.neutralRate),
+  })));
+
+  addSheet('Branch Summary', results.map((branch) => {
+    const avg = branch.questionResults.length > 0
+      ? branch.questionResults.reduce((sum, q) => sum + q.positiveRate, 0) / branch.questionResults.length
+      : 0;
+    const row: Record<string, string | number> = {
+      Branch: branch.branchName,
+      Respondents: branch.totalRespondents,
+      Submitted: branch.submitted ? 'Yes' : 'No',
+      'Average Positive %': pct(avg),
+    };
+    branch.questionResults.forEach((q, index) => {
+      row[`Q${index + 1} Positive %`] = pct(q.positiveRate);
+    });
+    return row;
+  }));
+
+  addSheet('Raw Counts', results.flatMap((branch) =>
+    branch.questionResults.flatMap((question, questionIndex) =>
+      question.counts.map((count) => ({
+        Branch: branch.branchName,
+        Respondents: branch.totalRespondents,
+        Question: `Q${questionIndex + 1}`,
+        'Question Text': question.questionText,
+        Option: count.label,
+        Sentiment: count.sentiment,
+        Count: count.count,
+      }))
+    )
+  ));
+
+  addSheet('Target Respondents', survey.respondents.map((respondent) => ({
+    Type: respondent.respondent_type === 'student' ? 'Student' : 'Staff',
+    Name: respondent.respondent_name,
+    Branch: respondent.branch_id,
+  })));
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBlob(
+    new Blob([buffer as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    `survey_results_${safeFilePart(survey.title)}_${today()}.xlsx`,
+  );
 }
 
 // ─── PDF: Class Roster ───────────────────────────────────────────────────────

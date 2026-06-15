@@ -13,12 +13,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,7 +41,7 @@ import {
 import {
   ClipboardList, Plus, Pencil, Trash2, BarChart3, Send, MoveHorizontal as MoreHorizontal,
   CheckCircle2, Clock, FileText, Users, TrendingUp, ChevronUp, ChevronDown,
-  Grip, X, Building2,
+  Grip, X, Building2, ArrowLeft, FileSpreadsheet,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -47,10 +49,12 @@ import {
 } from 'recharts';
 import {
   getSurveys, getSurveyFull, getSurveyResults, getBranchSubmission,
-  createSurvey, updateSurveyMeta, deleteSurvey, saveBranchData,
+  createSurvey, updateSurveyMeta, deleteSurvey, saveBranchData, getSurveyRespondentOptions,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
+  type SurveyRespondentType, type SurveyRespondentKind,
 } from '@/services/surveyService';
 import { getBranches, type Branch } from '@/services/branchService';
+import { exportSurveyResultsExcel, exportSurveyResultsPDF } from '@/services/exportService';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n';
 
@@ -63,6 +67,62 @@ const DEFAULT_OPTIONS = [
   { label: 'Neutral', sentiment: 'neutral' as Sentiment },
   { label: 'Not at All', sentiment: 'negative' as Sentiment },
   { label: 'No Answer', sentiment: 'neutral' as Sentiment },
+];
+
+const RESPONSE_SCALE_TEMPLATES = [
+  {
+    id: 'yes-no',
+    label: 'Yes / No',
+    options: [
+      { label: 'Yes', sentiment: 'positive' as Sentiment },
+      { label: 'No', sentiment: 'negative' as Sentiment },
+      { label: 'No Answer', sentiment: 'neutral' as Sentiment },
+    ],
+  },
+  {
+    id: 'agreement',
+    label: 'Agreement',
+    options: [
+      { label: 'Strongly Agree', sentiment: 'positive' as Sentiment },
+      { label: 'Agree', sentiment: 'positive' as Sentiment },
+      { label: 'Neither Agree nor Disagree', sentiment: 'neutral' as Sentiment },
+      { label: 'Disagree', sentiment: 'negative' as Sentiment },
+      { label: 'Strongly Disagree', sentiment: 'negative' as Sentiment },
+      { label: 'No Answer', sentiment: 'neutral' as Sentiment },
+    ],
+  },
+  {
+    id: 'satisfaction',
+    label: 'Satisfaction',
+    options: [
+      { label: 'Very Satisfied', sentiment: 'positive' as Sentiment },
+      { label: 'Satisfied', sentiment: 'positive' as Sentiment },
+      { label: 'Neutral', sentiment: 'neutral' as Sentiment },
+      { label: 'Unsatisfied', sentiment: 'negative' as Sentiment },
+      { label: 'Very Unsatisfied', sentiment: 'negative' as Sentiment },
+      { label: 'No Answer', sentiment: 'neutral' as Sentiment },
+    ],
+  },
+  {
+    id: 'frequency',
+    label: 'Frequency',
+    options: [
+      { label: 'Always', sentiment: 'positive' as Sentiment },
+      { label: 'Often', sentiment: 'positive' as Sentiment },
+      { label: 'Sometimes', sentiment: 'neutral' as Sentiment },
+      { label: 'Rarely', sentiment: 'negative' as Sentiment },
+      { label: 'Never', sentiment: 'negative' as Sentiment },
+      { label: 'No Answer', sentiment: 'neutral' as Sentiment },
+    ],
+  },
+  {
+    id: 'nps',
+    label: '0-10 Rating',
+    options: Array.from({ length: 11 }, (_, score) => ({
+      label: String(score),
+      sentiment: score >= 9 ? 'positive' as Sentiment : score >= 7 ? 'neutral' as Sentiment : 'negative' as Sentiment,
+    })),
+  },
 ];
 
 const STATUS_CONFIG: Record<SurveyStatus, { label: string; className: string; icon: React.ElementType }> = {
@@ -87,6 +147,12 @@ interface SurveyBuilderProps {
   existing?: SurveyFull | null;
 }
 
+interface SurveyCardStats {
+  totalRespondents: number;
+  submittedBranches: number;
+  avgPositive: number;
+}
+
 function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps) {
   const [tab, setTab] = useState('details');
   const [saving, setSaving] = useState(false);
@@ -95,6 +161,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [period, setPeriod] = useState('');
+  const [surveyDate, setSurveyDate] = useState('');
   const [status, setStatus] = useState<SurveyStatus>('draft');
 
   // Options (response scale)
@@ -114,6 +181,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
         setTitle(existing.title);
         setDescription(existing.description ?? '');
         setPeriod(existing.period ?? '');
+        setSurveyDate(existing.survey_date ?? '');
         setStatus(existing.status);
         setOptions(existing.options.map((o) => ({ label: o.label, sentiment: o.sentiment })));
         setSections(existing.sections.map((s) => ({ title: s.title, description: s.description ?? '' })));
@@ -126,7 +194,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
             : [{ text: '', sectionIndex: null }]
         );
       } else {
-        setTitle(''); setDescription(''); setPeriod(''); setStatus('draft');
+        setTitle(''); setDescription(''); setPeriod(''); setSurveyDate(''); setStatus('draft');
         setOptions(DEFAULT_OPTIONS);
         setSections([]); setQuestions([{ text: '', sectionIndex: null }]);
       }
@@ -159,7 +227,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
     try {
       if (existing) {
         // Update meta only (questions/sections rebuild is complex — for now update meta)
-        const res = await updateSurveyMeta(existing.id, { title: title.trim(), description: description.trim() || undefined, period: period.trim() || undefined, status });
+        const res = await updateSurveyMeta(existing.id, { title: title.trim(), description: description.trim() || undefined, period: period.trim() || undefined, survey_date: surveyDate || undefined, status });
         if (!res.success) { toast.error(res.error); return; }
         toast.success('Survey updated');
       } else {
@@ -167,6 +235,10 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
           title: title.trim(),
           description: description.trim() || undefined,
           period: period.trim() || undefined,
+          surveyDate: surveyDate || undefined,
+          branchId: undefined,
+          respondentType: 'students',
+          respondentIds: [],
           status,
           sections: sections.filter((s) => s.title.trim()).map((s) => ({ title: s.title.trim(), description: s.description.trim() || undefined })),
           questions: filledQuestions.map((q) => ({ text: q.text.trim(), sectionIndex: q.sectionIndex })),
@@ -182,207 +254,264 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
     }
   };
 
+  const questionCount = questions.filter((q) => q.text.trim()).length;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <ClipboardList className="h-5 w-5 text-primary" />
-            {existing ? 'Edit Survey' : 'Create Survey'}
-          </DialogTitle>
-          <DialogDescription>
-            {existing ? 'Update the survey details.' : 'Build your survey with sections, questions, and a response scale.'}
-          </DialogDescription>
+      <DialogContent
+        showCloseButton={false}
+        className="fixed inset-0 left-0 top-0 z-50 flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-0 p-0 shadow-none"
+      >
+        <DialogHeader className="shrink-0 border-b bg-background px-4 py-3 text-left sm:px-6 lg:px-8">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <ClipboardList className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="truncate text-lg font-semibold">
+                  {existing ? 'Edit Survey' : 'Create Survey'}
+                </DialogTitle>
+                <DialogDescription className="truncate">
+                  {existing ? 'Update the survey details.' : 'Build sections, questions, and response options in one workspace.'}
+                </DialogDescription>
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close survey builder">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={setTab} className="flex flex-col flex-1 min-h-0">
-          <TabsList className="rounded-none border-b h-11 bg-background justify-start gap-1 px-4 shrink-0 w-full">
-            <TabsTrigger value="details" className="text-xs">Details</TabsTrigger>
-            <TabsTrigger value="scale" className="text-xs">Response Scale</TabsTrigger>
-            {!existing && <TabsTrigger value="questions" className="text-xs">Questions</TabsTrigger>}
-          </TabsList>
+        <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col gap-0">
+          <div className="shrink-0 border-b bg-muted/20 px-4 sm:px-6 lg:px-8">
+            <TabsList className="mx-auto flex h-auto w-full max-w-7xl justify-start gap-1 rounded-none bg-transparent p-0">
+              <TabsTrigger value="details" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="scale" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">
+                Response Scale
+              </TabsTrigger>
+              {!existing && (
+                <TabsTrigger value="questions" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">
+                  Questions
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
 
-          <div className="flex-1 overflow-y-auto">
-            {/* ── Details ── */}
-            <TabsContent value="details" className="p-6 m-0 space-y-4">
-              <div className="space-y-2">
-                <Label>Survey Title <span className="text-red-500">*</span></Label>
-                <Input placeholder="e.g. Psychosocial Support Survey 2026" value={title} onChange={(e) => setTitle(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea rows={2} placeholder="Brief description of this survey's purpose..." value={description} onChange={(e) => setDescription(e.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Survey Period</Label>
-                  <Input placeholder="e.g. December 2026" value={period} onChange={(e) => setPeriod(e.target.value)} />
+          <div className="flex-1 overflow-y-auto bg-muted/10">
+            <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+              <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border bg-background p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Status</p>
+                  <p className="mt-1 text-lg font-semibold capitalize">{status}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as SurveyStatus)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="closed">Closed</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="rounded-lg border bg-background p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Response Options</p>
+                  <p className="mt-1 text-lg font-semibold">{options.length}</p>
+                </div>
+                <div className="rounded-lg border bg-background p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Questions</p>
+                  <p className="mt-1 text-lg font-semibold">{existing ? existing.questions.length : questionCount}</p>
                 </div>
               </div>
-            </TabsContent>
 
-            {/* ── Response Scale ── */}
-            <TabsContent value="scale" className="p-6 m-0 space-y-4">
-              <div className="text-sm text-muted-foreground">
-                Define the answer options respondents can choose from. Each option should be tagged with its sentiment so the system can calculate satisfaction rates.
-              </div>
-              <div className="space-y-2">
-                {options.map((opt, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2 border rounded-lg bg-muted/30">
-                    <Grip className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="flex-1 flex items-center gap-2 min-w-0">
-                      <Input
-                        className="h-7 text-sm"
-                        value={opt.label}
-                        onChange={(e) => {
-                          const next = [...options];
-                          next[idx] = { ...next[idx], label: e.target.value };
-                          setOptions(next);
-                        }}
-                      />
-                      <Select value={opt.sentiment} onValueChange={(v) => {
-                        const next = [...options];
-                        next[idx] = { ...next[idx], sentiment: v as Sentiment };
-                        setOptions(next);
-                      }}>
-                        <SelectTrigger className="h-7 w-28 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="positive">✅ Positive</SelectItem>
-                          <SelectItem value="negative">❌ Negative</SelectItem>
-                          <SelectItem value="neutral">➖ Neutral</SelectItem>
-                        </SelectContent>
-                      </Select>
+              <div className="rounded-lg border bg-background shadow-sm">
+                <TabsContent value="details" className="m-0 space-y-5 p-4 sm:p-6 lg:p-8">
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                    <div className="space-y-5">
+                      <div className="space-y-2">
+                        <Label>Survey Title <span className="text-red-500">*</span></Label>
+                        <Input placeholder="e.g. Psychosocial Support Survey 2026" value={title} onChange={(e) => setTitle(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Textarea rows={6} placeholder="Brief description of this survey's purpose..." value={description} onChange={(e) => setDescription(e.target.value)} />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveOption(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3 w-3" /></Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveOption(idx, 1)} disabled={idx === options.length - 1}><ChevronDown className="h-3 w-3" /></Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => setOptions(options.filter((_, i) => i !== idx))}><X className="h-3 w-3" /></Button>
+                    <div className="space-y-5 rounded-lg border bg-muted/20 p-4">
+                      <div className="space-y-2">
+                        <Label>Survey Period</Label>
+                        <Input placeholder="e.g. December 2026" value={period} onChange={(e) => setPeriod(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Survey Date</Label>
+                        <Input type="date" value={surveyDate} onChange={(e) => setSurveyDate(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={status} onValueChange={(v) => setStatus(v as SurveyStatus)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="closed">Closed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <Input placeholder="New option label..." value={newOptionLabel} onChange={(e) => setNewOptionLabel(e.target.value)} className="flex-1" />
-                <Select value={newOptionSentiment} onValueChange={(v) => setNewOptionSentiment(v as Sentiment)}>
-                  <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="positive">✅ Positive</SelectItem>
-                    <SelectItem value="negative">❌ Negative</SelectItem>
-                    <SelectItem value="neutral">➖ Neutral</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="sm" onClick={() => {
-                  if (!newOptionLabel.trim()) return;
-                  setOptions([...options, { label: newOptionLabel.trim(), sentiment: newOptionSentiment }]);
-                  setNewOptionLabel('');
-                }}>
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </TabsContent>
+                </TabsContent>
 
-            {/* ── Questions ── */}
-            {!existing && (
-              <TabsContent value="questions" className="p-6 m-0 space-y-5">
-                {/* Sections */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-semibold">Sections <span className="text-muted-foreground font-normal text-xs">(optional grouping)</span></Label>
-                  </div>
-                  <div className="flex gap-2 mb-2">
-                    <Input placeholder="Section title..." value={newSectionTitle} onChange={(e) => setNewSectionTitle(e.target.value)} />
-                    <Button variant="outline" size="sm" onClick={() => {
-                      if (!newSectionTitle.trim()) return;
-                      setSections([...sections, { title: newSectionTitle.trim(), description: '' }]);
-                      setNewSectionTitle('');
-                    }}>Add</Button>
-                  </div>
-                  {sections.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {sections.map((s, i) => (
-                        <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full text-xs font-medium text-primary">
-                          {s.title}
-                          <button onClick={() => {
-                            setSections(sections.filter((_, j) => j !== i));
-                            setQuestions(questions.map((q) => q.sectionIndex === i ? { ...q, sectionIndex: null } : q.sectionIndex !== null && q.sectionIndex > i ? { ...q, sectionIndex: q.sectionIndex - 1 } : q));
-                          }}>
-                            <X className="h-3 w-3" />
-                          </button>
+                <TabsContent value="scale" className="m-0 space-y-5 p-4 sm:p-6 lg:p-8">
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="text-sm font-semibold">Answer Options</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Define the answer options respondents can choose from and tag each option so results can calculate satisfaction.
+                        </p>
+                      </div>
+                      {options.map((opt, idx) => (
+                        <div key={idx} className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-center">
+                          <Grip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                            <Input
+                              className="h-9 text-sm"
+                              value={opt.label}
+                              onChange={(e) => {
+                                const next = [...options];
+                                next[idx] = { ...next[idx], label: e.target.value };
+                                setOptions(next);
+                              }}
+                            />
+                            <Select value={opt.sentiment} onValueChange={(v) => {
+                              const next = [...options];
+                              next[idx] = { ...next[idx], sentiment: v as Sentiment };
+                              setOptions(next);
+                            }}>
+                              <SelectTrigger className="h-9 w-full text-xs sm:w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="positive">✅ Positive</SelectItem>
+                                <SelectItem value="negative">❌ Negative</SelectItem>
+                                <SelectItem value="neutral">➖ Neutral</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveOption(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveOption(idx, 1)} disabled={idx === options.length - 1}><ChevronDown className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setOptions(options.filter((_, i) => i !== idx))}><X className="h-3 w-3" /></Button>
+                          </div>
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* Questions */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Questions</Label>
-                  {questions.map((q, idx) => (
-                    <div key={idx} className="flex items-start gap-2 group">
-                      <div className="flex flex-col items-center gap-0.5 pt-2">
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3 w-3" /></Button>
-                        <span className="text-xs font-mono text-muted-foreground">Q{idx + 1}</span>
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, 1)} disabled={idx === questions.length - 1}><ChevronDown className="h-3 w-3" /></Button>
+                    <div className="h-fit rounded-lg border bg-muted/20 p-4">
+                      <h3 className="text-sm font-semibold">Add Option</h3>
+                      <div className="mt-4 space-y-3">
+                        <Input placeholder="New option label..." value={newOptionLabel} onChange={(e) => setNewOptionLabel(e.target.value)} />
+                        <Select value={newOptionSentiment} onValueChange={(v) => setNewOptionSentiment(v as Sentiment)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="positive">✅ Positive</SelectItem>
+                            <SelectItem value="negative">❌ Negative</SelectItem>
+                            <SelectItem value="neutral">➖ Neutral</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button className="w-full" variant="outline" onClick={() => {
+                          if (!newOptionLabel.trim()) return;
+                          setOptions([...options, { label: newOptionLabel.trim(), sentiment: newOptionSentiment }]);
+                          setNewOptionLabel('');
+                        }}>
+                          <Plus className="mr-2 h-3.5 w-3.5" />
+                          Add Option
+                        </Button>
                       </div>
-                      <div className="flex-1 flex items-start gap-2">
-                        <Textarea
-                          rows={2}
-                          placeholder={`Question ${idx + 1}...`}
-                          value={q.text}
-                          onChange={(e) => {
-                            const next = [...questions];
-                            next[idx] = { ...next[idx], text: e.target.value };
-                            setQuestions(next);
-                          }}
-                          className="text-sm resize-none"
-                        />
-                        {sections.length > 0 && (
-                          <Select
-                            value={q.sectionIndex !== null ? String(q.sectionIndex) : 'none'}
-                            onValueChange={(v) => {
-                              const next = [...questions];
-                              next[idx] = { ...next[idx], sectionIndex: v === 'none' ? null : Number(v) };
-                              setQuestions(next);
-                            }}
-                          >
-                            <SelectTrigger className="w-32 h-9 text-xs shrink-0"><SelectValue placeholder="Section" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No section</SelectItem>
-                              {sections.map((s, i) => <SelectItem key={i} value={String(i)}>{s.title}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {!existing && (
+                  <TabsContent value="questions" className="m-0 space-y-6 p-4 sm:p-6 lg:p-8">
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <Label className="text-sm font-semibold">Sections <span className="text-xs font-normal text-muted-foreground">(optional grouping)</span></Label>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 mt-1 shrink-0 opacity-0 group-hover:opacity-100" onClick={() => setQuestions(questions.filter((_, i) => i !== idx))} disabled={questions.length === 1}>
-                        <X className="h-4 w-4" />
+                      <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+                        <Input placeholder="Section title..." value={newSectionTitle} onChange={(e) => setNewSectionTitle(e.target.value)} />
+                        <Button variant="outline" size="sm" onClick={() => {
+                          if (!newSectionTitle.trim()) return;
+                          setSections([...sections, { title: newSectionTitle.trim(), description: '' }]);
+                          setNewSectionTitle('');
+                        }}>Add</Button>
+                      </div>
+                      {sections.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {sections.map((s, i) => (
+                            <div key={i} className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                              {s.title}
+                              <button onClick={() => {
+                                setSections(sections.filter((_, j) => j !== i));
+                                setQuestions(questions.map((q) => q.sectionIndex === i ? { ...q, sectionIndex: null } : q.sectionIndex !== null && q.sectionIndex > i ? { ...q, sectionIndex: q.sectionIndex - 1 } : q));
+                              }}>
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold">Questions</Label>
+                      {questions.map((q, idx) => (
+                        <div key={idx} className="group flex items-start gap-2 rounded-lg border bg-muted/20 p-3">
+                          <div className="flex flex-col items-center gap-0.5 pt-1">
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3 w-3" /></Button>
+                            <span className="text-xs font-mono text-muted-foreground">Q{idx + 1}</span>
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, 1)} disabled={idx === questions.length - 1}><ChevronDown className="h-3 w-3" /></Button>
+                          </div>
+                          <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-start">
+                            <Textarea
+                              rows={2}
+                              placeholder={`Question ${idx + 1}...`}
+                              value={q.text}
+                              onChange={(e) => {
+                                const next = [...questions];
+                                next[idx] = { ...next[idx], text: e.target.value };
+                                setQuestions(next);
+                              }}
+                              className="resize-none text-sm"
+                            />
+                            {sections.length > 0 && (
+                              <Select
+                                value={q.sectionIndex !== null ? String(q.sectionIndex) : 'none'}
+                                onValueChange={(v) => {
+                                  const next = [...questions];
+                                  next[idx] = { ...next[idx], sectionIndex: v === 'none' ? null : Number(v) };
+                                  setQuestions(next);
+                                }}
+                              >
+                                <SelectTrigger className="h-9 w-full shrink-0 text-xs lg:w-44"><SelectValue placeholder="Section" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">No section</SelectItem>
+                                  {sections.map((s, i) => <SelectItem key={i} value={String(i)}>{s.title}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                          <Button variant="ghost" size="icon" className="mt-1 h-8 w-8 shrink-0 text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100" onClick={() => setQuestions(questions.filter((_, i) => i !== idx))} disabled={questions.length === 1}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => setQuestions([...questions, { text: '', sectionIndex: null }])}>
+                        <Plus className="mr-2 h-3.5 w-3.5" /> Add Question
                       </Button>
                     </div>
-                  ))}
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => setQuestions([...questions, { text: '', sectionIndex: null }])}>
-                    <Plus className="mr-2 h-3.5 w-3.5" /> Add Question
-                  </Button>
-                </div>
-              </TabsContent>
-            )}
+                  </TabsContent>
+                )}
+              </div>
+            </div>
           </div>
         </Tabs>
 
-        <div className="border-t px-6 py-4 flex justify-end gap-2 shrink-0">
+        <div className="flex shrink-0 justify-end gap-2 border-t bg-background px-4 py-3 sm:px-6 lg:px-8">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : existing ? 'Save Changes' : 'Create Survey'}
@@ -390,6 +519,467 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function SurveyCreatePage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [tab, setTab] = useState('details');
+  const [saving, setSaving] = useState(false);
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [period, setPeriod] = useState('');
+  const [surveyDate, setSurveyDate] = useState('');
+  const [status, setStatus] = useState<SurveyStatus>('draft');
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [respondentType, setRespondentType] = useState<SurveyRespondentType>('students');
+  const [studentOptions, setStudentOptions] = useState<Array<{ type: 'student'; id: string; name: string; meta?: string }>>([]);
+  const [staffOptions, setStaffOptions] = useState<Array<{ type: 'staff'; id: string; name: string; meta?: string }>>([]);
+  const [selectedRespondents, setSelectedRespondents] = useState<Array<{ type: SurveyRespondentKind; id: string; name: string }>>([]);
+  const [respondentsLoading, setRespondentsLoading] = useState(false);
+
+  const [options, setOptions] = useState<BuilderOption[]>(DEFAULT_OPTIONS);
+  const [newOptionLabel, setNewOptionLabel] = useState('');
+  const [newOptionSentiment, setNewOptionSentiment] = useState<Sentiment>('neutral');
+
+  const [sections, setSections] = useState<BuilderSection[]>([]);
+  const [questions, setQuestions] = useState<BuilderQuestion[]>([{ text: '', sectionIndex: null }]);
+  const [newSectionTitle, setNewSectionTitle] = useState('');
+
+  const questionCount = questions.filter((q) => q.text.trim()).length;
+  const isSuperadmin = user?.role === 'superadmin';
+  const visibleStudentOptions = respondentType === 'students' || respondentType === 'students_staff' ? studentOptions : [];
+  const visibleStaffOptions = respondentType === 'staff' || respondentType === 'students_staff' ? staffOptions : [];
+  const selectedStudentCount = selectedRespondents.filter((r) => r.type === 'student').length;
+  const selectedStaffCount = selectedRespondents.filter((r) => r.type === 'staff').length;
+
+  useEffect(() => {
+    getBranches().then((res) => {
+      if (res.success && res.data) {
+        setBranches(res.data);
+        setSelectedBranchId((current) => current || res.data?.[0]?.id || '');
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedBranchId) return;
+    setRespondentsLoading(true);
+    setSelectedRespondents([]);
+    getSurveyRespondentOptions(selectedBranchId).then((res) => {
+      if (res.success) {
+        setStudentOptions(res.students);
+        setStaffOptions(res.staff);
+      } else {
+        toast.error(res.error);
+      }
+      setRespondentsLoading(false);
+    });
+  }, [selectedBranchId]);
+
+  useEffect(() => {
+    setSelectedRespondents((current) => current.filter((respondent) => {
+      if (respondentType === 'students') return respondent.type === 'student';
+      if (respondentType === 'staff') return respondent.type === 'staff';
+      return true;
+    }));
+  }, [respondentType]);
+
+  const moveQuestion = (idx: number, dir: -1 | 1) => {
+    const next = [...questions];
+    const swap = idx + dir;
+    if (swap < 0 || swap >= next.length) return;
+    [next[idx], next[swap]] = [next[swap], next[idx]];
+    setQuestions(next);
+  };
+
+  const moveOption = (idx: number, dir: -1 | 1) => {
+    const next = [...options];
+    const swap = idx + dir;
+    if (swap < 0 || swap >= next.length) return;
+    [next[idx], next[swap]] = [next[swap], next[idx]];
+    setOptions(next);
+  };
+
+  const toggleRespondent = (respondent: { type: SurveyRespondentKind; id: string; name: string }) => {
+    setSelectedRespondents((current) => {
+      const exists = current.some((item) => item.type === respondent.type && item.id === respondent.id);
+      if (exists) return current.filter((item) => !(item.type === respondent.type && item.id === respondent.id));
+      return [...current, respondent];
+    });
+  };
+
+  const selectAllVisibleRespondents = () => {
+    const visible = [...visibleStudentOptions, ...visibleStaffOptions].map((r) => ({ type: r.type, id: r.id, name: r.name }));
+    setSelectedRespondents(visible);
+  };
+
+  const handleSave = async () => {
+    if (!title.trim()) { toast.error('Survey title is required'); setTab('details'); return; }
+    if (!selectedBranchId) { toast.error('Select a branch for this survey'); setTab('details'); return; }
+    if (selectedRespondents.length === 0) { toast.error('Select at least one respondent'); setTab('details'); return; }
+    if (options.length === 0) { toast.error('Add at least one response option'); setTab('scale'); return; }
+    const filledQuestions = questions.filter((q) => q.text.trim());
+    if (filledQuestions.length === 0) { toast.error('Add at least one question'); setTab('questions'); return; }
+
+    setSaving(true);
+    try {
+      const res = await createSurvey({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        period: period.trim() || undefined,
+        surveyDate: surveyDate || undefined,
+        branchId: selectedBranchId,
+        respondentType,
+        respondentIds: selectedRespondents,
+        status,
+        sections: sections.filter((s) => s.title.trim()).map((s) => ({ title: s.title.trim(), description: s.description.trim() || undefined })),
+        questions: filledQuestions.map((q) => ({ text: q.text.trim(), sectionIndex: q.sectionIndex })),
+        options,
+      });
+      if (!res.success) { toast.error(res.error); return; }
+      toast.success('Survey created successfully');
+      navigate('/surveys');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-5">
+      <div className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button variant="outline" size="icon" onClick={() => navigate('/surveys')} aria-label="Back to surveys">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <ClipboardList className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Create Survey</h1>
+            <p className="text-sm text-muted-foreground sm:text-base">Build sections, questions, and response options for branch data collection.</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => navigate('/surveys')}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : 'Create Survey'}
+          </Button>
+        </div>
+      </div>
+
+      <Tabs value={tab} onValueChange={setTab} className="gap-5">
+        <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-md border bg-background p-1 sm:w-fit">
+          <TabsTrigger value="details" className="flex-none px-4">Details</TabsTrigger>
+          <TabsTrigger value="scale" className="flex-none px-4">Response Scale</TabsTrigger>
+          <TabsTrigger value="questions" className="flex-none px-4">Questions</TabsTrigger>
+        </TabsList>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg border bg-background p-4">
+            <p className="text-xs font-medium text-muted-foreground">Status</p>
+            <p className="mt-1 text-2xl font-semibold capitalize">{status}</p>
+          </div>
+          <div className="rounded-lg border bg-background p-4">
+            <p className="text-xs font-medium text-muted-foreground">Respondents</p>
+            <p className="mt-1 text-2xl font-semibold">{selectedRespondents.length}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{selectedStudentCount} students, {selectedStaffCount} staff</p>
+          </div>
+          <div className="rounded-lg border bg-background p-4">
+            <p className="text-xs font-medium text-muted-foreground">Response Options</p>
+            <p className="mt-1 text-2xl font-semibold">{options.length}</p>
+          </div>
+          <div className="rounded-lg border bg-background p-4">
+            <p className="text-xs font-medium text-muted-foreground">Questions</p>
+            <p className="mt-1 text-2xl font-semibold">{questionCount}</p>
+          </div>
+        </div>
+
+        <TabsContent value="details" className="m-0">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+            <section className="space-y-5">
+              <div className="space-y-2">
+                <Label>Survey Title <span className="text-red-500">*</span></Label>
+                <Input placeholder="e.g. Psychosocial Support Survey 2026" value={title} onChange={(e) => setTitle(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea rows={8} placeholder="Brief description of this survey's purpose..." value={description} onChange={(e) => setDescription(e.target.value)} />
+              </div>
+            </section>
+            <aside className="space-y-5 rounded-lg border bg-muted/20 p-4">
+	              <div className="space-y-2">
+	                <Label>Survey Period</Label>
+	                <Input placeholder="e.g. December 2026" value={period} onChange={(e) => setPeriod(e.target.value)} />
+	              </div>
+	              <div className="space-y-2">
+	                <Label>Survey Date</Label>
+	                <Input type="date" value={surveyDate} onChange={(e) => setSurveyDate(e.target.value)} />
+	              </div>
+	              <div className="space-y-2">
+	                <Label>Branch</Label>
+	                {isSuperadmin ? (
+	                  <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+	                    <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+	                    <SelectContent>
+	                      {branches.map((branch) => (
+	                        <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+	                      ))}
+	                    </SelectContent>
+	                  </Select>
+	                ) : (
+	                  <Input value={branches.find((branch) => branch.id === selectedBranchId)?.name ?? 'Your branch'} disabled />
+	                )}
+	              </div>
+	              <div className="space-y-2">
+	                <Label>Status</Label>
+                <Select value={status} onValueChange={(v) => setStatus(v as SurveyStatus)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+	              </div>
+	            </aside>
+	          </div>
+	          <section className="mt-6 space-y-4 rounded-lg border bg-background p-4">
+	            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+	              <div className="space-y-2">
+	                <Label>Respondent Group</Label>
+	                <Select value={respondentType} onValueChange={(value) => setRespondentType(value as SurveyRespondentType)}>
+	                  <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
+	                  <SelectContent>
+	                    <SelectItem value="students">Students</SelectItem>
+	                    <SelectItem value="staff">Staff</SelectItem>
+	                    <SelectItem value="students_staff">Students and Staff</SelectItem>
+	                  </SelectContent>
+	                </Select>
+	              </div>
+	              <div className="flex gap-2">
+	                <Button type="button" variant="outline" onClick={selectAllVisibleRespondents} disabled={respondentsLoading || !selectedBranchId}>
+	                  Select All
+	                </Button>
+	                <Button type="button" variant="ghost" onClick={() => setSelectedRespondents([])}>
+	                  Clear
+	                </Button>
+	              </div>
+	            </div>
+
+	            {respondentsLoading ? (
+	              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+	                {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-12 rounded-md" />)}
+	              </div>
+	            ) : (
+	              <div className="grid gap-4 lg:grid-cols-2">
+	                {visibleStudentOptions.length > 0 && (
+	                  <div className="space-y-2">
+	                    <h3 className="text-sm font-semibold">Students</h3>
+	                    <div className="max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
+	                      {visibleStudentOptions.map((student) => {
+	                        const checked = selectedRespondents.some((item) => item.type === 'student' && item.id === student.id);
+	                        return (
+	                          <label key={student.id} className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted">
+	                            <Checkbox checked={checked} onCheckedChange={() => toggleRespondent({ type: 'student', id: student.id, name: student.name })} />
+	                            <span className="min-w-0">
+	                              <span className="block truncate text-sm font-medium">{student.name}</span>
+	                              {student.meta && <span className="block truncate text-xs text-muted-foreground">{student.meta}</span>}
+	                            </span>
+	                          </label>
+	                        );
+	                      })}
+	                    </div>
+	                  </div>
+	                )}
+	                {visibleStaffOptions.length > 0 && (
+	                  <div className="space-y-2">
+	                    <h3 className="text-sm font-semibold">Staff</h3>
+	                    <div className="max-h-72 space-y-2 overflow-y-auto rounded-md border p-2">
+	                      {visibleStaffOptions.map((member) => {
+	                        const checked = selectedRespondents.some((item) => item.type === 'staff' && item.id === member.id);
+	                        return (
+	                          <label key={member.id} className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted">
+	                            <Checkbox checked={checked} onCheckedChange={() => toggleRespondent({ type: 'staff', id: member.id, name: member.name })} />
+	                            <span className="min-w-0">
+	                              <span className="block truncate text-sm font-medium">{member.name}</span>
+	                              {member.meta && <span className="block truncate text-xs capitalize text-muted-foreground">{member.meta}</span>}
+	                            </span>
+	                          </label>
+	                        );
+	                      })}
+	                    </div>
+	                  </div>
+	                )}
+	              </div>
+	            )}
+	          </section>
+	        </TabsContent>
+
+	        <TabsContent value="scale" className="m-0">
+	          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+	            <section className="space-y-3">
+	              <div>
+	                <h2 className="text-base font-semibold">Answer Options</h2>
+	                <p className="mt-1 text-sm text-muted-foreground">
+	                  Define the choices respondents can select and tag each option for result calculations.
+	                </p>
+	              </div>
+	              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+	                {RESPONSE_SCALE_TEMPLATES.map((template) => (
+	                  <Button
+	                    key={template.id}
+	                    type="button"
+	                    variant="outline"
+	                    className="h-auto justify-start px-3 py-2 text-left"
+	                    onClick={() => setOptions(template.options)}
+	                  >
+	                    {template.label}
+	                  </Button>
+	                ))}
+	              </div>
+	              {options.map((opt, idx) => (
+                <div key={idx} className="flex flex-col gap-2 rounded-lg border bg-background p-3 sm:flex-row sm:items-center">
+                  <Grip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                    <Input
+                      className="h-9 text-sm"
+                      value={opt.label}
+                      onChange={(e) => {
+                        const next = [...options];
+                        next[idx] = { ...next[idx], label: e.target.value };
+                        setOptions(next);
+                      }}
+                    />
+                    <Select value={opt.sentiment} onValueChange={(v) => {
+                      const next = [...options];
+                      next[idx] = { ...next[idx], sentiment: v as Sentiment };
+                      setOptions(next);
+                    }}>
+                      <SelectTrigger className="h-9 w-full text-xs sm:w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="positive">✅ Positive</SelectItem>
+                        <SelectItem value="negative">❌ Negative</SelectItem>
+                        <SelectItem value="neutral">➖ Neutral</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveOption(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3 w-3" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveOption(idx, 1)} disabled={idx === options.length - 1}><ChevronDown className="h-3 w-3" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => setOptions(options.filter((_, i) => i !== idx))}><X className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+              ))}
+            </section>
+            <aside className="h-fit space-y-3 rounded-lg border bg-muted/20 p-4">
+              <h2 className="text-base font-semibold">Add Option</h2>
+              <Input placeholder="New option label..." value={newOptionLabel} onChange={(e) => setNewOptionLabel(e.target.value)} />
+              <Select value={newOptionSentiment} onValueChange={(v) => setNewOptionSentiment(v as Sentiment)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="positive">✅ Positive</SelectItem>
+                  <SelectItem value="negative">❌ Negative</SelectItem>
+                  <SelectItem value="neutral">➖ Neutral</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button className="w-full" variant="outline" onClick={() => {
+                if (!newOptionLabel.trim()) return;
+                setOptions([...options, { label: newOptionLabel.trim(), sentiment: newOptionSentiment }]);
+                setNewOptionLabel('');
+              }}>
+                <Plus className="mr-2 h-3.5 w-3.5" />
+                Add Option
+              </Button>
+            </aside>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="questions" className="m-0 space-y-5">
+          <section className="rounded-lg border bg-muted/20 p-4">
+            <Label className="text-sm font-semibold">Sections <span className="text-xs font-normal text-muted-foreground">(optional grouping)</span></Label>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <Input placeholder="Section title..." value={newSectionTitle} onChange={(e) => setNewSectionTitle(e.target.value)} />
+              <Button variant="outline" onClick={() => {
+                if (!newSectionTitle.trim()) return;
+                setSections([...sections, { title: newSectionTitle.trim(), description: '' }]);
+                setNewSectionTitle('');
+              }}>Add Section</Button>
+            </div>
+            {sections.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {sections.map((s, i) => (
+                  <div key={i} className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                    {s.title}
+                    <button onClick={() => {
+                      setSections(sections.filter((_, j) => j !== i));
+                      setQuestions(questions.map((q) => q.sectionIndex === i ? { ...q, sectionIndex: null } : q.sectionIndex !== null && q.sectionIndex > i ? { ...q, sectionIndex: q.sectionIndex - 1 } : q));
+                    }}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-base font-semibold">Questions</h2>
+              <Button variant="outline" size="sm" onClick={() => setQuestions([...questions, { text: '', sectionIndex: null }])}>
+                <Plus className="mr-2 h-3.5 w-3.5" /> Add Question
+              </Button>
+            </div>
+            {questions.map((q, idx) => (
+              <div key={idx} className="group flex items-start gap-2 rounded-lg border bg-background p-3">
+                <div className="flex flex-col items-center gap-0.5 pt-1">
+                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3 w-3" /></Button>
+                  <span className="text-xs font-mono text-muted-foreground">Q{idx + 1}</span>
+                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, 1)} disabled={idx === questions.length - 1}><ChevronDown className="h-3 w-3" /></Button>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-start">
+                  <Textarea
+                    rows={2}
+                    placeholder={`Question ${idx + 1}...`}
+                    value={q.text}
+                    onChange={(e) => {
+                      const next = [...questions];
+                      next[idx] = { ...next[idx], text: e.target.value };
+                      setQuestions(next);
+                    }}
+                    className="resize-none text-sm"
+                  />
+                  {sections.length > 0 && (
+                    <Select
+                      value={q.sectionIndex !== null ? String(q.sectionIndex) : 'none'}
+                      onValueChange={(v) => {
+                        const next = [...questions];
+                        next[idx] = { ...next[idx], sectionIndex: v === 'none' ? null : Number(v) };
+                        setQuestions(next);
+                      }}
+                    >
+                      <SelectTrigger className="h-9 w-full shrink-0 text-xs lg:w-44"><SelectValue placeholder="Section" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No section</SelectItem>
+                        {sections.map((s, i) => <SelectItem key={i} value={String(i)}>{s.title}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <Button variant="ghost" size="icon" className="mt-1 h-8 w-8 shrink-0 text-red-500" onClick={() => setQuestions(questions.filter((_, i) => i !== idx))} disabled={questions.length === 1}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </section>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
@@ -696,6 +1286,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
 function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () => void; survey: SurveyFull }) {
   const [results, setResults] = useState<BranchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [tab, setTab] = useState('overview');
 
   useEffect(() => {
@@ -757,7 +1348,11 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
             <BarChart3 className="h-5 w-5 text-primary" />
             Survey Results
           </DialogTitle>
-          <DialogDescription>{survey.title}{survey.period ? ` · ${survey.period}` : ''}</DialogDescription>
+          <DialogDescription>
+            {survey.title}
+            {survey.period ? ` · ${survey.period}` : ''}
+            {survey.survey_date ? ` · ${new Date(`${survey.survey_date}T00:00:00`).toLocaleDateString(i18n.language)}` : ''}
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (
@@ -916,7 +1511,32 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
           </Tabs>
         )}
 
-        <div className="border-t px-6 py-4 shrink-0 flex justify-end">
+        <div className="border-t px-6 py-4 shrink-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => exportSurveyResultsPDF(survey, results)}
+              disabled={loading || results.length === 0}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setExportingExcel(true);
+                try {
+                  await exportSurveyResultsExcel(survey, results);
+                } finally {
+                  setExportingExcel(false);
+                }
+              }}
+              disabled={loading || exportingExcel || results.length === 0}
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              {exportingExcel ? 'Exporting...' : 'Excel'}
+            </Button>
+          </div>
           <Button variant="outline" onClick={onClose}>Close</Button>
         </div>
       </DialogContent>
@@ -928,15 +1548,16 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
 
 export function Surveys() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   useTranslation(); // ensure i18n is active; translations are inline strings
   const isAdmin = user?.role === 'superadmin' || user?.role === 'admin';
 
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [surveyStats, setSurveyStats] = useState<Record<string, SurveyCardStats>>({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | SurveyStatus>('all');
 
-  const [builderOpen, setBuilderOpen] = useState(false);
   const [editingSurvey, setEditingSurvey] = useState<SurveyFull | null>(null);
   const [editBuilderOpen, setEditBuilderOpen] = useState(false);
 
@@ -952,8 +1573,23 @@ export function Surveys() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [sRes, bRes] = await Promise.all([getSurveys(), getBranches()]);
-    if (sRes.success && sRes.data) setSurveys(sRes.data);
     if (bRes.success && bRes.data) setBranches(bRes.data);
+    if (sRes.success && sRes.data) {
+      setSurveys(sRes.data);
+      const statsEntries = await Promise.all(sRes.data.map(async (survey) => {
+        const res = await getSurveyResults(survey.id);
+        if (!res.success || !res.data) return [survey.id, { totalRespondents: 0, submittedBranches: 0, avgPositive: 0 }] as const;
+        const allQuestionRates = res.data.flatMap((branch) => branch.questionResults.map((question) => question.positiveRate));
+        return [survey.id, {
+          totalRespondents: res.data.reduce((sum, branch) => sum + branch.totalRespondents, 0),
+          submittedBranches: res.data.filter((branch) => branch.submitted).length,
+          avgPositive: allQuestionRates.length > 0
+            ? allQuestionRates.reduce((sum, value) => sum + value, 0) / allQuestionRates.length
+            : 0,
+        }] as const;
+      }));
+      setSurveyStats(Object.fromEntries(statsEntries));
+    }
     setLoading(false);
   }, []);
 
@@ -1007,7 +1643,7 @@ export function Surveys() {
           <p className="text-muted-foreground">Manage and collect survey data across branches</p>
         </div>
         {isAdmin && (
-          <Button onClick={() => setBuilderOpen(true)}>
+          <Button onClick={() => navigate('/surveys/new')}>
             <Plus className="mr-2 h-4 w-4" /> Create Survey
           </Button>
         )}
@@ -1043,7 +1679,7 @@ export function Surveys() {
             {isAdmin ? 'Create your first survey to start collecting data from branches.' : 'No surveys are active right now.'}
           </p>
           {isAdmin && (
-            <Button className="mt-4" onClick={() => setBuilderOpen(true)}>
+            <Button className="mt-4" onClick={() => navigate('/surveys/new')}>
               <Plus className="mr-2 h-4 w-4" /> Create Survey
             </Button>
           )}
@@ -1053,6 +1689,9 @@ export function Surveys() {
           {filtered.map((survey) => {
             const cfg = STATUS_CONFIG[survey.status];
             const StatusIcon = cfg.icon;
+            const stats = surveyStats[survey.id];
+            const avgPositivePct = Math.round((stats?.avgPositive ?? 0) * 100);
+            const branchName = branches.find((branch) => branch.id === survey.branch_id)?.name;
             return (
               <Card key={survey.id} className="group overflow-hidden border hover:shadow-md transition-shadow">
                 <div className={cn(
@@ -1066,6 +1705,12 @@ export function Surveys() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-base leading-snug truncate">{survey.title}</h3>
                       {survey.period && <p className="text-xs text-muted-foreground mt-0.5">{survey.period}</p>}
+                      {survey.survey_date && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(`${survey.survey_date}T00:00:00`).toLocaleDateString(i18n.language)}
+                        </p>
+                      )}
+                      {branchName && <p className="text-xs text-muted-foreground mt-0.5">{branchName}</p>}
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className={cn('flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold', cfg.className)}>
@@ -1096,6 +1741,26 @@ export function Surveys() {
                     <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{survey.description}</p>
                   )}
 
+                  <div className="mt-4 rounded-lg border bg-muted/20 p-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-muted-foreground">Average positive</span>
+                      <span className="font-semibold">{avgPositivePct}%</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn(
+                          'h-full rounded-full transition-all',
+                          avgPositivePct >= 75 ? 'bg-emerald-500' : avgPositivePct >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                        )}
+                        style={{ width: `${avgPositivePct}%` }}
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{stats?.totalRespondents ?? 0} respondents</span>
+                      <span>{stats?.submittedBranches ?? 0} submitted</span>
+                    </div>
+                  </div>
+
                   <div className="mt-4 flex gap-3">
                     <Button
                       size="sm"
@@ -1124,12 +1789,6 @@ export function Surveys() {
         </div>
       )}
 
-      {/* Builder dialog */}
-      <SurveyBuilder
-        open={builderOpen}
-        onClose={() => setBuilderOpen(false)}
-        onSaved={fetchAll}
-      />
       <SurveyBuilder
         open={editBuilderOpen}
         onClose={() => { setEditBuilderOpen(false); setEditingSurvey(null); }}
@@ -1144,7 +1803,8 @@ export function Surveys() {
           onClose={() => { setDataEntryOpen(false); setDataEntrySurvey(null); }}
           onSaved={fetchAll}
           survey={dataEntrySurvey}
-          branches={branches}
+          branches={dataEntrySurvey.branch_id ? branches.filter((branch) => branch.id === dataEntrySurvey.branch_id) : branches}
+          defaultBranchId={dataEntrySurvey.branch_id ?? undefined}
         />
       )}
 

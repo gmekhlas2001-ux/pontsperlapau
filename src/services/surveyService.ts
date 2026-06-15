@@ -13,17 +13,23 @@
 import { supabase } from '@/lib/supabase';
 import { callEdgeFunction } from '@/lib/edge';
 import { logActivity } from '@/services/activityService';
+import { scopedBranchId } from '@/lib/scope';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SurveyStatus = 'draft' | 'active' | 'closed';
 export type Sentiment = 'positive' | 'negative' | 'neutral';
+export type SurveyRespondentType = 'students' | 'staff' | 'students_staff';
+export type SurveyRespondentKind = 'student' | 'staff';
 
 export interface Survey {
   id: string;
   title: string;
   description?: string;
   period?: string;
+  survey_date?: string;
+  branch_id?: string | null;
+  respondent_type?: SurveyRespondentType;
   status: SurveyStatus;
   created_by?: string;
   created_at: string;
@@ -54,6 +60,16 @@ export interface SurveyResponseOption {
   sentiment: Sentiment;
 }
 
+export interface SurveyRespondent {
+  id: string;
+  survey_id: string;
+  branch_id: string;
+  respondent_type: SurveyRespondentKind;
+  respondent_id: string;
+  respondent_name: string;
+  created_at: string;
+}
+
 export interface SurveyBranchResponse {
   id: string;
   survey_id: string;
@@ -78,6 +94,7 @@ export interface SurveyFull extends Survey {
   sections: SurveySection[];
   questions: SurveyQuestion[];
   options: SurveyResponseOption[];
+  respondents: SurveyRespondent[];
 }
 
 export interface BranchResult {
@@ -99,6 +116,10 @@ export interface CreateSurveyPayload {
   title: string;
   description?: string;
   period?: string;
+  surveyDate?: string;
+  branchId?: string;
+  respondentType: SurveyRespondentType;
+  respondentIds: { type: SurveyRespondentKind; id: string; name: string }[];
   status: SurveyStatus;
   sections: { title: string; description?: string }[];
   questions: { text: string; sectionIndex: number | null }[];
@@ -108,22 +129,34 @@ export interface CreateSurveyPayload {
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 
 export async function getSurveys() {
-  const { data, error } = await supabase
+  const branchId = scopedBranchId();
+  let query = supabase
     .from('surveys')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (branchId) query = query.eq('branch_id', branchId);
+
+  const { data, error } = await query;
   if (error) return { success: false as const, error: error.message };
   return { success: true as const, data: data as Survey[] };
 }
 
 export async function getSurveyFull(surveyId: string): Promise<{ success: boolean; data?: SurveyFull; error?: string }> {
-  const [surveyRes, sectionsRes, questionsRes, optionsRes] = await Promise.all([
+  const [surveyRes, sectionsRes, questionsRes, optionsRes, respondentsRes] = await Promise.all([
     supabase.from('surveys').select('*').eq('id', surveyId).single(),
     supabase.from('survey_sections').select('*').eq('survey_id', surveyId).order('order_index'),
     supabase.from('survey_questions').select('*').eq('survey_id', surveyId).order('order_index'),
     supabase.from('survey_response_options').select('*').eq('survey_id', surveyId).order('order_index'),
+    supabase.from('survey_respondents').select('*').eq('survey_id', surveyId).order('respondent_name'),
   ]);
   if (surveyRes.error) return { success: false, error: surveyRes.error.message };
+  const respondentTableUnavailable =
+    respondentsRes.error &&
+    ['42P01', 'PGRST106', 'PGRST202', 'PGRST205'].includes(respondentsRes.error.code ?? '');
+  if (respondentsRes.error && !respondentTableUnavailable) {
+    return { success: false, error: respondentsRes.error.message };
+  }
   return {
     success: true,
     data: {
@@ -131,6 +164,7 @@ export async function getSurveyFull(surveyId: string): Promise<{ success: boolea
       sections: (sectionsRes.data ?? []) as SurveySection[],
       questions: (questionsRes.data ?? []) as SurveyQuestion[],
       options: (optionsRes.data ?? []) as SurveyResponseOption[],
+      respondents: respondentTableUnavailable ? [] : (respondentsRes.data ?? []) as SurveyRespondent[],
     },
   };
 }
@@ -191,6 +225,46 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
   return { success: true, data: results };
 }
 
+export async function getSurveyRespondentOptions(branchId: string) {
+  const [studentsRes, staffRes] = await Promise.all([
+    supabase
+      .from('students')
+      .select('id, student_id, user:users!user_id(first_name, last_name, status)')
+      .eq('branch_id', branchId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('staff')
+      .select('id, user:users!user_id(first_name, last_name, role, status)')
+      .eq('branch_id', branchId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false }),
+  ]);
+
+  if (studentsRes.error) return { success: false as const, error: studentsRes.error.message };
+  if (staffRes.error) return { success: false as const, error: staffRes.error.message };
+
+  const students = ((studentsRes.data ?? []) as any[])
+    .filter((student) => student.user?.status === 'active')
+    .map((student) => ({
+      type: 'student' as const,
+      id: student.id as string,
+      name: `${student.user?.first_name ?? ''} ${student.user?.last_name ?? ''}`.trim() || student.student_id || 'Student',
+      meta: student.student_id as string | undefined,
+    }));
+
+  const staff = ((staffRes.data ?? []) as any[])
+    .filter((member) => member.user?.status === 'active' && member.user?.role !== 'parent')
+    .map((member) => ({
+      type: 'staff' as const,
+      id: member.id as string,
+      name: `${member.user?.first_name ?? ''} ${member.user?.last_name ?? ''}`.trim() || 'Staff member',
+      meta: member.user?.role as string | undefined,
+    }));
+
+  return { success: true as const, students, staff };
+}
+
 export async function getBranchSubmission(surveyId: string, branchId: string) {
   const [submissionRes, responsesRes] = await Promise.all([
     supabase.from('survey_branch_submissions').select('*').eq('survey_id', surveyId).eq('branch_id', branchId).maybeSingle(),
@@ -215,7 +289,7 @@ export async function createSurvey(payload: CreateSurveyPayload): Promise<{ succ
   return { success: true, id: res.data?.id };
 }
 
-export async function updateSurveyMeta(surveyId: string, fields: { title?: string; description?: string; period?: string; status?: SurveyStatus }) {
+export async function updateSurveyMeta(surveyId: string, fields: { title?: string; description?: string; period?: string; survey_date?: string; status?: SurveyStatus }) {
   const res = await callEdgeFunction('app-actions', {
     operation: 'update-survey-meta',
     surveyId,
