@@ -1089,7 +1089,24 @@ Deno.serve(async (req: Request) => {
         if (error) return errorResponse(req, 500, "Failed to delete branch", error);
         return jsonResponse(req, { success: true });
       }
-      const updates = { ...(body.updates ?? {}), updated_at: new Date().toISOString() };
+      const rawUpdates = body.updates && typeof body.updates === "object" ? body.updates : {};
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if ("name" in rawUpdates) {
+        const name = cleanString(rawUpdates.name);
+        if (!name) return errorResponse(req, 400, "Branch name is required");
+        updates.name = name;
+      }
+      if ("province" in rawUpdates) {
+        const province = cleanString(rawUpdates.province);
+        if (!province) return errorResponse(req, 400, "Branch province is required");
+        updates.province = province;
+      }
+      if ("city" in rawUpdates) updates.city = cleanString(rawUpdates.city);
+      if ("address" in rawUpdates) updates.address = cleanString(rawUpdates.address);
+      if ("phone" in rawUpdates) updates.phone = cleanString(rawUpdates.phone);
+      if ("email" in rawUpdates) updates.email = cleanString(rawUpdates.email);
+      if ("established_date" in rawUpdates) updates.established_date = cleanString(rawUpdates.established_date);
+      if ("status" in rawUpdates) updates.status = rawUpdates.status === "inactive" ? "inactive" : "active";
       const { data, error } = await supabase.from("branches").update(updates).eq("id", branchId).select().single();
       if (error) return errorResponse(req, 500, "Failed to update branch", error);
       return jsonResponse(req, { success: true, data });
