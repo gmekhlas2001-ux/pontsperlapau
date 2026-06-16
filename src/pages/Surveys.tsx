@@ -49,10 +49,11 @@ import {
 } from 'recharts';
 import {
   getSurveys, getSurveyFull, getSurveyResults, getBranchSubmission,
-  createSurvey, updateSurveyMeta, deleteSurvey, saveBranchData, getSurveyRespondentOptions,
+  createSurvey, updateSurveyMeta, deleteSurvey, saveBranchData, saveIndividualResponses, getSurveyRespondentOptions,
   optionsForQuestion,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
-  type SurveyRespondentType, type SurveyRespondentKind,
+  type SurveyRespondentType, type SurveyRespondentKind, type SurveyQuestionType,
+  type SurveyRespondent, type SurveyIndividualResponse,
 } from '@/services/surveyService';
 import { getBranches, type Branch } from '@/services/branchService';
 import { exportSurveyResultsExcel, exportSurveyResultsPDF } from '@/services/exportService';
@@ -133,12 +134,60 @@ const STATUS_CONFIG: Record<SurveyStatus, { label: string; className: string; ic
 };
 
 
-const PIE_COLORS = ['#10b981', '#ef4444', '#94a3b8'];
+const PIE_COLORS = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#65a30d', '#9333ea'];
+
+const QUESTION_TYPES: Array<{ value: SurveyQuestionType; label: string; icon: React.ElementType; usesOptions: boolean; placeholder: string }> = [
+  { value: 'short_answer', label: 'Short answer', icon: FileText, usesOptions: false, placeholder: 'Short text response' },
+  { value: 'paragraph', label: 'Paragraph', icon: FileText, usesOptions: false, placeholder: 'Long text response' },
+  { value: 'multiple_choice', label: 'Multiple choice', icon: CheckCircle2, usesOptions: true, placeholder: 'Select one option' },
+  { value: 'checkboxes', label: 'Checkboxes', icon: ClipboardList, usesOptions: true, placeholder: 'Select one or more options' },
+  { value: 'dropdown', label: 'Dropdown', icon: ChevronDown, usesOptions: true, placeholder: 'Choose from a list' },
+  { value: 'linear_scale', label: 'Linear scale', icon: BarChart3, usesOptions: true, placeholder: 'Rate on a scale' },
+  { value: 'rating', label: 'Rating', icon: TrendingUp, usesOptions: true, placeholder: 'Star or numeric rating' },
+  { value: 'multiple_choice_grid', label: 'Multiple choice grid', icon: Building2, usesOptions: true, placeholder: 'Grid with one answer per row' },
+  { value: 'checkbox_grid', label: 'Checkbox grid', icon: Building2, usesOptions: true, placeholder: 'Grid with multiple answers per row' },
+  { value: 'date', label: 'Date', icon: Clock, usesOptions: false, placeholder: 'Date response' },
+  { value: 'time', label: 'Time', icon: Clock, usesOptions: false, placeholder: 'Time response' },
+];
+
+const DEFAULT_QUESTION_OPTIONS: BuilderOption[] = [
+  { label: 'Option 1', sentiment: 'neutral' },
+  { label: 'Option 2', sentiment: 'neutral' },
+];
+
+function questionTypeConfig(type?: SurveyQuestionType) {
+  return QUESTION_TYPES.find((item) => item.value === type) ?? QUESTION_TYPES[2];
+}
+
+function questionUsesOptions(type?: SurveyQuestionType) {
+  return questionTypeConfig(type).usesOptions;
+}
+
+function cloneOptions(options: BuilderOption[]) {
+  return options.map((option) => ({ label: option.label, sentiment: option.sentiment }));
+}
+
+function createBlankQuestion(overrides: Partial<BuilderQuestion> = {}): BuilderQuestion {
+  return {
+    text: '',
+    sectionIndex: null,
+    questionType: 'multiple_choice',
+    sentimentEnabled: false,
+    options: cloneOptions(DEFAULT_QUESTION_OPTIONS),
+    ...overrides,
+  };
+}
 
 // ─── Survey Builder ───────────────────────────────────────────────────────────
 
 interface BuilderSection { title: string; description: string }
-interface BuilderQuestion { text: string; sectionIndex: number | null }
+interface BuilderQuestion {
+  text: string;
+  sectionIndex: number | null;
+  questionType?: SurveyQuestionType;
+  sentimentEnabled?: boolean;
+  options?: BuilderOption[];
+}
 interface BuilderOption { label: string; sentiment: Sentiment }
 
 interface SurveyBuilderProps {
@@ -172,7 +221,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
 
   // Sections + Questions
   const [sections, setSections] = useState<BuilderSection[]>([]);
-  const [questions, setQuestions] = useState<BuilderQuestion[]>([{ text: '', sectionIndex: null }]);
+  const [questions, setQuestions] = useState<BuilderQuestion[]>([createBlankQuestion()]);
   const [newSectionTitle, setNewSectionTitle] = useState('');
 
   useEffect(() => {
@@ -190,14 +239,20 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
           existing.questions.length > 0
             ? existing.questions.map((q) => {
                 const sec = existing.sections.findIndex((s) => s.id === q.section_id);
-                return { text: q.question_text, sectionIndex: sec >= 0 ? sec : null };
+                return {
+                  text: q.question_text,
+                  sectionIndex: sec >= 0 ? sec : null,
+                  questionType: q.question_type,
+                  sentimentEnabled: q.sentiment_enabled,
+                  options: cloneOptions(optionsForQuestion(existing, q.id)),
+                };
               })
-            : [{ text: '', sectionIndex: null }]
+            : [createBlankQuestion()]
         );
       } else {
         setTitle(''); setDescription(''); setPeriod(''); setSurveyDate(''); setStatus('draft');
         setOptions(DEFAULT_OPTIONS);
-        setSections([]); setQuestions([{ text: '', sectionIndex: null }]);
+        setSections([]); setQuestions([createBlankQuestion()]);
       }
     }
   }, [open, existing]);
@@ -242,7 +297,18 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
           respondentIds: [],
           status,
           sections: sections.filter((s) => s.title.trim()).map((s) => ({ title: s.title.trim(), description: s.description.trim() || undefined })),
-          questions: filledQuestions.map((q) => ({ text: q.text.trim(), sectionIndex: q.sectionIndex })),
+          questions: filledQuestions.map((q) => ({
+            text: q.text.trim(),
+            sectionIndex: q.sectionIndex,
+            questionType: q.questionType ?? 'multiple_choice',
+            sentimentEnabled: q.sentimentEnabled ?? false,
+            options: questionUsesOptions(q.questionType)
+              ? (q.options ?? options).filter((option) => option.label.trim()).map((option) => ({
+                  label: option.label.trim(),
+                  sentiment: q.sentimentEnabled ? option.sentiment : 'neutral',
+                }))
+              : [],
+          })),
           options,
         });
         if (!res.success) { toast.error(res.error); return; }
@@ -386,9 +452,9 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="positive">✅ Positive</SelectItem>
-                                <SelectItem value="negative">❌ Negative</SelectItem>
-                                <SelectItem value="neutral">➖ Neutral</SelectItem>
+                                <SelectItem value="positive">Positive</SelectItem>
+                                <SelectItem value="negative">Negative</SelectItem>
+                                <SelectItem value="neutral">Neutral</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -407,9 +473,9 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                         <Select value={newOptionSentiment} onValueChange={(v) => setNewOptionSentiment(v as Sentiment)}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="positive">✅ Positive</SelectItem>
-                            <SelectItem value="negative">❌ Negative</SelectItem>
-                            <SelectItem value="neutral">➖ Neutral</SelectItem>
+                            <SelectItem value="positive">Positive</SelectItem>
+                            <SelectItem value="negative">Negative</SelectItem>
+                            <SelectItem value="neutral">Neutral</SelectItem>
                           </SelectContent>
                         </Select>
                         <Button className="w-full" variant="outline" onClick={() => {
@@ -501,7 +567,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                           </Button>
                         </div>
                       ))}
-                      <Button variant="outline" size="sm" className="w-full" onClick={() => setQuestions([...questions, { text: '', sectionIndex: null }])}>
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => setQuestions([...questions, createBlankQuestion()])}>
                         <Plus className="mr-2 h-3.5 w-3.5" /> Add Question
                       </Button>
                     </div>
@@ -547,7 +613,7 @@ export function SurveyCreatePage() {
   const [newOptionSentiment, setNewOptionSentiment] = useState<Sentiment>('neutral');
 
   const [sections, setSections] = useState<BuilderSection[]>([]);
-  const [questions, setQuestions] = useState<BuilderQuestion[]>([{ text: '', sectionIndex: null }]);
+  const [questions, setQuestions] = useState<BuilderQuestion[]>([createBlankQuestion()]);
   const [newSectionTitle, setNewSectionTitle] = useState('');
 
   const questionCount = questions.filter((q) => q.text.trim()).length;
@@ -618,13 +684,69 @@ export function SurveyCreatePage() {
     setSelectedRespondents(visible);
   };
 
+  const updateQuestion = (index: number, patch: Partial<BuilderQuestion>) => {
+    setQuestions((current) => current.map((question, questionIndex) => (
+      questionIndex === index ? { ...question, ...patch } : question
+    )));
+  };
+
+  const updateQuestionOption = (questionIndex: number, optionIndex: number, patch: Partial<BuilderOption>) => {
+    setQuestions((current) => current.map((question, index) => {
+      if (index !== questionIndex) return question;
+      const nextOptions = cloneOptions(question.options ?? DEFAULT_QUESTION_OPTIONS);
+      nextOptions[optionIndex] = { ...nextOptions[optionIndex], ...patch };
+      return { ...question, options: nextOptions };
+    }));
+  };
+
+  const addQuestionOption = (questionIndex: number) => {
+    setQuestions((current) => current.map((question, index) => {
+      if (index !== questionIndex) return question;
+      const nextOptions = cloneOptions(question.options ?? DEFAULT_QUESTION_OPTIONS);
+      nextOptions.push({ label: `Option ${nextOptions.length + 1}`, sentiment: 'neutral' });
+      return { ...question, options: nextOptions };
+    }));
+  };
+
+  const removeQuestionOption = (questionIndex: number, optionIndex: number) => {
+    setQuestions((current) => current.map((question, index) => {
+      if (index !== questionIndex) return question;
+      const nextOptions = cloneOptions(question.options ?? DEFAULT_QUESTION_OPTIONS).filter((_, itemIndex) => itemIndex !== optionIndex);
+      return { ...question, options: nextOptions.length > 0 ? nextOptions : cloneOptions(DEFAULT_QUESTION_OPTIONS) };
+    }));
+  };
+
+  const applyAnswerBankToQuestion = (questionIndex: number) => {
+    updateQuestion(questionIndex, { options: cloneOptions(options) });
+  };
+
+  const changeQuestionType = (questionIndex: number, questionType: SurveyQuestionType) => {
+    setQuestions((current) => current.map((question, index) => {
+      if (index !== questionIndex) return question;
+      return {
+        ...question,
+        questionType,
+        options: questionUsesOptions(questionType)
+          ? cloneOptions(question.options?.length ? question.options : DEFAULT_QUESTION_OPTIONS)
+          : [],
+      };
+    }));
+  };
+
   const handleSave = async () => {
     if (!title.trim()) { toast.error('Survey title is required'); setTab('details'); return; }
     if (!selectedBranchId) { toast.error('Select a branch for this survey'); setTab('details'); return; }
     if (selectedRespondents.length === 0) { toast.error('Select at least one respondent'); setTab('details'); return; }
-    if (options.length === 0) { toast.error('Add at least one response option'); setTab('scale'); return; }
     const filledQuestions = questions.filter((q) => q.text.trim());
     if (filledQuestions.length === 0) { toast.error('Add at least one question'); setTab('questions'); return; }
+    const missingOptions = filledQuestions.find((q) =>
+      questionUsesOptions(q.questionType) && !(q.options ?? []).some((option) => option.label.trim()),
+    );
+    if (missingOptions) {
+      toast.error('Choice questions need at least one answer option');
+      setTab('questions');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -638,7 +760,18 @@ export function SurveyCreatePage() {
         respondentIds: selectedRespondents,
         status,
         sections: sections.filter((s) => s.title.trim()).map((s) => ({ title: s.title.trim(), description: s.description.trim() || undefined })),
-        questions: filledQuestions.map((q) => ({ text: q.text.trim(), sectionIndex: q.sectionIndex })),
+        questions: filledQuestions.map((q) => ({
+          text: q.text.trim(),
+          sectionIndex: q.sectionIndex,
+          questionType: q.questionType ?? 'multiple_choice',
+          sentimentEnabled: q.sentimentEnabled ?? false,
+          options: questionUsesOptions(q.questionType)
+            ? (q.options ?? []).filter((option) => option.label.trim()).map((option) => ({
+                label: option.label.trim(),
+                sentiment: q.sentimentEnabled ? option.sentiment : 'neutral',
+              }))
+            : [],
+        })),
         options,
       });
       if (!res.success) { toast.error(res.error); return; }
@@ -864,9 +997,9 @@ export function SurveyCreatePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="positive">✅ Positive</SelectItem>
-                        <SelectItem value="negative">❌ Negative</SelectItem>
-                        <SelectItem value="neutral">➖ Neutral</SelectItem>
+                        <SelectItem value="positive">Positive</SelectItem>
+                        <SelectItem value="negative">Negative</SelectItem>
+                        <SelectItem value="neutral">Neutral</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -884,9 +1017,9 @@ export function SurveyCreatePage() {
               <Select value={newOptionSentiment} onValueChange={(v) => setNewOptionSentiment(v as Sentiment)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="positive">✅ Positive</SelectItem>
-                  <SelectItem value="negative">❌ Negative</SelectItem>
-                  <SelectItem value="neutral">➖ Neutral</SelectItem>
+                  <SelectItem value="positive">Positive</SelectItem>
+                  <SelectItem value="negative">Negative</SelectItem>
+                  <SelectItem value="neutral">Neutral</SelectItem>
                 </SelectContent>
               </Select>
               <Button className="w-full" variant="outline" onClick={() => {
@@ -931,52 +1064,152 @@ export function SurveyCreatePage() {
 
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold">Questions</h2>
-              <Button variant="outline" size="sm" onClick={() => setQuestions([...questions, { text: '', sectionIndex: null }])}>
+              <div>
+                <h2 className="text-base font-semibold">Questions</h2>
+                <p className="text-sm text-muted-foreground">Choose a response type for each question and add custom answer choices where needed.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setQuestions([...questions, createBlankQuestion({ options: cloneOptions(options) })])}>
                 <Plus className="mr-2 h-3.5 w-3.5" /> Add Question
               </Button>
             </div>
-            {questions.map((q, idx) => (
-              <div key={idx} className="group flex items-start gap-2 rounded-lg border bg-background p-3">
-                <div className="flex flex-col items-center gap-0.5 pt-1">
-                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3 w-3" /></Button>
-                  <span className="text-xs font-mono text-muted-foreground">Q{idx + 1}</span>
-                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, 1)} disabled={idx === questions.length - 1}><ChevronDown className="h-3 w-3" /></Button>
+            {questions.map((q, idx) => {
+              const config = questionTypeConfig(q.questionType);
+              const TypeIcon = config.icon;
+              const optionRows = q.options?.length ? q.options : DEFAULT_QUESTION_OPTIONS;
+
+              return (
+                <div key={idx} className="rounded-lg border bg-background shadow-sm">
+                  <div className="flex flex-col gap-3 border-b p-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="flex items-center rounded-md border bg-muted/40">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveQuestion(idx, -1)} disabled={idx === 0} aria-label="Move question up">
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="min-w-10 text-center text-xs font-semibold text-muted-foreground">Q{idx + 1}</span>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveQuestion(idx, 1)} disabled={idx === questions.length - 1} aria-label="Move question down">
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                        <TypeIcon className="h-4 w-4 shrink-0 text-primary" />
+                        <span className="truncate">{config.label}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Select value={q.questionType ?? 'multiple_choice'} onValueChange={(value) => changeQuestionType(idx, value as SurveyQuestionType)}>
+                        <SelectTrigger className="h-9 w-full bg-background sm:w-56">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {QUESTION_TYPES.map((type) => {
+                            const Icon = type.icon;
+                            return (
+                              <SelectItem key={type.value} value={type.value}>
+                                <span className="flex items-center gap-2">
+                                  <Icon className="h-3.5 w-3.5" />
+                                  {type.label}
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                      {sections.length > 0 && (
+                        <Select
+                          value={q.sectionIndex !== null ? String(q.sectionIndex) : 'none'}
+                          onValueChange={(v) => updateQuestion(idx, { sectionIndex: v === 'none' ? null : Number(v) })}
+                        >
+                          <SelectTrigger className="h-9 w-full bg-background sm:w-44"><SelectValue placeholder="Section" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No section</SelectItem>
+                            {sections.map((s, i) => <SelectItem key={i} value={String(i)}>{s.title}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-red-500" onClick={() => setQuestions(questions.filter((_, i) => i !== idx))} disabled={questions.length === 1} aria-label="Remove question">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 p-4">
+                    <Textarea
+                      rows={2}
+                      placeholder={`Question ${idx + 1}...`}
+                      value={q.text}
+                      onChange={(e) => updateQuestion(idx, { text: e.target.value })}
+                      className="resize-none text-sm"
+                    />
+
+                    {questionUsesOptions(q.questionType) ? (
+                      <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold">Answer choices</p>
+                            <p className="text-xs text-muted-foreground">{config.placeholder}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={() => applyAnswerBankToQuestion(idx)}>
+                              Use Answer Bank
+                            </Button>
+                            <label className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-xs font-medium">
+                              <Checkbox
+                                checked={q.sentimentEnabled ?? false}
+                                onCheckedChange={(checked) => updateQuestion(idx, { sentimentEnabled: Boolean(checked) })}
+                              />
+                              Result tags
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {optionRows.map((option, optionIndex) => (
+                            <div key={optionIndex} className="flex flex-col gap-2 rounded-md border bg-background p-2 sm:flex-row sm:items-center">
+                              <div className="flex min-w-0 flex-1 items-center gap-2">
+                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs text-muted-foreground">
+                                  {optionIndex + 1}
+                                </span>
+                                <Input
+                                  className="h-9 text-sm"
+                                  placeholder={`Option ${optionIndex + 1}`}
+                                  value={option.label}
+                                  onChange={(event) => updateQuestionOption(idx, optionIndex, { label: event.target.value })}
+                                />
+                              </div>
+                              {q.sentimentEnabled && (
+                                <Select value={option.sentiment} onValueChange={(value) => updateQuestionOption(idx, optionIndex, { sentiment: value as Sentiment })}>
+                                  <SelectTrigger className="h-9 w-full text-xs sm:w-32">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="positive">Positive</SelectItem>
+                                    <SelectItem value="neutral">Neutral</SelectItem>
+                                    <SelectItem value="negative">Negative</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              <Button variant="ghost" size="icon" className="h-8 w-8 self-end text-red-500 sm:self-auto" onClick={() => removeQuestionOption(idx, optionIndex)} aria-label="Remove option">
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <Button type="button" variant="outline" size="sm" onClick={() => addQuestionOption(idx)}>
+                          <Plus className="mr-2 h-3.5 w-3.5" /> Add Option
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed bg-muted/20 p-4">
+                        <p className="text-sm font-medium">{config.label}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{config.placeholder}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-start">
-                  <Textarea
-                    rows={2}
-                    placeholder={`Question ${idx + 1}...`}
-                    value={q.text}
-                    onChange={(e) => {
-                      const next = [...questions];
-                      next[idx] = { ...next[idx], text: e.target.value };
-                      setQuestions(next);
-                    }}
-                    className="resize-none text-sm"
-                  />
-                  {sections.length > 0 && (
-                    <Select
-                      value={q.sectionIndex !== null ? String(q.sectionIndex) : 'none'}
-                      onValueChange={(v) => {
-                        const next = [...questions];
-                        next[idx] = { ...next[idx], sectionIndex: v === 'none' ? null : Number(v) };
-                        setQuestions(next);
-                      }}
-                    >
-                      <SelectTrigger className="h-9 w-full shrink-0 text-xs lg:w-44"><SelectValue placeholder="Section" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No section</SelectItem>
-                        {sections.map((s, i) => <SelectItem key={i} value={String(i)}>{s.title}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-                <Button variant="ghost" size="icon" className="mt-1 h-8 w-8 shrink-0 text-red-500" onClick={() => setQuestions(questions.filter((_, i) => i !== idx))} disabled={questions.length === 1}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </section>
         </TabsContent>
       </Tabs>
@@ -995,26 +1228,44 @@ interface DataEntryProps {
   defaultBranchId?: string;
 }
 
-const OPTION_ACCENT: Record<Sentiment, string> = {
-  positive: 'border-t-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/20',
-  negative: 'border-t-red-400 bg-red-50/60 dark:bg-red-950/20',
-  neutral:  'border-t-slate-300 bg-slate-50/60 dark:bg-slate-800/20',
-};
-const OPTION_INPUT_FOCUS: Record<Sentiment, string> = {
-  positive: 'focus-visible:ring-emerald-400',
-  negative: 'focus-visible:ring-red-400',
-  neutral:  'focus-visible:ring-slate-400',
-};
-const OPTION_DOT: Record<Sentiment, string> = {
-  positive: 'bg-emerald-400',
-  negative: 'bg-red-400',
-  neutral:  'bg-slate-400',
-};
+type EntryMode = 'individual' | 'aggregate';
+type IndividualAnswerValue = string | string[];
+
+const MULTI_ANSWER_TYPES: SurveyQuestionType[] = ['checkboxes', 'checkbox_grid'];
+
+function isMultiAnswerType(type?: SurveyQuestionType) {
+  return MULTI_ANSWER_TYPES.includes(type ?? 'multiple_choice');
+}
+
+function respondentKey(respondent: Pick<SurveyRespondent, 'respondent_type' | 'respondent_id'>) {
+  return `${respondent.respondent_type}:${respondent.respondent_id}`;
+}
+
+function isAnswered(value: IndividualAnswerValue | undefined) {
+  if (Array.isArray(value)) return value.length > 0;
+  return !!value;
+}
+
+function displayRespondentType(type: SurveyRespondentKind) {
+  return type === 'student' ? 'Student' : 'Staff';
+}
+
+function answerTextForResponse(survey: SurveyFull, response: SurveyIndividualResponse) {
+  if (response.text_answer) return response.text_answer;
+  if (response.option_id) {
+    return survey.options.find((option) => option.id === response.option_id)?.label ?? 'Selected option';
+  }
+  return '';
+}
 
 function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBranchId }: DataEntryProps) {
+  const [entryMode, setEntryMode] = useState<EntryMode>('individual');
   const [branchId, setBranchId] = useState(defaultBranchId ?? '');
   const [totalRespondents, setTotalRespondents] = useState('');
   const [counts, setCounts] = useState<Record<string, Record<string, string>>>({});
+  const [individualResponses, setIndividualResponses] = useState<SurveyIndividualResponse[]>([]);
+  const [selectedRespondentKey, setSelectedRespondentKey] = useState('');
+  const [individualAnswers, setIndividualAnswers] = useState<Record<string, IndividualAnswerValue>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -1023,12 +1274,16 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     setBranchId(defaultBranchId ?? branches[0]?.id ?? '');
     setTotalRespondents('');
     setCounts({});
-  }, [open]);
+    setIndividualResponses([]);
+    setSelectedRespondentKey('');
+    setIndividualAnswers({});
+    setEntryMode(survey.respondents.length > 0 ? 'individual' : 'aggregate');
+  }, [open, defaultBranchId, branches, survey.respondents.length]);
 
   useEffect(() => {
     if (!branchId || !open) return;
     setLoading(true);
-    getBranchSubmission(survey.id, branchId).then(({ submission, responses }) => {
+    getBranchSubmission(survey.id, branchId).then(({ submission, responses, individualResponses }) => {
       setTotalRespondents(submission ? String(submission.total_respondents) : '');
       const c: Record<string, Record<string, string>> = {};
       responses.forEach((r) => {
@@ -1036,12 +1291,61 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
         c[r.question_id][r.option_id] = String(r.count);
       });
       setCounts(c);
+      setIndividualResponses(individualResponses);
+      const branchRespondents = survey.respondents.filter((respondent) => respondent.branch_id === branchId);
+      setSelectedRespondentKey((current) => (
+        current && branchRespondents.some((respondent) => respondentKey(respondent) === current)
+          ? current
+          : branchRespondents[0] ? respondentKey(branchRespondents[0]) : ''
+      ));
       setLoading(false);
     });
-  }, [branchId, open]);
+  }, [branchId, open, survey.id, survey.respondents]);
+
+  useEffect(() => {
+    if (!selectedRespondentKey) {
+      setIndividualAnswers({});
+      return;
+    }
+    const selected = survey.respondents.find((respondent) => respondentKey(respondent) === selectedRespondentKey);
+    if (!selected) {
+      setIndividualAnswers({});
+      return;
+    }
+
+    const respondentRows = individualResponses.filter((row) =>
+      row.respondent_type === selected.respondent_type && row.respondent_id === selected.respondent_id,
+    );
+    const nextAnswers: Record<string, IndividualAnswerValue> = {};
+    survey.questions.forEach((question) => {
+      const rows = respondentRows.filter((row) => row.question_id === question.id);
+      if (isMultiAnswerType(question.question_type)) {
+        nextAnswers[question.id] = rows.map((row) => row.option_id).filter(Boolean) as string[];
+      } else if (questionUsesOptions(question.question_type)) {
+        nextAnswers[question.id] = rows[0]?.option_id ?? '';
+      } else {
+        nextAnswers[question.id] = rows[0]?.text_answer ?? '';
+      }
+    });
+    setIndividualAnswers(nextAnswers);
+  }, [selectedRespondentKey, individualResponses, survey.questions, survey.respondents]);
 
   const setCount = (qId: string, oId: string, val: string) => {
     setCounts((prev) => ({ ...prev, [qId]: { ...(prev[qId] ?? {}), [oId]: val } }));
+  };
+
+  const setIndividualAnswer = (questionId: string, value: IndividualAnswerValue) => {
+    setIndividualAnswers((current) => ({ ...current, [questionId]: value }));
+  };
+
+  const toggleMultiAnswer = (questionId: string, optionId: string) => {
+    setIndividualAnswers((current) => {
+      const selected = Array.isArray(current[questionId]) ? current[questionId] as string[] : [];
+      const next = selected.includes(optionId)
+        ? selected.filter((id) => id !== optionId)
+        : [...selected, optionId];
+      return { ...current, [questionId]: next };
+    });
   };
 
   const rowTotal = (qId: string) =>
@@ -1049,127 +1353,338 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
 
   const handleSave = async () => {
     if (!branchId) { toast.error('Please select a branch'); return; }
-    const total = parseInt(totalRespondents) || 0;
+    const branchRespondents = survey.respondents.filter((respondent) => respondent.branch_id === branchId);
+    const selectedRespondent = branchRespondents.find((respondent) => respondentKey(respondent) === selectedRespondentKey);
+
     setSaving(true);
-    const flatCounts = survey.questions.flatMap((q) =>
-      optionsForQuestion(survey, q.id).map((o) => ({ questionId: q.id, optionId: o.id, count: parseInt(counts[q.id]?.[o.id] ?? '0') || 0 }))
-    );
-    const res = await saveBranchData(survey.id, branchId, total, flatCounts);
-    setSaving(false);
-    if (!res.success) { toast.error(res.error); return; }
-    toast.success('Data saved successfully');
-    onSaved();
-    onClose();
+    try {
+      if (entryMode === 'individual') {
+        if (!selectedRespondent) { toast.error('Select a respondent'); return; }
+        const answers = survey.questions.map((question) => {
+          const value = individualAnswers[question.id];
+          if (isMultiAnswerType(question.question_type)) {
+            return { questionId: question.id, optionIds: Array.isArray(value) ? value : [] };
+          }
+          if (questionUsesOptions(question.question_type)) {
+            return { questionId: question.id, optionId: typeof value === 'string' ? value : null };
+          }
+          return { questionId: question.id, textAnswer: typeof value === 'string' ? value : null };
+        });
+        const res = await saveIndividualResponses(
+          survey.id,
+          branchId,
+          { type: selectedRespondent.respondent_type, id: selectedRespondent.respondent_id, name: selectedRespondent.respondent_name },
+          answers,
+        );
+        if (!res.success) { toast.error(res.error); return; }
+        const latest = await getBranchSubmission(survey.id, branchId);
+        setIndividualResponses(latest.individualResponses);
+        setTotalRespondents(latest.submission ? String(latest.submission.total_respondents) : totalRespondents);
+        toast.success('Individual response saved');
+        onSaved();
+        return;
+      }
+
+      const total = parseInt(totalRespondents) || 0;
+      const flatCounts = survey.questions.flatMap((q) =>
+        optionsForQuestion(survey, q.id).map((o) => ({ questionId: q.id, optionId: o.id, count: parseInt(counts[q.id]?.[o.id] ?? '0') || 0 }))
+      );
+      const res = await saveBranchData(survey.id, branchId, total, flatCounts);
+      if (!res.success) { toast.error(res.error); return; }
+      toast.success('Aggregate data saved');
+      onSaved();
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const selectedBranch = branches.find((b) => b.id === branchId);
+  const branchRespondents = survey.respondents.filter((respondent) => respondent.branch_id === branchId);
+  const selectedRespondent = branchRespondents.find((respondent) => respondentKey(respondent) === selectedRespondentKey);
   const respondentsNum = parseInt(totalRespondents) || 0;
 
-  // overall completion: how many questions have a non-zero row total
-  const filledCount = survey.questions.filter((q) => rowTotal(q.id) > 0).length;
+  const aggregateFilledCount = survey.questions.filter((q) => rowTotal(q.id) > 0).length;
+  const individualFilledCount = survey.questions.filter((q) => isAnswered(individualAnswers[q.id])).length;
+  const filledCount = entryMode === 'individual' ? individualFilledCount : aggregateFilledCount;
   const completionPct = survey.questions.length > 0 ? Math.round((filledCount / survey.questions.length) * 100) : 0;
   const maxOptionCount = Math.max(1, ...survey.questions.map((question) => optionsForQuestion(survey, question.id).length));
+  const respondentProgress = (respondent: SurveyRespondent) => {
+    const rows = individualResponses.filter((row) =>
+      row.respondent_type === respondent.respondent_type && row.respondent_id === respondent.respondent_id,
+    );
+    return new Set(rows.map((row) => row.question_id)).size;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
-
-        {/* ── Header ── */}
-        <div className="relative px-6 pt-6 pb-5 shrink-0 overflow-hidden">
-          {/* Subtle gradient backdrop */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+      <DialogContent
+        showCloseButton={false}
+        className="!fixed !inset-0 !left-0 !top-0 z-50 flex !h-dvh !w-screen !max-w-none !translate-x-0 !translate-y-0 flex-col gap-0 overflow-hidden !rounded-none border-0 p-0 shadow-none sm:!max-w-none"
+      >
+        <DialogHeader className="shrink-0 border-b bg-background px-4 py-3 text-left sm:px-6 lg:px-8">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <Send className="h-5 w-5 text-primary" />
               </div>
-              <div>
-                <DialogTitle className="text-lg font-bold leading-tight">Enter Survey Data</DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground mt-0.5">
+              <div className="min-w-0">
+                <DialogTitle className="truncate text-lg font-semibold">Enter Survey Data</DialogTitle>
+                <DialogDescription className="truncate">
                   {survey.title}{survey.period ? <span className="mx-1.5 opacity-40">·</span> : ''}{survey.period}
                 </DialogDescription>
               </div>
             </div>
-            {/* Completion pill */}
-            <div className={cn(
-              'shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border',
-              completionPct === 100
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                : 'bg-muted text-muted-foreground border-border'
-            )}>
-              <span className={cn('h-1.5 w-1.5 rounded-full', completionPct === 100 ? 'bg-emerald-500' : 'bg-slate-400')} />
-              {filledCount}/{survey.questions.length} filled
-            </div>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close data entry">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
+        </DialogHeader>
 
-          {/* Branch + Respondents row */}
-          <div className="relative mt-4 grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+        <div className="shrink-0 border-b bg-muted/20 px-4 py-3 sm:px-6 lg:px-8">
+          <div className="mx-auto grid w-full max-w-7xl gap-3 lg:grid-cols-[18rem_1fr_auto] lg:items-end">
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted-foreground">
                 <Building2 className="h-3 w-3" /> Branch
-              </label>
+              </Label>
               <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger className="h-10 bg-background border-border shadow-sm">
-                  <SelectValue placeholder="Select branch" />
-                </SelectTrigger>
+                <SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Select branch" /></SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                <Users className="h-3 w-3" /> Total Respondents
-              </label>
-              <Input
-                type="number" min="0" placeholder="0"
-                className="h-10 bg-background border-border shadow-sm text-center font-semibold text-base tabular-nums"
-                value={totalRespondents}
-                onChange={(e) => setTotalRespondents(e.target.value)}
-              />
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={entryMode === 'individual' ? 'default' : 'outline'}
+                onClick={() => setEntryMode('individual')}
+                disabled={branchRespondents.length === 0}
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Individual Responses
+              </Button>
+              <Button
+                type="button"
+                variant={entryMode === 'aggregate' ? 'default' : 'outline'}
+                onClick={() => setEntryMode('aggregate')}
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Aggregate Counts
+              </Button>
+            </div>
+
+            <div className={cn(
+              'flex items-center justify-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm font-semibold',
+              completionPct === 100 ? 'border-emerald-200 text-emerald-700' : 'text-muted-foreground',
+            )}>
+              <span className={cn('h-2 w-2 rounded-full', completionPct === 100 ? 'bg-emerald-500' : 'bg-slate-400')} />
+              {filledCount}/{survey.questions.length} answered
             </div>
           </div>
         </div>
 
-        <div className="h-px bg-border shrink-0" />
-
-        {/* ── Question cards ── */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto bg-muted/10">
           {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="rounded-xl border p-4 space-y-3">
-                <Skeleton className="h-4 w-3/4" />
-                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(maxOptionCount, 6)}, minmax(0, 1fr))` }}>
-                  {Array.from({ length: maxOptionCount }).map((_, j) => <Skeleton key={j} className="h-20 rounded-lg" />)}
+            <div className="mx-auto w-full max-w-7xl space-y-3 p-4 sm:p-6 lg:p-8">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-lg border bg-background p-4">
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(maxOptionCount, 6)}, minmax(0, 1fr))` }}>
+                    {Array.from({ length: maxOptionCount }).map((_, j) => <Skeleton key={j} className="h-16 rounded-lg" />)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : entryMode === 'individual' ? (
+            <div className="mx-auto grid w-full max-w-7xl gap-4 p-4 sm:p-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:p-8">
+              <aside className="h-fit rounded-lg border bg-background">
+                <div className="border-b p-3">
+                  <p className="text-sm font-semibold">Respondents</p>
+                  <p className="text-xs text-muted-foreground">{branchRespondents.length} selected for this branch</p>
+                </div>
+                <div className="max-h-[62vh] space-y-1 overflow-y-auto p-2">
+                  {branchRespondents.length === 0 ? (
+                    <div className="p-4 text-sm text-muted-foreground">No students or staff were assigned to this survey branch.</div>
+                  ) : branchRespondents.map((respondent) => {
+                    const key = respondentKey(respondent);
+                    const progress = respondentProgress(respondent);
+                    return (
+                      <button
+                        key={respondent.id}
+                        type="button"
+                        onClick={() => setSelectedRespondentKey(key)}
+                        className={cn(
+                          'w-full rounded-md border px-3 py-2 text-left transition-colors',
+                          selectedRespondentKey === key ? 'border-primary bg-primary/10' : 'bg-background hover:bg-muted/50',
+                        )}
+                      >
+                        <span className="block truncate text-sm font-medium">{respondent.respondent_name}</span>
+                        <span className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                          <span>{displayRespondentType(respondent.respondent_type)}</span>
+                          <span>{progress}/{survey.questions.length}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </aside>
+
+              <section className="space-y-3">
+                {selectedRespondent ? (
+                  <>
+                    <div className="rounded-lg border bg-background p-4">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recording for</p>
+                      <div className="mt-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-lg font-semibold">{selectedRespondent.respondent_name}</p>
+                        <span className="w-fit rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                          {displayRespondentType(selectedRespondent.respondent_type)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {survey.questions.map((question, index) => {
+                      const config = questionTypeConfig(question.question_type);
+                      const questionOptions = optionsForQuestion(survey, question.id);
+                      const value = individualAnswers[question.id];
+                      const multi = isMultiAnswerType(question.question_type);
+
+                      return (
+                        <div key={question.id} className="rounded-lg border bg-background p-4 shadow-sm">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold leading-relaxed">{question.question_text}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">{config.label}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 space-y-2">
+                            {questionUsesOptions(question.question_type) ? (
+                              question.question_type === 'dropdown' ? (
+                                <Select
+                                  value={typeof value === 'string' ? value : ''}
+                                  onValueChange={(next) => setIndividualAnswer(question.id, next)}
+                                >
+                                  <SelectTrigger className="bg-background">
+                                    <SelectValue placeholder="Choose an answer" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {questionOptions.map((option) => (
+                                      <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                questionOptions.map((option) => {
+                                  const selected = multi
+                                    ? Array.isArray(value) && value.includes(option.id)
+                                    : value === option.id;
+                                  return (
+                                    <button
+                                      key={option.id}
+                                      type="button"
+                                      onClick={() => multi ? toggleMultiAnswer(question.id, option.id) : setIndividualAnswer(question.id, option.id)}
+                                      className={cn(
+                                        'flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm transition-colors',
+                                        selected ? 'border-primary bg-primary/10 text-foreground' : 'bg-background hover:bg-muted/40',
+                                      )}
+                                    >
+                                      {multi ? (
+                                        <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center rounded border', selected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/50')}>
+                                          {selected && <CheckCircle2 className="h-3 w-3" />}
+                                        </span>
+                                      ) : (
+                                        <span className={cn('h-4 w-4 rounded-full border', selected ? 'border-primary bg-primary shadow-[inset_0_0_0_4px_hsl(var(--background))]' : 'border-muted-foreground/50')} />
+                                      )}
+                                      <span className="min-w-0 flex-1 break-words">{option.label}</span>
+                                    </button>
+                                  );
+                                })
+                              )
+                            ) : question.question_type === 'paragraph' ? (
+                              <Textarea
+                                rows={4}
+                                value={typeof value === 'string' ? value : ''}
+                                onChange={(event) => setIndividualAnswer(question.id, event.target.value)}
+                                placeholder="Write the response..."
+                              />
+                            ) : question.question_type === 'date' ? (
+                              <Input
+                                type="date"
+                                value={typeof value === 'string' ? value : ''}
+                                onChange={(event) => setIndividualAnswer(question.id, event.target.value)}
+                              />
+                            ) : question.question_type === 'time' ? (
+                              <Input
+                                type="time"
+                                value={typeof value === 'string' ? value : ''}
+                                onChange={(event) => setIndividualAnswer(question.id, event.target.value)}
+                              />
+                            ) : (
+                              <Input
+                                value={typeof value === 'string' ? value : ''}
+                                onChange={(event) => setIndividualAnswer(question.id, event.target.value)}
+                                placeholder="Short answer"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <div className="rounded-lg border bg-background p-8 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold">No respondent selected</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">Assign students or staff to this survey, then enter their individual answers here.</p>
+                  </div>
+                )}
+              </section>
+            </div>
+          ) : (
+            <div className="mx-auto w-full max-w-7xl space-y-3 p-4 sm:p-6 lg:p-8">
+              <div className="rounded-lg border bg-background p-4">
+                <div className="grid gap-3 sm:grid-cols-[1fr_14rem] sm:items-end">
+                  <div>
+                    <p className="text-sm font-semibold">Aggregate branch counts</p>
+                    <p className="text-sm text-muted-foreground">Use this when you only know totals by answer option, not the named respondent choices.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted-foreground">
+                      <Users className="h-3 w-3" /> Total Respondents
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      className="h-10 text-center text-base font-semibold tabular-nums"
+                      value={totalRespondents}
+                      onChange={(e) => setTotalRespondents(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
-            ))
-          ) : (
-            survey.questions.map((q, qi) => {
+
+              {survey.questions.map((q, qi) => {
               const questionOptions = optionsForQuestion(survey, q.id);
               const total = rowTotal(q.id);
               const over = respondentsNum > 0 && total > respondentsNum;
               const exact = respondentsNum > 0 && total === respondentsNum;
-              const positiveCount = questionOptions
-                .filter((o) => o.sentiment === 'positive')
-                .reduce((s, o) => s + (parseInt(counts[q.id]?.[o.id] ?? '0') || 0), 0);
-              const negativeCount = questionOptions
-                .filter((o) => o.sentiment === 'negative')
-                .reduce((s, o) => s + (parseInt(counts[q.id]?.[o.id] ?? '0') || 0), 0);
-              const posW = total > 0 ? (positiveCount / total) * 100 : 0;
-              const negW = total > 0 ? (negativeCount / total) * 100 : 0;
 
               return (
                 <div
                   key={q.id}
                   className={cn(
-                    'rounded-xl border bg-card transition-all duration-200',
+                    'rounded-lg border bg-background transition-colors',
                     over ? 'border-red-300 dark:border-red-800 shadow-sm shadow-red-100 dark:shadow-red-950/20'
                       : exact ? 'border-emerald-300 dark:border-emerald-800'
                       : 'border-border hover:border-border/80'
                   )}
                 >
-                  {/* Question header */}
                   <div className="flex items-start gap-3 px-4 pt-4 pb-3">
                     <span className={cn(
                       'shrink-0 h-6 w-6 rounded-full text-[11px] font-bold flex items-center justify-center mt-0.5',
@@ -1180,7 +1695,6 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                       {qi + 1}
                     </span>
                     <p className="text-sm font-medium leading-snug flex-1">{q.question_text}</p>
-                    {/* Row total badge */}
                     <div className={cn(
                       'shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums',
                       over ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'
@@ -1188,83 +1702,70 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                         : total > 0 ? 'bg-muted text-muted-foreground'
                         : 'bg-muted/50 text-muted-foreground/50'
                     )}>
-                      {over && '⚠ '}
+                      {over && '! '}
                       {total}{respondentsNum > 0 ? ` / ${respondentsNum}` : ''}
                     </div>
                   </div>
 
-                  {/* Option tiles */}
                   <div className="px-4 pb-3">
-                    <div
-                      className="grid gap-2"
-                      style={{ gridTemplateColumns: `repeat(${Math.min(questionOptions.length || 1, 6)}, minmax(0, 1fr))` }}
-                    >
-                      {questionOptions.map((opt) => {
-                        const val = counts[q.id]?.[opt.id] ?? '';
-                        const num = parseInt(val) || 0;
-                        return (
-                          <div
-                            key={opt.id}
-                            className={cn(
-                              'flex flex-col items-center gap-1.5 rounded-lg border-t-2 p-2.5 transition-all',
-                              OPTION_ACCENT[opt.sentiment],
-                              num > 0 ? 'opacity-100' : 'opacity-70 hover:opacity-90'
-                            )}
-                          >
-                            <div className="flex items-center gap-1">
-                              <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', OPTION_DOT[opt.sentiment])} />
-                              <span className="text-[11px] font-semibold text-center leading-tight line-clamp-2">
+                    {questionOptions.length === 0 ? (
+                      <div className="rounded-md border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                        This question type is collected in Individual Responses mode.
+                      </div>
+                    ) : (
+                      <div
+                        className="grid gap-2"
+                        style={{ gridTemplateColumns: `repeat(${Math.min(questionOptions.length || 1, 6)}, minmax(0, 1fr))` }}
+                      >
+                        {questionOptions.map((opt) => {
+                          const val = counts[q.id]?.[opt.id] ?? '';
+                          const num = parseInt(val) || 0;
+                          return (
+                            <div
+                              key={opt.id}
+                              className={cn(
+                                'flex flex-col items-center gap-1.5 rounded-lg border bg-muted/20 p-2.5 transition-colors',
+                                num > 0 ? 'border-primary/50 bg-primary/5' : 'hover:bg-muted/40'
+                              )}
+                            >
+                              <span className="text-center text-[11px] font-semibold leading-tight line-clamp-2">
                                 {opt.label}
                               </span>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                value={val}
+                                onChange={(e) => setCount(q.id, opt.id, e.target.value)}
+                                className={cn(
+                                  'w-full h-9 rounded-md border bg-background text-center text-base font-bold tabular-nums',
+                                  'outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0',
+                                  'placeholder:text-muted-foreground/30',
+                                  num > 0 ? 'text-foreground' : 'text-muted-foreground'
+                                )}
+                              />
                             </div>
-                            <input
-                              type="number"
-                              min="0"
-                              placeholder="0"
-                              value={val}
-                              onChange={(e) => setCount(q.id, opt.id, e.target.value)}
-                              className={cn(
-                                'w-full h-9 text-center text-base font-bold tabular-nums rounded-md border bg-background',
-                                'outline-none focus-visible:ring-2 focus-visible:ring-offset-0 transition-colors',
-                                'placeholder:text-muted-foreground/30',
-                                OPTION_INPUT_FOCUS[opt.sentiment],
-                                num > 0 ? 'text-foreground' : 'text-muted-foreground'
-                              )}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-
-                  {/* Mini distribution bar */}
-                  {total > 0 && (
-                    <div className="px-4 pb-3">
-                      <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5">
-                        <div className="bg-emerald-400 rounded-full transition-all duration-300" style={{ width: `${posW}%` }} />
-                        <div className="bg-red-400 rounded-full transition-all duration-300" style={{ width: `${negW}%` }} />
-                        <div className="bg-slate-300 dark:bg-slate-600 rounded-full flex-1" />
-                      </div>
-                      <div className="flex gap-3 mt-1.5 text-[10px] text-muted-foreground">
-                        <span>✓ {Math.round(posW)}% positive</span>
-                        <span>✗ {Math.round(negW)}% negative</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
-            })
+              })}
+            </div>
           )}
         </div>
 
-        {/* ── Footer ── */}
-        <div className="border-t px-6 py-4 flex items-center justify-between shrink-0 bg-muted/20">
+        <div className="shrink-0 border-t bg-background px-4 py-3 sm:px-6 lg:px-8">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {selectedBranch && (
               <>
                 <Building2 className="h-3.5 w-3.5" />
                 <span className="font-medium">{selectedBranch.name}</span>
-                {respondentsNum > 0 && <span className="opacity-60">· {respondentsNum} respondents</span>}
+                {entryMode === 'individual' && selectedRespondent && <span className="opacity-60">- {selectedRespondent.respondent_name}</span>}
+                {entryMode === 'aggregate' && respondentsNum > 0 && <span className="opacity-60">- {respondentsNum} respondents</span>}
               </>
             )}
           </div>
@@ -1272,11 +1773,12 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={handleSave} disabled={saving || loading} className="min-w-[100px]">
               {saving ? (
-                <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Saving…</span>
+                <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Saving...</span>
               ) : (
                 <span className="flex items-center gap-2"><Send className="h-3.5 w-3.5" />Save Data</span>
               )}
             </Button>
+          </div>
           </div>
         </div>
       </DialogContent>
@@ -1304,14 +1806,20 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
   const totalRespondents = results.reduce((s, b) => s + b.totalRespondents, 0);
   const submittedBranches = results.filter((b) => b.submitted).length;
 
+  const hasSentimentAnalytics = survey.questions.some((question) => question.sentiment_enabled);
+
   // Aggregate per question across all branches
   const questionAggregates = survey.questions.map((q) => {
     let positiveTotal = 0, negativeTotal = 0, neutralTotal = 0, grandTotal = 0;
+    const optionTotals = new Map<string, { label: string; count: number }>();
     results.forEach((b) => {
       const qr = b.questionResults.find((r) => r.questionId === q.id);
       if (!qr) return;
       qr.counts.forEach((c) => {
         grandTotal += c.count;
+        const current = optionTotals.get(c.optionId) ?? { label: c.label, count: 0 };
+        current.count += c.count;
+        optionTotals.set(c.optionId, current);
         if (c.sentiment === 'positive') positiveTotal += c.count;
         else if (c.sentiment === 'negative') negativeTotal += c.count;
         else neutralTotal += c.count;
@@ -1323,6 +1831,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
       negativeRate: grandTotal > 0 ? negativeTotal / grandTotal : 0,
       neutralRate: grandTotal > 0 ? neutralTotal / grandTotal : 0,
       grandTotal,
+      optionCounts: Array.from(optionTotals.values()),
     };
   });
 
@@ -1330,18 +1839,42 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
     ? questionAggregates.reduce((s, q) => s + q.positiveRate, 0) / questionAggregates.length
     : 0;
 
-  const pieData = [
-    { name: 'Positive', value: Math.round(avgSatisfaction * 100) },
-    { name: 'Negative', value: Math.round(questionAggregates.reduce((s, q) => s + q.negativeRate, 0) / (questionAggregates.length || 1) * 100) },
-    { name: 'Neutral', value: Math.round(questionAggregates.reduce((s, q) => s + q.neutralRate, 0) / (questionAggregates.length || 1) * 100) },
-  ];
+  const optionDistribution = Array.from(
+    questionAggregates
+      .flatMap((question) => question.optionCounts)
+      .reduce((map, option) => {
+        map.set(option.label, (map.get(option.label) ?? 0) + option.count);
+        return map;
+      }, new Map<string, number>()),
+    ([name, value]) => ({ name, value }),
+  ).sort((a, b) => b.value - a.value).slice(0, 8);
+
+  const pieData = hasSentimentAnalytics
+    ? [
+        { name: 'Positive', value: Math.round(avgSatisfaction * 100) },
+        { name: 'Negative', value: Math.round(questionAggregates.reduce((s, q) => s + q.negativeRate, 0) / (questionAggregates.length || 1) * 100) },
+        { name: 'Neutral', value: Math.round(questionAggregates.reduce((s, q) => s + q.neutralRate, 0) / (questionAggregates.length || 1) * 100) },
+      ]
+    : optionDistribution;
 
   const branchBarData = results.map((b) => {
     const avg = b.questionResults.length > 0
       ? b.questionResults.reduce((s, q) => s + q.positiveRate, 0) / b.questionResults.length
       : 0;
-    return { name: b.branchName, satisfaction: Math.round(avg * 100), respondents: b.totalRespondents };
+    return {
+      name: b.branchName,
+      metric: hasSentimentAnalytics ? Math.round(avg * 100) : b.totalRespondents,
+      respondents: b.totalRespondents,
+    };
   });
+  const individualRows = results.flatMap((branch) =>
+    branch.individualResponses.map((response) => ({
+      ...response,
+      branchName: branch.branchName,
+      questionText: survey.questions.find((question) => question.id === response.question_id)?.question_text ?? '',
+      answerText: answerTextForResponse(survey, response),
+    })),
+  );
   const hasResultData = results.length > 0 && (totalRespondents > 0 || questionAggregates.some((q) => q.grandTotal > 0));
 
   return (
@@ -1385,6 +1918,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                 <TabsTrigger value="overview" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">Overview</TabsTrigger>
                 <TabsTrigger value="questions" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">By Question</TabsTrigger>
                 <TabsTrigger value="branches" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">By Branch</TabsTrigger>
+                <TabsTrigger value="individual" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">Individual</TabsTrigger>
               </TabsList>
             </div>
 
@@ -1396,7 +1930,9 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                   {[
                     { label: 'Total Respondents', value: totalRespondents.toLocaleString(i18n.language), icon: Users, color: 'text-blue-600' },
                     { label: 'Branches Submitted', value: `${submittedBranches} / ${results.length}`, icon: Building2, color: 'text-emerald-600' },
-                    { label: 'Avg Satisfaction', value: `${Math.round(avgSatisfaction * 100)}%`, icon: TrendingUp, color: avgSatisfaction >= 0.75 ? 'text-emerald-600' : avgSatisfaction >= 0.5 ? 'text-amber-600' : 'text-red-600' },
+                    hasSentimentAnalytics
+                      ? { label: 'Avg Satisfaction', value: `${Math.round(avgSatisfaction * 100)}%`, icon: TrendingUp, color: avgSatisfaction >= 0.75 ? 'text-emerald-600' : avgSatisfaction >= 0.5 ? 'text-amber-600' : 'text-red-600' }
+                      : { label: 'Individual Answers', value: individualRows.length.toLocaleString(i18n.language), icon: FileText, color: 'text-teal-600' },
                   ].map((kpi) => (
                     <Card key={kpi.label} className="border">
                       <CardContent className="p-4 flex items-center gap-3">
@@ -1416,26 +1952,31 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                 {hasResultData ? (
                   <div className="grid gap-6 xl:grid-cols-2">
                     <div className="rounded-lg border bg-background p-4">
-                      <p className="mb-3 text-sm font-semibold">Overall Response Distribution</p>
+                      <p className="mb-3 text-sm font-semibold">{hasSentimentAnalytics ? 'Overall Response Distribution' : 'Answer Distribution'}</p>
                       <ResponsiveContainer width="100%" height={320}>
                         <PieChart>
                           <Pie data={pieData} cx="50%" cy="50%" innerRadius={75} outerRadius={115} paddingAngle={3} dataKey="value">
-                            {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
+                            {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                           </Pie>
-                          <Tooltip formatter={(v) => `${v}%`} />
+                          <Tooltip formatter={(v) => hasSentimentAnalytics ? `${v}%` : Number(v).toLocaleString(i18n.language)} />
                           <Legend />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
                     <div className="rounded-lg border bg-background p-4">
-                      <p className="mb-3 text-sm font-semibold">Satisfaction by Branch</p>
+                      <p className="mb-3 text-sm font-semibold">{hasSentimentAnalytics ? 'Satisfaction by Branch' : 'Responses by Branch'}</p>
                       <ResponsiveContainer width="100%" height={320}>
                         <BarChart data={branchBarData} layout="vertical" margin={{ left: 12, right: 18 }}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
+                          <XAxis
+                            type="number"
+                            domain={hasSentimentAnalytics ? [0, 100] : undefined}
+                            tickFormatter={(v) => hasSentimentAnalytics ? `${v}%` : String(v)}
+                            tick={{ fontSize: 11 }}
+                          />
                           <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
-                          <Tooltip formatter={(v) => `${v}%`} />
-                          <Bar dataKey="satisfaction" fill="#10b981" radius={[0, 4, 4, 0]} />
+                          <Tooltip formatter={(v) => hasSentimentAnalytics ? `${v}%` : `${v} respondents`} />
+                          <Bar dataKey="metric" fill="#10b981" radius={[0, 4, 4, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -1456,32 +1997,38 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
               {/* By Question */}
               <TabsContent value="questions" className="m-0 mx-auto w-full max-w-7xl space-y-3 p-4 sm:p-6 lg:p-8">
                 {questionAggregates.length > 0 ? questionAggregates.map((qa, idx) => (
-                  <div key={qa.question.id} className="p-4 border rounded-lg space-y-2">
+                  <div key={qa.question.id} className="space-y-3 rounded-lg border bg-background p-4">
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-sm leading-snug flex-1">
                         <span className="font-bold text-primary mr-1.5">Q{idx + 1}.</span>
                         {qa.question.question_text}
                       </p>
-                      <div className={cn(
-                        'shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold',
-                        qa.positiveRate >= 0.75 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                          : qa.positiveRate >= 0.5 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-                      )}>
-                        {Math.round(qa.positiveRate * 100)}% positive
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                        {qa.grandTotal.toLocaleString(i18n.language)} responses
+                      </span>
+                    </div>
+                    {qa.optionCounts.length > 0 ? (
+                      <div className="space-y-2">
+                        {qa.optionCounts.map((option) => {
+                          const width = qa.grandTotal > 0 ? Math.round((option.count / qa.grandTotal) * 100) : 0;
+                          return (
+                            <div key={option.label} className="grid gap-2 text-sm sm:grid-cols-[minmax(10rem,16rem)_1fr_5rem] sm:items-center">
+                              <span className="truncate font-medium">{option.label}</span>
+                              <div className="h-3 overflow-hidden rounded-full bg-muted">
+                                <div className="h-full rounded-full bg-primary" style={{ width: `${width}%` }} />
+                              </div>
+                              <span className="text-right text-xs tabular-nums text-muted-foreground">
+                                {option.count.toLocaleString(i18n.language)} ({width}%)
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                    <div className="flex gap-1 h-3 rounded-full overflow-hidden">
-                      <div className="bg-emerald-500 transition-all" style={{ width: `${qa.positiveRate * 100}%` }} />
-                      <div className="bg-red-400 transition-all" style={{ width: `${qa.negativeRate * 100}%` }} />
-                      <div className="bg-slate-300 dark:bg-slate-600 flex-1" />
-                    </div>
-                    <div className="flex gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />Positive {Math.round(qa.positiveRate * 100)}%</span>
-                      <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-red-400" />Negative {Math.round(qa.negativeRate * 100)}%</span>
-                      <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" />Neutral {Math.round(qa.neutralRate * 100)}%</span>
-                      <span className="ml-auto">{qa.grandTotal.toLocaleString(i18n.language)} responses</span>
-                    </div>
+                    ) : (
+                      <div className="rounded-md border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                        Text, date, or time answers appear in the Individual tab.
+                      </div>
+                    )}
                   </div>
                 )) : (
                   <div className="rounded-lg border bg-background p-8 text-center text-sm text-muted-foreground">
@@ -1498,7 +2045,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       <tr className="bg-muted/50">
                         <th className="text-left p-3 font-semibold text-xs uppercase tracking-wide border-b">Branch</th>
                         <th className="text-center p-3 font-semibold text-xs uppercase tracking-wide border-b">Respondents</th>
-                        <th className="text-center p-3 font-semibold text-xs uppercase tracking-wide border-b">Avg Satisfaction</th>
+                        <th className="text-center p-3 font-semibold text-xs uppercase tracking-wide border-b">{hasSentimentAnalytics ? 'Avg Satisfaction' : 'Answers'}</th>
                         {survey.questions.map((q, i) => (
                           <th key={q.id} className="text-center p-2 font-medium text-xs border-b min-w-[55px]">Q{i + 1}</th>
                         ))}
@@ -1521,16 +2068,18 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                             <td className="p-3 text-center">
                               <span className={cn(
                                 'px-2 py-0.5 rounded-full text-xs font-semibold',
-                                avg >= 0.75 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                                  : avg >= 0.5 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                                  : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                                hasSentimentAnalytics
+                                  ? avg >= 0.75 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                                    : avg >= 0.5 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                                      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                                  : 'bg-muted text-muted-foreground'
                               )}>
-                                {Math.round(avg * 100)}%
+                                {hasSentimentAnalytics ? `${Math.round(avg * 100)}%` : b.individualResponses.length.toLocaleString(i18n.language)}
                               </span>
                             </td>
                             {b.questionResults.map((qr) => (
                               <td key={qr.questionId} className="p-2 text-center tabular-nums text-xs">
-                                {Math.round(qr.positiveRate * 100)}%
+                                {hasSentimentAnalytics ? `${Math.round(qr.positiveRate * 100)}%` : qr.total.toLocaleString(i18n.language)}
                               </td>
                             ))}
                           </tr>
@@ -1540,6 +2089,47 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                   </table>
                   {results.length === 0 && (
                     <div className="text-center py-12 text-muted-foreground text-sm">No data submitted yet.</div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Individual Responses */}
+              <TabsContent value="individual" className="m-0 mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+                <div className="overflow-x-auto rounded-lg border bg-background">
+                  <table className="w-full min-w-[900px] border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="border-b p-3 text-left text-xs font-semibold uppercase tracking-wide">Branch</th>
+                        <th className="border-b p-3 text-left text-xs font-semibold uppercase tracking-wide">Respondent</th>
+                        <th className="border-b p-3 text-left text-xs font-semibold uppercase tracking-wide">Type</th>
+                        <th className="border-b p-3 text-left text-xs font-semibold uppercase tracking-wide">Question</th>
+                        <th className="border-b p-3 text-left text-xs font-semibold uppercase tracking-wide">Answer</th>
+                        <th className="border-b p-3 text-left text-xs font-semibold uppercase tracking-wide">Updated</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {individualRows.map((row) => (
+                        <tr key={row.id} className="border-b hover:bg-muted/20">
+                          <td className="p-3 font-medium">{row.branchName}</td>
+                          <td className="p-3">{row.respondent_name}</td>
+                          <td className="p-3">{displayRespondentType(row.respondent_type)}</td>
+                          <td className="max-w-[22rem] p-3">
+                            <span className="line-clamp-2">{row.questionText}</span>
+                          </td>
+                          <td className="max-w-[18rem] p-3">
+                            <span className="line-clamp-2">{row.answerText || '-'}</span>
+                          </td>
+                          <td className="p-3 text-xs text-muted-foreground">
+                            {new Date(row.updated_at).toLocaleString(i18n.language)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {individualRows.length === 0 && (
+                    <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      No individual student or staff responses have been saved yet.
+                    </div>
                   )}
                 </div>
               </TabsContent>
@@ -1553,7 +2143,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
             <Button
               variant="outline"
               onClick={() => exportSurveyResultsPDF(survey, results)}
-              disabled={loading || results.length === 0}
+              disabled={loading}
             >
               <FileText className="mr-2 h-4 w-4" />
               PDF
@@ -1568,7 +2158,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                   setExportingExcel(false);
                 }
               }}
-              disabled={loading || exportingExcel || results.length === 0}
+              disabled={loading || exportingExcel}
             >
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               {exportingExcel ? 'Exporting...' : 'Excel'}
@@ -1728,7 +2318,11 @@ export function Surveys() {
             const cfg = STATUS_CONFIG[survey.status];
             const StatusIcon = cfg.icon;
             const stats = surveyStats[survey.id];
-            const avgPositivePct = Math.round((stats?.avgPositive ?? 0) * 100);
+            const responseActivityPct = stats?.totalRespondents
+              ? 100
+              : stats?.submittedBranches
+                ? 45
+                : 0;
             const branchName = branches.find((branch) => branch.id === survey.branch_id)?.name;
             return (
               <Card key={survey.id} className="group overflow-hidden border hover:shadow-md transition-shadow">
@@ -1781,16 +2375,13 @@ export function Surveys() {
 
                   <div className="mt-4 rounded-lg border bg-muted/20 p-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-muted-foreground">Average positive</span>
-                      <span className="font-semibold">{avgPositivePct}%</span>
+                      <span className="font-medium text-muted-foreground">Response activity</span>
+                      <span className="font-semibold">{stats?.totalRespondents ?? 0}</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
                       <div
-                        className={cn(
-                          'h-full rounded-full transition-all',
-                          avgPositivePct >= 75 ? 'bg-emerald-500' : avgPositivePct >= 50 ? 'bg-amber-500' : 'bg-red-500'
-                        )}
-                        style={{ width: `${avgPositivePct}%` }}
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${responseActivityPct}%` }}
                       />
                     </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">

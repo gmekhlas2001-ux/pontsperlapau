@@ -3,8 +3,8 @@
  *
  * Manages the psychosocial survey module:
  *  - Surveys have sections → questions → response options (with sentiment tags).
- *  - Each branch submits response counts per question/option via `saveBranchData`.
- *  - `getSurveyResults` aggregates those counts across branches for the results view.
+ *  - Branch staff can submit aggregate counts or named respondent answers.
+ *  - `getSurveyResults` combines both sources for the results view.
  *
  * Surveys are hard-deleted (no soft-delete) because all child rows (sections,
  * questions, options, responses) are ON DELETE CASCADE in the DB schema.
@@ -21,6 +21,18 @@ export type SurveyStatus = 'draft' | 'active' | 'closed';
 export type Sentiment = 'positive' | 'negative' | 'neutral';
 export type SurveyRespondentType = 'students' | 'staff' | 'students_staff';
 export type SurveyRespondentKind = 'student' | 'staff';
+export type SurveyQuestionType =
+  | 'short_answer'
+  | 'paragraph'
+  | 'multiple_choice'
+  | 'checkboxes'
+  | 'dropdown'
+  | 'linear_scale'
+  | 'rating'
+  | 'multiple_choice_grid'
+  | 'checkbox_grid'
+  | 'date'
+  | 'time';
 
 export interface Survey {
   id: string;
@@ -49,6 +61,8 @@ export interface SurveyQuestion {
   survey_id: string;
   section_id?: string;
   question_text: string;
+  question_type: SurveyQuestionType;
+  sentiment_enabled: boolean;
   order_index: number;
 }
 
@@ -91,6 +105,20 @@ export interface SurveyBranchSubmission {
   updated_at: string;
 }
 
+export interface SurveyIndividualResponse {
+  id: string;
+  survey_id: string;
+  branch_id: string;
+  respondent_type: SurveyRespondentKind;
+  respondent_id: string;
+  respondent_name: string;
+  question_id: string;
+  option_id?: string | null;
+  text_answer?: string | null;
+  answered_by?: string | null;
+  updated_at: string;
+}
+
 export interface SurveyFull extends Survey {
   sections: SurveySection[];
   questions: SurveyQuestion[];
@@ -111,6 +139,7 @@ export interface BranchResult {
     positiveRate: number;
     negativeRate: number;
   }[];
+  individualResponses: SurveyIndividualResponse[];
 }
 
 export interface CreateSurveyPayload {
@@ -123,7 +152,13 @@ export interface CreateSurveyPayload {
   respondentIds: { type: SurveyRespondentKind; id: string; name: string }[];
   status: SurveyStatus;
   sections: { title: string; description?: string }[];
-  questions: { text: string; sectionIndex: number | null; options?: { label: string; sentiment: Sentiment }[] }[];
+  questions: {
+    text: string;
+    sectionIndex: number | null;
+    questionType?: SurveyQuestionType;
+    sentimentEnabled?: boolean;
+    options?: { label: string; sentiment: Sentiment }[];
+  }[];
   options: { label: string; sentiment: Sentiment }[];
 }
 
@@ -178,22 +213,25 @@ export function optionsForQuestion(survey: Pick<SurveyFull, 'options'>, question
 }
 
 export async function getSurveyResults(surveyId: string): Promise<{ success: boolean; data?: BranchResult[]; error?: string }> {
-  const [fullRes, responsesRes, submissionsRes, branchesRes] = await Promise.all([
+  const [fullRes, responsesRes, submissionsRes, individualResponsesRes, branchesRes] = await Promise.all([
     getSurveyFull(surveyId),
     supabase.from('survey_branch_responses').select('*').eq('survey_id', surveyId),
     supabase.from('survey_branch_submissions').select('*').eq('survey_id', surveyId),
+    supabase.from('survey_individual_responses').select('*').eq('survey_id', surveyId),
     supabase.from('branches').select('id, name').eq('status', 'active'),
   ]);
   if (!fullRes.success || !fullRes.data) return { success: false, error: fullRes.error };
   const { questions } = fullRes.data;
   const responses = (responsesRes.data ?? []) as SurveyBranchResponse[];
   const submissions = (submissionsRes.data ?? []) as SurveyBranchSubmission[];
+  const individualResponses = (individualResponsesRes.data ?? []) as SurveyIndividualResponse[];
   const branches = (branchesRes.data ?? []) as { id: string; name: string }[];
 
   // Only include branches that have any submission data
   const activeBranchIds = new Set([
     ...submissions.map((s) => s.branch_id),
     ...responses.map((r) => r.branch_id),
+    ...individualResponses.map((r) => r.branch_id),
   ]);
 
   const results: BranchResult[] = branches
@@ -201,13 +239,19 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
     .map((branch) => {
       const submission = submissions.find((s) => s.branch_id === branch.id);
       const branchResponses = responses.filter((r) => r.branch_id === branch.id);
+      const branchIndividualResponses = individualResponses.filter((r) => r.branch_id === branch.id);
+      const individualRespondentCount = new Set(
+        branchIndividualResponses.map((r) => `${r.respondent_type}:${r.respondent_id}`),
+      ).size;
 
       const questionResults = questions.map((q) => {
         const questionOptions = optionsForQuestion(fullRes.data!, q.id);
         const qResponses = branchResponses.filter((r) => r.question_id === q.id);
+        const qIndividualResponses = branchIndividualResponses.filter((r) => r.question_id === q.id);
         const counts = questionOptions.map((opt) => {
           const r = qResponses.find((r) => r.option_id === opt.id);
-          return { optionId: opt.id, label: opt.label, sentiment: opt.sentiment, count: r?.count ?? 0 };
+          const individualCount = qIndividualResponses.filter((answer) => answer.option_id === opt.id).length;
+          return { optionId: opt.id, label: opt.label, sentiment: opt.sentiment, count: (r?.count ?? 0) + individualCount };
         });
         const total = counts.reduce((s, c) => s + c.count, 0);
         const positiveCount = counts.filter((c) => c.sentiment === 'positive').reduce((s, c) => s + c.count, 0);
@@ -225,9 +269,10 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
       return {
         branchId: branch.id,
         branchName: branch.name,
-        totalRespondents: submission?.total_respondents ?? 0,
-        submitted: !!submission,
+        totalRespondents: Math.max(submission?.total_respondents ?? 0, individualRespondentCount),
+        submitted: !!submission || branchIndividualResponses.length > 0,
         questionResults,
+        individualResponses: branchIndividualResponses,
       };
     });
 
@@ -275,13 +320,15 @@ export async function getSurveyRespondentOptions(branchId: string) {
 }
 
 export async function getBranchSubmission(surveyId: string, branchId: string) {
-  const [submissionRes, responsesRes] = await Promise.all([
+  const [submissionRes, responsesRes, individualResponsesRes] = await Promise.all([
     supabase.from('survey_branch_submissions').select('*').eq('survey_id', surveyId).eq('branch_id', branchId).maybeSingle(),
     supabase.from('survey_branch_responses').select('*').eq('survey_id', surveyId).eq('branch_id', branchId),
+    supabase.from('survey_individual_responses').select('*').eq('survey_id', surveyId).eq('branch_id', branchId),
   ]);
   return {
     submission: submissionRes.data as SurveyBranchSubmission | null,
     responses: (responsesRes.data ?? []) as SurveyBranchResponse[],
+    individualResponses: (individualResponsesRes.data ?? []) as SurveyIndividualResponse[],
   };
 }
 
@@ -335,5 +382,24 @@ export async function saveBranchData(
   if (!res.ok) return { success: false, error: res.error || 'Failed to save survey data' };
 
   logActivity({ action_type: 'UPDATE', table_name: 'survey_branch_responses', description: `Submitted survey data for branch` });
+  return { success: true };
+}
+
+export async function saveIndividualResponses(
+  surveyId: string,
+  branchId: string,
+  respondent: { type: SurveyRespondentKind; id: string; name: string },
+  answers: { questionId: string; optionId?: string | null; optionIds?: string[]; textAnswer?: string | null }[],
+): Promise<{ success: boolean; error?: string }> {
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'save-individual-survey-responses',
+    surveyId,
+    branchId,
+    respondent,
+    answers,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to save individual responses' };
+
+  logActivity({ action_type: 'UPDATE', table_name: 'survey_individual_responses', description: `Submitted individual survey responses` });
   return { success: true };
 }

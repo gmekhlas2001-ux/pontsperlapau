@@ -28,6 +28,19 @@ const SURVEY_STATUSES = ["draft", "active", "closed"];
 const SENTIMENTS = ["positive", "negative", "neutral"];
 const SURVEY_RESPONDENT_TYPES = ["students", "staff", "students_staff"];
 const SURVEY_RESPONDENT_KINDS = ["student", "staff"];
+const SURVEY_QUESTION_TYPES = [
+  "short_answer",
+  "paragraph",
+  "multiple_choice",
+  "checkboxes",
+  "dropdown",
+  "linear_scale",
+  "rating",
+  "multiple_choice_grid",
+  "checkbox_grid",
+  "date",
+  "time",
+];
 
 type Caller = {
   id: string;
@@ -668,7 +681,13 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Surveys ────────────────────────────────────────────────────
-    if (op === "create-survey" || op === "update-survey-meta" || op === "delete-survey" || op === "save-branch-survey-data") {
+    if (
+      op === "create-survey" ||
+      op === "update-survey-meta" ||
+      op === "delete-survey" ||
+      op === "save-branch-survey-data" ||
+      op === "save-individual-survey-responses"
+    ) {
       const roleError = assertRoles(req, caller, ADMIN_ROLES);
       if (roleError) return roleError;
 
@@ -727,6 +746,8 @@ Deno.serve(async (req: Request) => {
                 ? sectionIdMap[question.sectionIndex] ?? null
                 : null,
               question_text: String(question.text ?? ""),
+              question_type: isOneOf(question.questionType, SURVEY_QUESTION_TYPES) ? question.questionType : "multiple_choice",
+              sentiment_enabled: Boolean(question.sentimentEnabled),
               order_index: index,
             })),
           ).select("id");
@@ -839,6 +860,144 @@ Deno.serve(async (req: Request) => {
       const branchId = cleanString(body.branchId);
       const branchError = assertBranch(req, caller, branchId);
       if (branchError) return branchError;
+
+      if (op === "save-individual-survey-responses") {
+        const respondent = body.respondent ?? {};
+        const respondentType = isOneOf(respondent.type, SURVEY_RESPONDENT_KINDS) ? respondent.type : null;
+        const respondentId = cleanString(respondent.id);
+        const respondentName = cleanString(respondent.name);
+        if (!surveyId || !branchId || !respondentType || !respondentId || !respondentName) {
+          return errorResponse(req, 400, "Invalid individual survey payload");
+        }
+
+        const { data: survey, error: surveyErr } = await supabase
+          .from("surveys")
+          .select("id, branch_id")
+          .eq("id", surveyId)
+          .maybeSingle();
+        if (surveyErr || !survey) return errorResponse(req, 404, "Survey not found", surveyErr);
+        if (survey.branch_id && survey.branch_id !== branchId) {
+          return errorResponse(req, 403, "Survey is outside this branch");
+        }
+
+        const { data: selectedRespondent, error: selectedErr } = await supabase
+          .from("survey_respondents")
+          .select("id")
+          .eq("survey_id", surveyId)
+          .eq("branch_id", branchId)
+          .eq("respondent_type", respondentType)
+          .eq("respondent_id", respondentId)
+          .maybeSingle();
+        if (selectedErr) return errorResponse(req, 500, "Failed to verify respondent", selectedErr);
+        if (!selectedRespondent) return errorResponse(req, 403, "Respondent is not assigned to this survey");
+
+        const answers = Array.isArray(body.answers) ? body.answers : [];
+        const cleanedAnswers = answers
+          .map((answer: any) => {
+            const singleOption = cleanString(answer.optionId);
+            const multiOptions = Array.isArray(answer.optionIds)
+              ? answer.optionIds.map((optionId: unknown) => cleanString(optionId)).filter(Boolean)
+              : [];
+            return {
+              questionId: cleanString(answer.questionId),
+              optionIds: multiOptions.length > 0 ? Array.from(new Set(multiOptions)) : singleOption ? [singleOption] : [],
+              textAnswer: cleanString(answer.textAnswer),
+            };
+          })
+          .filter((answer: any) => answer.questionId);
+        const questionIds = Array.from(new Set(cleanedAnswers.map((answer: any) => answer.questionId)));
+        if (questionIds.length > 0) {
+          const { data: validQuestions, error } = await supabase
+            .from("survey_questions")
+            .select("id")
+            .eq("survey_id", surveyId)
+            .in("id", questionIds);
+          if (error) return errorResponse(req, 500, "Failed to verify survey questions", error);
+          if ((validQuestions ?? []).length !== questionIds.length) {
+            return errorResponse(req, 400, "One or more answers do not belong to this survey");
+          }
+        }
+
+        const optionIds = Array.from(new Set(cleanedAnswers.flatMap((answer: any) => answer.optionIds).filter(Boolean)));
+        if (optionIds.length > 0) {
+          const { data: validOptions, error } = await supabase
+            .from("survey_response_options")
+            .select("id")
+            .eq("survey_id", surveyId)
+            .in("id", optionIds);
+          if (error) return errorResponse(req, 500, "Failed to verify survey options", error);
+          if ((validOptions ?? []).length !== optionIds.length) {
+            return errorResponse(req, 400, "One or more answers have invalid options");
+          }
+        }
+
+        const rows = cleanedAnswers.flatMap((answer: any) => {
+          const common = {
+            survey_id: surveyId,
+            branch_id: branchId,
+            respondent_type: respondentType,
+            respondent_id: respondentId,
+            respondent_name: respondentName,
+            question_id: answer.questionId,
+            answered_by: caller.id,
+            updated_at: new Date().toISOString(),
+          };
+          if (answer.optionIds.length > 0) {
+            return answer.optionIds.map((optionId: string) => ({
+              ...common,
+              option_id: optionId,
+              text_answer: null,
+            }));
+          }
+          if (answer.textAnswer) {
+            return [{ ...common, option_id: null, text_answer: answer.textAnswer }];
+          }
+          return [];
+        });
+
+        if (questionIds.length > 0) {
+          const { error } = await supabase
+            .from("survey_individual_responses")
+            .delete()
+            .eq("survey_id", surveyId)
+            .eq("branch_id", branchId)
+            .eq("respondent_type", respondentType)
+            .eq("respondent_id", respondentId)
+            .in("question_id", questionIds);
+          if (error) return errorResponse(req, 500, "Failed to clear survey responses", error);
+        }
+
+        if (rows.length > 0) {
+          const { error } = await supabase.from("survey_individual_responses").insert(rows);
+          if (error) return errorResponse(req, 500, "Failed to save individual survey responses", error);
+        }
+
+        const { data: allIndividual } = await supabase
+          .from("survey_individual_responses")
+          .select("respondent_type, respondent_id")
+          .eq("survey_id", surveyId)
+          .eq("branch_id", branchId);
+        const individualTotal = new Set((allIndividual ?? []).map((row: any) => `${row.respondent_type}:${row.respondent_id}`)).size;
+        const { data: existingSubmission } = await supabase
+          .from("survey_branch_submissions")
+          .select("total_respondents")
+          .eq("survey_id", surveyId)
+          .eq("branch_id", branchId)
+          .maybeSingle();
+        const { error: subErr } = await supabase.from("survey_branch_submissions").upsert(
+          {
+            survey_id: surveyId,
+            branch_id: branchId,
+            total_respondents: Math.max(Number(existingSubmission?.total_respondents ?? 0), individualTotal),
+            submitted_by: caller.id,
+          },
+          { onConflict: "survey_id,branch_id" },
+        );
+        if (subErr) return errorResponse(req, 500, "Failed to save survey submission", subErr);
+
+        return jsonResponse(req, { success: true });
+      }
+
       if (!surveyId || !branchId || Number(body.totalRespondents) < 0) {
         return errorResponse(req, 400, "Invalid branch survey payload");
       }

@@ -21,7 +21,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveRowsAsExcel, type ExcelRow } from '@/lib/excel';
 import type { GradeStudent } from './gradesService';
-import type { BranchResult, SurveyFull } from './surveyService';
+import { optionsForQuestion, type BranchResult, type SurveyFull, type SurveyIndividualResponse } from './surveyService';
 
 // ─── shared helpers ──────────────────────────────────────────────────────────
 
@@ -102,12 +102,16 @@ function surveyQuestionAggregates(survey: SurveyFull, results: BranchResult[]) {
     let negativeTotal = 0;
     let neutralTotal = 0;
     let grandTotal = 0;
+    const optionTotals = new Map<string, { label: string; count: number }>();
 
     results.forEach((b) => {
       const qr = b.questionResults.find((r) => r.questionId === q.id);
       if (!qr) return;
       qr.counts.forEach((c) => {
         grandTotal += c.count;
+        const current = optionTotals.get(c.optionId) ?? { label: c.label, count: 0 };
+        current.count += c.count;
+        optionTotals.set(c.optionId, current);
         if (c.sentiment === 'positive') positiveTotal += c.count;
         else if (c.sentiment === 'negative') negativeTotal += c.count;
         else neutralTotal += c.count;
@@ -123,12 +127,42 @@ function surveyQuestionAggregates(survey: SurveyFull, results: BranchResult[]) {
       positiveRate: grandTotal > 0 ? positiveTotal / grandTotal : 0,
       negativeRate: grandTotal > 0 ? negativeTotal / grandTotal : 0,
       neutralRate: grandTotal > 0 ? neutralTotal / grandTotal : 0,
+      optionCounts: Array.from(optionTotals.values()),
     };
   });
 }
 
 function pct(value: number): string {
   return `${Math.round(value * 100)}%`;
+}
+
+function questionTypeLabel(value?: string): string {
+  return (value ?? 'multiple_choice')
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function sectionTitleForQuestion(survey: SurveyFull, sectionId?: string | null): string {
+  if (!sectionId) return '';
+  return survey.sections.find((section) => section.id === sectionId)?.title ?? '';
+}
+
+function answerTextForIndividualExport(survey: SurveyFull, response: SurveyIndividualResponse): string {
+  if (response.text_answer) return response.text_answer;
+  if (response.option_id) return survey.options.find((option) => option.id === response.option_id)?.label ?? '';
+  return '';
+}
+
+function individualRowsForExport(survey: SurveyFull, results: BranchResult[]) {
+  return results.flatMap((branch) =>
+    branch.individualResponses.map((response) => ({
+      branchName: branch.branchName,
+      response,
+      questionText: survey.questions.find((question) => question.id === response.question_id)?.question_text ?? '',
+      answerText: answerTextForIndividualExport(survey, response),
+    })),
+  );
 }
 
 // ─── PDF / Excel: Survey Results ─────────────────────────────────────────────
@@ -145,6 +179,8 @@ export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult
   const submittedBranches = results.filter((branch) => branch.submitted).length;
   const targetStudents = survey.respondents.filter((respondent) => respondent.respondent_type === 'student').length;
   const targetStaff = survey.respondents.filter((respondent) => respondent.respondent_type === 'staff').length;
+  const hasSentimentAnalytics = survey.questions.some((question) => question.sentiment_enabled);
+  const individualRows = individualRowsForExport(survey, results);
   const avgSatisfaction = aggregates.length > 0
     ? aggregates.reduce((sum, q) => sum + q.positiveRate, 0) / aggregates.length
     : 0;
@@ -164,7 +200,9 @@ export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult
   const kpis = [
     ['Total Respondents', totalRespondents.toLocaleString()],
     ['Target Students / Staff', `${targetStudents} / ${targetStaff}`],
-    ['Average Positive', pct(avgSatisfaction)],
+    hasSentimentAnalytics
+      ? ['Average Satisfaction', pct(avgSatisfaction)]
+      : ['Individual Answers', individualRows.length.toLocaleString()],
   ];
   const cardW = (usableW - 8) / 3;
   kpis.forEach(([label, value], index) => {
@@ -185,7 +223,7 @@ export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(15, 23, 42);
-  doc.text('Satisfaction by Branch', margin, y);
+  doc.text(hasSentimentAnalytics ? 'Satisfaction by Branch' : 'Responses by Branch', margin, y);
   y += 7;
 
   const branchRows = results.slice(0, 8);
@@ -193,7 +231,8 @@ export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult
     const avg = branch.questionResults.length > 0
       ? branch.questionResults.reduce((sum, q) => sum + q.positiveRate, 0) / branch.questionResults.length
       : 0;
-    const barW = Math.max(1, Math.round((usableW - 62) * avg));
+    const metric = hasSentimentAnalytics ? avg : (totalRespondents > 0 ? branch.totalRespondents / totalRespondents : 0);
+    const barW = Math.max(1, Math.round((usableW - 62) * metric));
     doc.setFontSize(8);
     doc.setTextColor(51, 65, 85);
     doc.text(branch.branchName.slice(0, 32), margin, y + 3);
@@ -201,20 +240,22 @@ export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult
     doc.roundedRect(margin + 50, y - 1, usableW - 62, 5, 2, 2, 'F');
     doc.setFillColor(avg >= 0.75 ? 16 : avg >= 0.5 ? 245 : 239, avg >= 0.75 ? 185 : avg >= 0.5 ? 158 : 68, avg >= 0.75 ? 129 : avg >= 0.5 ? 11 : 68);
     doc.roundedRect(margin + 50, y - 1, barW, 5, 2, 2, 'F');
-    doc.text(pct(avg), pageW - margin - 10, y + 3, { align: 'right' });
+    doc.text(hasSentimentAnalytics ? pct(avg) : branch.totalRespondents.toLocaleString(), pageW - margin - 10, y + 3, { align: 'right' });
     y += 8;
   });
 
   y += 5;
   autoTable(doc, {
     startY: y,
-    head: [['#', 'Question', 'Positive', 'Negative', 'Neutral', 'Responses']],
+    head: [hasSentimentAnalytics
+      ? ['#', 'Question', 'Positive', 'Negative', 'Neutral', 'Responses']
+      : ['#', 'Question', 'Answer Distribution', 'Responses']],
     body: aggregates.map((qa, index) => [
       String(index + 1),
       qa.question.question_text,
-      pct(qa.positiveRate),
-      pct(qa.negativeRate),
-      pct(qa.neutralRate),
+      ...(hasSentimentAnalytics
+        ? [pct(qa.positiveRate), pct(qa.negativeRate), pct(qa.neutralRate)]
+        : [qa.optionCounts.map((option) => `${option.label}: ${option.count}`).join(' | ')]),
       qa.grandTotal.toLocaleString(),
     ]),
     headStyles: { fillColor: [13, 148, 136], textColor: 255 },
@@ -237,7 +278,12 @@ export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult
   y += 7;
   autoTable(doc, {
     startY: y + 2,
-    head: [['Branch', 'Respondents', 'Average Positive', ...survey.questions.map((_, index) => `Q${index + 1}`)]],
+    head: [[
+      'Branch',
+      'Respondents',
+      hasSentimentAnalytics ? 'Average Satisfaction' : 'Individual Answers',
+      ...survey.questions.map((_, index) => `Q${index + 1}`),
+    ]],
     body: results.map((branch) => {
       const avg = branch.questionResults.length > 0
         ? branch.questionResults.reduce((sum, q) => sum + q.positiveRate, 0) / branch.questionResults.length
@@ -245,14 +291,61 @@ export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult
       return [
         branch.branchName,
         String(branch.totalRespondents),
-        pct(avg),
-        ...branch.questionResults.map((q) => pct(q.positiveRate)),
+        hasSentimentAnalytics ? pct(avg) : String(branch.individualResponses.length),
+        ...branch.questionResults.map((q) => hasSentimentAnalytics ? pct(q.positiveRate) : String(q.total)),
       ];
     }),
     headStyles: { fillColor: [13, 148, 136], textColor: 255 },
     alternateRowStyles: { fillColor: [240, 253, 250] },
     styles: { fontSize: 7, cellPadding: 1.8 },
   });
+
+  doc.addPage();
+  y = addPDFHeader(doc, 'Survey Questionnaire - Dari', survey.title);
+  autoTable(doc, {
+    startY: y + 2,
+    head: [['Section', '#', 'Type', 'Question (Dari)', 'Answer Options (Dari)']],
+    body: survey.questions.map((question, index) => [
+      sectionTitleForQuestion(survey, question.section_id),
+      String(index + 1),
+      questionTypeLabel(question.question_type),
+      question.question_text,
+      optionsForQuestion(survey, question.id).map((option) => option.label).join(' | '),
+    ]),
+    headStyles: { fillColor: [13, 148, 136], textColor: 255 },
+    alternateRowStyles: { fillColor: [240, 253, 250] },
+    columnStyles: {
+      0: { cellWidth: 38 },
+      1: { halign: 'center', cellWidth: 10 },
+      2: { cellWidth: 28 },
+      3: { cellWidth: 120 },
+    },
+    styles: { fontSize: 7, cellPadding: 1.8, overflow: 'linebreak' },
+  });
+
+  if (individualRows.length > 0) {
+    doc.addPage();
+    y = addPDFHeader(doc, 'Individual Responses', survey.title);
+    autoTable(doc, {
+      startY: y + 2,
+      head: [['Branch', 'Respondent', 'Type', 'Question', 'Answer', 'Updated']],
+      body: individualRows.map((row) => [
+        row.branchName,
+        row.response.respondent_name,
+        row.response.respondent_type === 'student' ? 'Student' : 'Staff',
+        row.questionText,
+        row.answerText,
+        new Date(row.response.updated_at).toLocaleString(),
+      ]),
+      headStyles: { fillColor: [13, 148, 136], textColor: 255 },
+      alternateRowStyles: { fillColor: [240, 253, 250] },
+      columnStyles: {
+        3: { cellWidth: 95 },
+        4: { cellWidth: 60 },
+      },
+      styles: { fontSize: 7, cellPadding: 1.8, overflow: 'linebreak' },
+    });
+  }
 
   if (survey.respondents.length > 0) {
     doc.addPage();
@@ -284,6 +377,8 @@ export async function exportSurveyResultsExcel(survey: SurveyFull, results: Bran
   const submittedBranches = results.filter((branch) => branch.submitted).length;
   const targetStudents = survey.respondents.filter((respondent) => respondent.respondent_type === 'student').length;
   const targetStaff = survey.respondents.filter((respondent) => respondent.respondent_type === 'staff').length;
+  const hasSentimentAnalytics = survey.questions.some((question) => question.sentiment_enabled);
+  const individualRows = individualRowsForExport(survey, results);
   const avgSatisfaction = aggregates.length > 0
     ? aggregates.reduce((sum, q) => sum + q.positiveRate, 0) / aggregates.length
     : 0;
@@ -320,20 +415,28 @@ export async function exportSurveyResultsExcel(survey: SurveyFull, results: Bran
     { Metric: 'Total Respondents', Value: totalRespondents },
     { Metric: 'Branches Submitted', Value: submittedBranches },
     { Metric: 'Branches With Data', Value: results.length },
-    { Metric: 'Average Positive Rate', Value: pct(avgSatisfaction) },
+    { Metric: hasSentimentAnalytics ? 'Average Satisfaction Rate' : 'Individual Answers', Value: hasSentimentAnalytics ? pct(avgSatisfaction) : individualRows.length },
   ]);
 
-  addSheet('Question Summary', aggregates.map((qa, index) => ({
-    '#': index + 1,
-    Question: qa.question.question_text,
-    Responses: qa.grandTotal,
-    Positive: qa.positiveTotal,
-    'Positive %': pct(qa.positiveRate),
-    Negative: qa.negativeTotal,
-    'Negative %': pct(qa.negativeRate),
-    Neutral: qa.neutralTotal,
-    'Neutral %': pct(qa.neutralRate),
-  })));
+  addSheet('Question Summary', aggregates.map((qa, index) => {
+    const base: Record<string, string | number> = {
+      '#': index + 1,
+      Question: qa.question.question_text,
+      Type: questionTypeLabel(qa.question.question_type),
+      Responses: qa.grandTotal,
+      'Answer Distribution': qa.optionCounts.map((option) => `${option.label}: ${option.count}`).join(' | '),
+    };
+    if (!hasSentimentAnalytics) return base;
+    return {
+      ...base,
+      Positive: qa.positiveTotal,
+      'Positive %': pct(qa.positiveRate),
+      Negative: qa.negativeTotal,
+      'Negative %': pct(qa.negativeRate),
+      Neutral: qa.neutralTotal,
+      'Neutral %': pct(qa.neutralRate),
+    };
+  }));
 
   addSheet('Branch Summary', results.map((branch) => {
     const avg = branch.questionResults.length > 0
@@ -343,10 +446,10 @@ export async function exportSurveyResultsExcel(survey: SurveyFull, results: Bran
       Branch: branch.branchName,
       Respondents: branch.totalRespondents,
       Submitted: branch.submitted ? 'Yes' : 'No',
-      'Average Positive %': pct(avg),
+      [hasSentimentAnalytics ? 'Average Satisfaction %' : 'Individual Answers']: hasSentimentAnalytics ? pct(avg) : branch.individualResponses.length,
     };
     branch.questionResults.forEach((q, index) => {
-      row[`Q${index + 1} Positive %`] = pct(q.positiveRate);
+      row[hasSentimentAnalytics ? `Q${index + 1} Satisfaction %` : `Q${index + 1} Responses`] = hasSentimentAnalytics ? pct(q.positiveRate) : q.total;
     });
     return row;
   }));
@@ -359,11 +462,30 @@ export async function exportSurveyResultsExcel(survey: SurveyFull, results: Bran
         Question: `Q${questionIndex + 1}`,
         'Question Text': question.questionText,
         Option: count.label,
-        Sentiment: count.sentiment,
+        ...(hasSentimentAnalytics ? { 'Result Tag': count.sentiment } : {}),
         Count: count.count,
       }))
     )
   ));
+
+  addSheet('Questionnaire Dari', survey.questions.map((question, index) => ({
+    Section: sectionTitleForQuestion(survey, question.section_id),
+    '#': index + 1,
+    Type: questionTypeLabel(question.question_type),
+    'Question (Dari)': question.question_text,
+    'Answer Options (Dari)': optionsForQuestion(survey, question.id).map((option) => option.label).join(' | '),
+  })));
+
+  addSheet('Individual Responses', individualRows.length > 0
+    ? individualRows.map((row) => ({
+        Branch: row.branchName,
+        Respondent: row.response.respondent_name,
+        Type: row.response.respondent_type === 'student' ? 'Student' : 'Staff',
+        Question: row.questionText,
+        Answer: row.answerText,
+        Updated: new Date(row.response.updated_at).toLocaleString(),
+      }))
+    : [{ Branch: '', Respondent: '', Type: '', Question: '', Answer: '', Updated: '' }]);
 
   addSheet('Target Respondents', survey.respondents.map((respondent) => ({
     Type: respondent.respondent_type === 'student' ? 'Student' : 'Staff',
