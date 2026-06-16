@@ -55,6 +55,7 @@ export interface SurveyQuestion {
 export interface SurveyResponseOption {
   id: string;
   survey_id: string;
+  question_id?: string | null;
   label: string;
   order_index: number;
   sentiment: Sentiment;
@@ -122,7 +123,7 @@ export interface CreateSurveyPayload {
   respondentIds: { type: SurveyRespondentKind; id: string; name: string }[];
   status: SurveyStatus;
   sections: { title: string; description?: string }[];
-  questions: { text: string; sectionIndex: number | null }[];
+  questions: { text: string; sectionIndex: number | null; options?: { label: string; sentiment: Sentiment }[] }[];
   options: { label: string; sentiment: Sentiment }[];
 }
 
@@ -169,6 +170,13 @@ export async function getSurveyFull(surveyId: string): Promise<{ success: boolea
   };
 }
 
+export function optionsForQuestion(survey: Pick<SurveyFull, 'options'>, questionId: string) {
+  const questionOptions = survey.options.filter((option) => option.question_id === questionId);
+  return questionOptions.length > 0
+    ? questionOptions
+    : survey.options.filter((option) => !option.question_id);
+}
+
 export async function getSurveyResults(surveyId: string): Promise<{ success: boolean; data?: BranchResult[]; error?: string }> {
   const [fullRes, responsesRes, submissionsRes, branchesRes] = await Promise.all([
     getSurveyFull(surveyId),
@@ -177,7 +185,7 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
     supabase.from('branches').select('id, name').eq('status', 'active'),
   ]);
   if (!fullRes.success || !fullRes.data) return { success: false, error: fullRes.error };
-  const { questions, options } = fullRes.data;
+  const { questions } = fullRes.data;
   const responses = (responsesRes.data ?? []) as SurveyBranchResponse[];
   const submissions = (submissionsRes.data ?? []) as SurveyBranchSubmission[];
   const branches = (branchesRes.data ?? []) as { id: string; name: string }[];
@@ -195,8 +203,9 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
       const branchResponses = responses.filter((r) => r.branch_id === branch.id);
 
       const questionResults = questions.map((q) => {
+        const questionOptions = optionsForQuestion(fullRes.data!, q.id);
         const qResponses = branchResponses.filter((r) => r.question_id === q.id);
-        const counts = options.map((opt) => {
+        const counts = questionOptions.map((opt) => {
           const r = qResponses.find((r) => r.option_id === opt.id);
           return { optionId: opt.id, label: opt.label, sentiment: opt.sentiment, count: r?.count ?? 0 };
         });

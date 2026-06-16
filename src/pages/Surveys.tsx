@@ -50,6 +50,7 @@ import {
 import {
   getSurveys, getSurveyFull, getSurveyResults, getBranchSubmission,
   createSurvey, updateSurveyMeta, deleteSurvey, saveBranchData, getSurveyRespondentOptions,
+  optionsForQuestion,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
   type SurveyRespondentType, type SurveyRespondentKind,
 } from '@/services/surveyService';
@@ -1044,14 +1045,14 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   };
 
   const rowTotal = (qId: string) =>
-    survey.options.reduce((s, o) => s + (parseInt(counts[qId]?.[o.id] ?? '0') || 0), 0);
+    optionsForQuestion(survey, qId).reduce((s, o) => s + (parseInt(counts[qId]?.[o.id] ?? '0') || 0), 0);
 
   const handleSave = async () => {
     if (!branchId) { toast.error('Please select a branch'); return; }
     const total = parseInt(totalRespondents) || 0;
     setSaving(true);
     const flatCounts = survey.questions.flatMap((q) =>
-      survey.options.map((o) => ({ questionId: q.id, optionId: o.id, count: parseInt(counts[q.id]?.[o.id] ?? '0') || 0 }))
+      optionsForQuestion(survey, q.id).map((o) => ({ questionId: q.id, optionId: o.id, count: parseInt(counts[q.id]?.[o.id] ?? '0') || 0 }))
     );
     const res = await saveBranchData(survey.id, branchId, total, flatCounts);
     setSaving(false);
@@ -1067,6 +1068,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   // overall completion: how many questions have a non-zero row total
   const filledCount = survey.questions.filter((q) => rowTotal(q.id) > 0).length;
   const completionPct = survey.questions.length > 0 ? Math.round((filledCount / survey.questions.length) * 100) : 0;
+  const maxOptionCount = Math.max(1, ...survey.questions.map((question) => optionsForQuestion(survey, question.id).length));
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -1137,20 +1139,21 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
             Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="rounded-xl border p-4 space-y-3">
                 <Skeleton className="h-4 w-3/4" />
-                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${survey.options.length}, 1fr)` }}>
-                  {survey.options.map((_, j) => <Skeleton key={j} className="h-20 rounded-lg" />)}
+                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(maxOptionCount, 6)}, minmax(0, 1fr))` }}>
+                  {Array.from({ length: maxOptionCount }).map((_, j) => <Skeleton key={j} className="h-20 rounded-lg" />)}
                 </div>
               </div>
             ))
           ) : (
             survey.questions.map((q, qi) => {
+              const questionOptions = optionsForQuestion(survey, q.id);
               const total = rowTotal(q.id);
               const over = respondentsNum > 0 && total > respondentsNum;
               const exact = respondentsNum > 0 && total === respondentsNum;
-              const positiveCount = survey.options
+              const positiveCount = questionOptions
                 .filter((o) => o.sentiment === 'positive')
                 .reduce((s, o) => s + (parseInt(counts[q.id]?.[o.id] ?? '0') || 0), 0);
-              const negativeCount = survey.options
+              const negativeCount = questionOptions
                 .filter((o) => o.sentiment === 'negative')
                 .reduce((s, o) => s + (parseInt(counts[q.id]?.[o.id] ?? '0') || 0), 0);
               const posW = total > 0 ? (positiveCount / total) * 100 : 0;
@@ -1194,9 +1197,9 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                   <div className="px-4 pb-3">
                     <div
                       className="grid gap-2"
-                      style={{ gridTemplateColumns: `repeat(${Math.min(survey.options.length, 6)}, 1fr)` }}
+                      style={{ gridTemplateColumns: `repeat(${Math.min(questionOptions.length || 1, 6)}, minmax(0, 1fr))` }}
                     >
-                      {survey.options.map((opt) => {
+                      {questionOptions.map((opt) => {
                         const val = counts[q.id]?.[opt.id] ?? '';
                         const num = parseInt(val) || 0;
                         return (

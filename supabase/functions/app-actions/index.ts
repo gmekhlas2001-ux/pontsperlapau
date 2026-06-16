@@ -718,8 +718,9 @@ Deno.serve(async (req: Request) => {
         }
 
         const questions = Array.isArray(body.questions) ? body.questions : [];
+        const questionIdMap: Record<number, string> = {};
         if (questions.length > 0) {
-          const { error } = await supabase.from("survey_questions").insert(
+          const { data, error } = await supabase.from("survey_questions").insert(
             questions.map((question: any, index: number) => ({
               survey_id: survey.id,
               section_id: question.sectionIndex !== null && question.sectionIndex !== undefined
@@ -728,22 +729,38 @@ Deno.serve(async (req: Request) => {
               question_text: String(question.text ?? ""),
               order_index: index,
             })),
-          );
+          ).select("id");
           if (error) {
             await supabase.from("surveys").delete().eq("id", survey.id);
             return errorResponse(req, 400, "Failed to create survey questions", error);
           }
+          (data ?? []).forEach((question: any, index: number) => { questionIdMap[index] = question.id; });
         }
 
         const options = Array.isArray(body.options) ? body.options : [];
-        if (options.length > 0) {
-          const { error } = await supabase.from("survey_response_options").insert(
-            options.map((option: any, index: number) => ({
+        const perQuestionOptions = questions.flatMap((question: any, questionIndex: number) =>
+          Array.isArray(question.options)
+            ? question.options.map((option: any, optionIndex: number) => ({
               survey_id: survey.id,
+              question_id: questionIdMap[questionIndex] ?? null,
               label: String(option.label ?? ""),
               sentiment: isOneOf(option.sentiment, SENTIMENTS) ? option.sentiment : "neutral",
-              order_index: index,
-            })),
+              order_index: optionIndex,
+            }))
+            : []
+        );
+        const optionRows = perQuestionOptions.length > 0
+          ? perQuestionOptions
+          : options.map((option: any, index: number) => ({
+            survey_id: survey.id,
+            question_id: null,
+            label: String(option.label ?? ""),
+            sentiment: isOneOf(option.sentiment, SENTIMENTS) ? option.sentiment : "neutral",
+            order_index: index,
+          }));
+        if (optionRows.length > 0) {
+          const { error } = await supabase.from("survey_response_options").insert(
+            optionRows,
           );
           if (error) {
             await supabase.from("surveys").delete().eq("id", survey.id);
