@@ -11,7 +11,7 @@
  * (distinguished by the `existing` prop).
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,7 +56,13 @@ import {
   type SurveyRespondent, type SurveyIndividualResponse,
 } from '@/services/surveyService';
 import { getBranches, type Branch } from '@/services/branchService';
-import { exportSurveyResultsExcel, exportSurveyResultsPDF } from '@/services/exportService';
+import {
+  exportSurveyIndividualExcel,
+  exportSurveyIndividualPDF,
+  exportSurveyResultsExcel,
+  exportSurveyResultsPDF,
+  type SurveyIndividualExportTarget,
+} from '@/services/exportService';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n';
 
@@ -1791,8 +1797,11 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
 function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () => void; survey: SurveyFull }) {
   const [results, setResults] = useState<BranchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
-  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingGeneralPdf, setExportingGeneralPdf] = useState(false);
+  const [exportingGeneralExcel, setExportingGeneralExcel] = useState(false);
+  const [exportingIndividualPdf, setExportingIndividualPdf] = useState(false);
+  const [exportingIndividualExcel, setExportingIndividualExcel] = useState(false);
+  const [selectedExportTargetKey, setSelectedExportTargetKey] = useState('');
   const [tab, setTab] = useState('overview');
 
   useEffect(() => {
@@ -1876,6 +1885,31 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
       answerText: answerTextForResponse(survey, response),
     })),
   );
+  const individualExportTargets = useMemo(() => {
+    const targets = new Map<string, SurveyIndividualExportTarget & { key: string; answerCount: number }>();
+    individualRows.forEach((row) => {
+      const key = `${row.branch_id}:${row.respondent_type}:${row.respondent_id}`;
+      const current = targets.get(key);
+      if (current) {
+        current.answerCount += 1;
+        return;
+      }
+      targets.set(key, {
+        key,
+        branchId: row.branch_id,
+        branchName: row.branchName,
+        respondentType: row.respondent_type,
+        respondentId: row.respondent_id,
+        respondentName: row.respondent_name,
+        answerCount: 1,
+      });
+    });
+    return Array.from(targets.values()).sort((a, b) =>
+      a.respondentName.localeCompare(b.respondentName, i18n.language)
+    );
+  }, [individualRows]);
+  const selectedIndividualExportTarget =
+    individualExportTargets.find((target) => target.key === selectedExportTargetKey) ?? individualExportTargets[0];
   const hasResultData = results.length > 0 && (totalRespondents > 0 || questionAggregates.some((q) => q.grandTotal > 0));
 
   return (
@@ -2139,42 +2173,109 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
         )}
 
         <div className="shrink-0 border-t bg-background px-4 py-3 sm:px-6 lg:px-8">
-          <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={async () => {
-                setExportingPdf(true);
-                try {
-                  await exportSurveyResultsPDF(survey, results);
-                } catch {
-                  toast.error('PDF export failed. Downloaded an HTML fallback instead.');
-                } finally {
-                  setExportingPdf(false);
-                }
-              }}
-              disabled={loading || exportingPdf}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              {exportingPdf ? 'Exporting...' : 'PDF'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                setExportingExcel(true);
-                try {
-                  await exportSurveyResultsExcel(survey, results);
-                } finally {
-                  setExportingExcel(false);
-                }
-              }}
-              disabled={loading || exportingExcel}
-            >
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              {exportingExcel ? 'Exporting...' : 'Excel'}
-            </Button>
-          </div>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:w-20">General</span>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    setExportingGeneralPdf(true);
+                    try {
+                      await exportSurveyResultsPDF(survey, results);
+                    } catch {
+                      toast.error('PDF export failed. Downloaded an HTML fallback instead.');
+                    } finally {
+                      setExportingGeneralPdf(false);
+                    }
+                  }}
+                  disabled={loading || exportingGeneralPdf}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  {exportingGeneralPdf ? 'Exporting...' : 'General PDF'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    setExportingGeneralExcel(true);
+                    try {
+                      await exportSurveyResultsExcel(survey, results);
+                    } catch {
+                      toast.error('Excel export failed');
+                    } finally {
+                      setExportingGeneralExcel(false);
+                    }
+                  }}
+                  disabled={loading || exportingGeneralExcel}
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  {exportingGeneralExcel ? 'Exporting...' : 'General Excel'}
+                </Button>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:w-20">Individual</span>
+                <Select
+                  value={selectedIndividualExportTarget?.key ?? ''}
+                  onValueChange={setSelectedExportTargetKey}
+                  disabled={loading || individualExportTargets.length === 0}
+                >
+                  <SelectTrigger className="w-full sm:w-[280px]">
+                    <SelectValue placeholder="Select student or staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {individualExportTargets.map((target) => (
+                      <SelectItem key={target.key} value={target.key}>
+                        {target.respondentName} · {displayRespondentType(target.respondentType)} · {target.answerCount}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (!selectedIndividualExportTarget) {
+                      toast.error('Select a student or staff member first');
+                      return;
+                    }
+                    setExportingIndividualPdf(true);
+                    try {
+                      await exportSurveyIndividualPDF(survey, results, selectedIndividualExportTarget);
+                    } catch {
+                      toast.error('Individual PDF export failed. Downloaded an HTML fallback instead.');
+                    } finally {
+                      setExportingIndividualPdf(false);
+                    }
+                  }}
+                  disabled={loading || exportingIndividualPdf || !selectedIndividualExportTarget}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  {exportingIndividualPdf ? 'Exporting...' : 'Person PDF'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (!selectedIndividualExportTarget) {
+                      toast.error('Select a student or staff member first');
+                      return;
+                    }
+                    setExportingIndividualExcel(true);
+                    try {
+                      await exportSurveyIndividualExcel(survey, results, selectedIndividualExportTarget);
+                    } catch {
+                      toast.error('Individual Excel export failed');
+                    } finally {
+                      setExportingIndividualExcel(false);
+                    }
+                  }}
+                  disabled={loading || exportingIndividualExcel || !selectedIndividualExportTarget}
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  {exportingIndividualExcel ? 'Exporting...' : 'Person Excel'}
+                </Button>
+              </div>
+            </div>
+            <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
         </div>
       </DialogContent>
