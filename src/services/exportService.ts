@@ -2,8 +2,9 @@
  * Export Service — PDF & Excel generation for school reports.
  *
  * Exports are generated entirely in the browser (no server round-trip).
- * jsPDF + jspdf-autotable handle school PDFs; survey PDFs use browser print
- * so Dari/Persian text keeps proper RTL shaping. ExcelJS handles Excel.
+ * jsPDF + jspdf-autotable handle school PDFs; survey PDFs rasterize the
+ * browser-rendered report so Dari/Persian text keeps proper RTL shaping.
+ * ExcelJS handles Excel.
  *
  * Available exports
  * ─────────────────
@@ -206,7 +207,7 @@ function buildAnswerDistributionHtml(
   }).join('');
 }
 
-function openPrintableSurveyReport(filename: string, html: string) {
+async function downloadSurveyReportPDF(filename: string, html: string) {
   const downloadHtmlFallback = () => {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     downloadBlob(blob, filename.replace(/\.pdf$/i, '.html'));
@@ -216,48 +217,94 @@ function openPrintableSurveyReport(filename: string, html: string) {
   iframe.title = filename;
   iframe.setAttribute('aria-hidden', 'true');
   iframe.style.position = 'fixed';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
+  iframe.style.left = '-10000px';
+  iframe.style.top = '0';
+  iframe.style.width = '1200px';
+  iframe.style.height = '1600px';
   iframe.style.border = '0';
   iframe.style.opacity = '0';
   iframe.style.pointerEvents = 'none';
 
-  let printed = false;
-  const cleanup = () => {
-    setTimeout(() => iframe.remove(), 1000);
-  };
-  const printFrame = () => {
-    if (printed) return;
-    printed = true;
-    const frameWindow = iframe.contentWindow;
-    if (!frameWindow) {
-      cleanup();
-      downloadHtmlFallback();
-      return;
-    }
-    frameWindow.focus();
-    frameWindow.addEventListener('afterprint', cleanup, { once: true });
-    setTimeout(() => {
-      try {
-        frameWindow.print();
-      } catch {
-        cleanup();
-        downloadHtmlFallback();
-      }
-    }, 150);
-    setTimeout(cleanup, 60_000);
-  };
+  try {
+    const { default: html2canvas } = await import('html2canvas');
+    await new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error('Timed out while preparing the survey PDF')), 10_000);
+      iframe.onload = () => {
+        window.clearTimeout(timeout);
+        resolve();
+      };
+      document.body.appendChild(iframe);
+      iframe.srcdoc = html;
+    });
 
-  iframe.onload = printFrame;
-  document.body.appendChild(iframe);
-  iframe.srcdoc = html;
+    const frameDocument = iframe.contentDocument;
+    const reportElement = frameDocument?.querySelector('.report') as HTMLElement | null;
+    if (!frameDocument || !reportElement) throw new Error('Survey PDF report could not be prepared');
+
+    await frameDocument.fonts?.ready;
+    await new Promise<void>((resolve) => {
+      const frameWindow = iframe.contentWindow;
+      if (!frameWindow) {
+        resolve();
+        return;
+      }
+      frameWindow.requestAnimationFrame(() => resolve());
+    });
+    await new Promise<void>((resolve) => {
+      const frameWindow = iframe.contentWindow;
+      if (!frameWindow) {
+        resolve();
+        return;
+      }
+      frameWindow.requestAnimationFrame(() => resolve());
+    });
+
+    const maxCanvasHeight = 30_000;
+    const reportHeight = Math.max(1, reportElement.scrollHeight);
+    const scale = Math.min(1.5, window.devicePixelRatio || 1.25, maxCanvasHeight / reportHeight);
+    const canvas = await html2canvas(reportElement, {
+      backgroundColor: '#ffffff',
+      logging: false,
+      scale,
+      useCORS: true,
+      windowWidth: 1200,
+      windowHeight: Math.max(1600, reportHeight),
+    });
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const canvasPageHeight = Math.floor(canvas.width * (pageHeight / pageWidth));
+    const pageCanvas = document.createElement('canvas');
+    pageCanvas.width = canvas.width;
+    pageCanvas.height = canvasPageHeight;
+    const pageContext = pageCanvas.getContext('2d');
+    if (!pageContext) throw new Error('Survey PDF canvas could not be prepared');
+
+    for (let sourceY = 0, pageIndex = 0; sourceY < canvas.height; sourceY += canvasPageHeight, pageIndex += 1) {
+      const sliceHeight = Math.min(canvasPageHeight, canvas.height - sourceY);
+      pageContext.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
+      pageContext.fillStyle = '#ffffff';
+      pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      pageContext.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+
+      if (pageIndex > 0) pdf.addPage();
+      pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, pageHeight);
+    }
+
+    pdf.save(filename);
+  } catch (error) {
+    console.error('Failed to generate survey PDF', error);
+    downloadHtmlFallback();
+    throw error;
+  } finally {
+    iframe.remove();
+  }
 }
 
 // ─── PDF / Excel: Survey Results ─────────────────────────────────────────────
 
-export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult[]): void {
+export async function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult[]): Promise<void> {
   const aggregates = surveyQuestionAggregates(survey, results);
   const totalRespondents = results.reduce((sum, branch) => sum + branch.totalRespondents, 0);
   const submittedBranches = results.filter((branch) => branch.submitted).length;
@@ -644,7 +691,7 @@ export function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult
       </body>
     </html>`;
 
-  openPrintableSurveyReport(filename, html);
+  await downloadSurveyReportPDF(filename, html);
 }
 
 export async function exportSurveyResultsExcel(survey: SurveyFull, results: BranchResult[]): Promise<void> {

@@ -1791,6 +1791,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
 function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () => void; survey: SurveyFull }) {
   const [results, setResults] = useState<BranchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [tab, setTab] = useState('overview');
 
@@ -2142,11 +2143,20 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               variant="outline"
-              onClick={() => exportSurveyResultsPDF(survey, results)}
-              disabled={loading}
+              onClick={async () => {
+                setExportingPdf(true);
+                try {
+                  await exportSurveyResultsPDF(survey, results);
+                } catch {
+                  toast.error('PDF export failed. Downloaded an HTML fallback instead.');
+                } finally {
+                  setExportingPdf(false);
+                }
+              }}
+              disabled={loading || exportingPdf}
             >
               <FileText className="mr-2 h-4 w-4" />
-              PDF
+              {exportingPdf ? 'Exporting...' : 'PDF'}
             </Button>
             <Button
               variant="outline"
