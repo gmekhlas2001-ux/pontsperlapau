@@ -207,18 +207,52 @@ function buildAnswerDistributionHtml(
 }
 
 function openPrintableSurveyReport(filename: string, html: string) {
-  const reportWindow = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=900');
-  if (!reportWindow) {
+  const downloadHtmlFallback = () => {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     downloadBlob(blob, filename.replace(/\.pdf$/i, '.html'));
-    return;
-  }
+  };
 
-  reportWindow.document.open();
-  reportWindow.document.write(html);
-  reportWindow.document.close();
-  reportWindow.focus();
-  setTimeout(() => reportWindow.print(), 500);
+  const iframe = document.createElement('iframe');
+  iframe.title = filename;
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.position = 'fixed';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.border = '0';
+  iframe.style.opacity = '0';
+  iframe.style.pointerEvents = 'none';
+
+  let printed = false;
+  const cleanup = () => {
+    setTimeout(() => iframe.remove(), 1000);
+  };
+  const printFrame = () => {
+    if (printed) return;
+    printed = true;
+    const frameWindow = iframe.contentWindow;
+    if (!frameWindow) {
+      cleanup();
+      downloadHtmlFallback();
+      return;
+    }
+    frameWindow.focus();
+    frameWindow.addEventListener('afterprint', cleanup, { once: true });
+    setTimeout(() => {
+      try {
+        frameWindow.print();
+      } catch {
+        cleanup();
+        downloadHtmlFallback();
+      }
+    }, 150);
+    setTimeout(cleanup, 60_000);
+  };
+
+  iframe.onload = printFrame;
+  document.body.appendChild(iframe);
+  iframe.srcdoc = html;
 }
 
 // ─── PDF / Excel: Survey Results ─────────────────────────────────────────────
