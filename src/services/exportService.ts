@@ -567,7 +567,176 @@ async function downloadSurveyReportPDF(filename: string, html: string) {
 
 // ─── PDF / Excel: Survey Results ─────────────────────────────────────────────
 
+// Native (selectable-text) survey PDF header for Latin-script languages.
+function addSurveyNativeHeader(doc: jsPDF, survey: SurveyFull, lang: SurveyLanguage, subtitle: string): number {
+  const t = SURVEY_T[lang];
+  const pageW = doc.internal.pageSize.getWidth();
+  doc.setFillColor(13, 148, 136);
+  doc.rect(0, 0, pageW, 24, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+  doc.text('Ponts per la Pau', 14, 11);
+  doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+  doc.text(doc.splitTextToSize(survey.title, pageW - 28)[0] ?? '', 14, 18);
+  doc.setTextColor(40, 40, 40);
+
+  let y = 32;
+  doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+  doc.text(subtitle, 14, y); y += 6;
+
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 120, 120);
+  const meta = [
+    survey.period || '',
+    survey.survey_date ? `${t.surveyDate}: ${formatReportDate(lang, survey.survey_date)}` : '',
+    `${t.status}: ${surveyStatusLabel(survey.status, lang)}`,
+    `${t.generated}: ${reportNow(lang)}`,
+  ].filter(Boolean).join('   |   ');
+  doc.text(doc.splitTextToSize(meta, pageW - 28), 14, y);
+  y += 8;
+  doc.setTextColor(40, 40, 40);
+  return y;
+}
+
+const NATIVE_HEAD_STYLES = { fillColor: [15, 118, 110] as [number, number, number], textColor: 255, fontStyle: 'bold' as const };
+
+function exportSurveyResultsNativePDF(survey: SurveyFull, results: BranchResult[], lang: SurveyLanguage): void {
+  const t = SURVEY_T[lang];
+  const sep = ', ';
+  const aggregates = surveyQuestionAggregates(survey, results);
+  const totalRespondents = results.reduce((sum, branch) => sum + branch.totalRespondents, 0);
+  const submittedBranches = results.filter((branch) => branch.submitted).length;
+  const targetStudents = survey.respondents.filter((r) => r.respondent_type === 'student').length;
+  const targetStaff = survey.respondents.filter((r) => r.respondent_type === 'staff').length;
+  const taggedIds = new Set(aggregates.filter((qa) => qa.question.sentiment_enabled).map((qa) => qa.question.id));
+  const hasSentiment = taggedIds.size > 0;
+  const recordedAnswerTotal = aggregates.reduce((sum, qa) => sum + qa.responseTotal, 0);
+  const taggedRates = aggregates.filter((qa) => qa.question.sentiment_enabled).map((qa) => qa.positiveRate);
+  const avgSatisfaction = taggedRates.length > 0 ? taggedRates.reduce((s, r) => s + r, 0) / taggedRates.length : 0;
+  const filename = `survey_results_${safeFilePart(survey.title)}_${today()}.pdf`;
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  let y = addSurveyNativeHeader(doc, survey, lang, t.branchSummary);
+
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
+  const summary = [
+    `${t.totalRespondents}: ${totalRespondents}`,
+    `${t.branchesWithData}: ${submittedBranches}/${results.length}`,
+    `${t.targetStudentsStaff}: ${targetStudents}/${targetStaff}`,
+    hasSentiment ? `${t.taggedSatisfaction}: ${pct(avgSatisfaction)}` : `${t.recordedAnswers}: ${recordedAnswerTotal}`,
+  ].join('    ');
+  doc.text(doc.splitTextToSize(summary, pageW - 28), 14, y);
+  y += 6;
+  doc.setTextColor(40, 40, 40);
+
+  autoTable(doc, {
+    startY: y,
+    head: [[t.colBranch, t.colRespondents, t.colIndividual, t.colStatus, ...(hasSentiment ? [t.colTagged] : [])]],
+    body: results.length > 0
+      ? results.map((branch) => {
+          const tagged = branch.questionResults.filter((q) => taggedIds.has(q.questionId) && q.total > 0);
+          const avg = tagged.length > 0 ? tagged.reduce((s, q) => s + q.positiveRate, 0) / tagged.length : 0;
+          return [branch.branchName, String(branch.totalRespondents), String(branch.individualResponses.length), branch.submitted ? t.submitted : t.noData, ...(hasSentiment ? [pct(avg)] : [])];
+        })
+      : [[t.emptyBranches, ...Array(hasSentiment ? 4 : 3).fill('')]],
+    styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+    headStyles: NATIVE_HEAD_STYLES,
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+
+  if (y > 250) { doc.addPage(); y = 20; }
+  doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 118, 110);
+  doc.text(t.questionResults, 14, y); y += 5;
+  doc.setTextColor(40, 40, 40);
+  autoTable(doc, {
+    startY: y,
+    head: [[t.colNum, t.colQuestion, t.colType, t.responses, t.colOptions, ...(hasSentiment ? [t.taggedSatisfaction] : [])]],
+    body: aggregates.length > 0
+      ? aggregates.map((qa, index) => {
+          const dist = qa.optionCounts.length > 0
+            ? qa.optionCounts.map((o) => `${o.label}: ${o.count} (${qa.grandTotal > 0 ? Math.round((o.count / qa.grandTotal) * 100) : 0}%)`).join('\n')
+            : (qa.textAnswerTotal > 0 ? `${qa.textAnswerTotal} ${t.writtenAnswers}` : '-');
+          const sentiment = qa.question.sentiment_enabled ? `${t.positive} ${pct(qa.positiveRate)}\n${t.neutral} ${pct(qa.neutralRate)}\n${t.negative} ${pct(qa.negativeRate)}` : '';
+          return [String(index + 1), qa.question.question_text, questionTypeLabelL(lang, qa.question.question_type), String(qa.responseTotal), dist, ...(hasSentiment ? [sentiment] : [])];
+        })
+      : [[t.emptyQuestions, ...Array(hasSentiment ? 5 : 4).fill('')]],
+    styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+    headStyles: NATIVE_HEAD_STYLES,
+    columnStyles: { 0: { cellWidth: 8 }, 2: { cellWidth: 22 }, 3: { cellWidth: 18 } },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+
+  if (y > 250) { doc.addPage(); y = 20; }
+  doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 118, 110);
+  doc.text(t.questionnaire, 14, y); y += 5;
+  doc.setTextColor(40, 40, 40);
+  autoTable(doc, {
+    startY: y,
+    head: [[t.colNum, t.colSection, t.colType, t.colQuestion, t.colOptions]],
+    body: survey.questions.map((question, index) => [
+      String(index + 1),
+      sectionTitleForQuestion(survey, question.section_id),
+      questionTypeLabelL(lang, question.question_type),
+      question.question_text,
+      optionsForQuestion(survey, question.id).map((o) => o.label).join(sep),
+    ]),
+    styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+    headStyles: NATIVE_HEAD_STYLES,
+    columnStyles: { 0: { cellWidth: 8 } },
+    margin: { left: 14, right: 14 },
+  });
+
+  doc.save(filename);
+}
+
+function exportSurveyIndividualNativePDF(survey: SurveyFull, results: BranchResult[], target: SurveyIndividualExportTarget, lang: SurveyLanguage): void {
+  const t = SURVEY_T[lang];
+  const answerRows = individualAnswerRowsForExport(survey, results, target, lang);
+  const answeredCount = answerRows.filter((row) => row.answered).length;
+  const filename = `survey_response_${safeFilePart(target.respondentName)}_${safeFilePart(survey.title)}_${today()}.pdf`;
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  let y = addSurveyNativeHeader(doc, survey, lang, t.individualResponse);
+
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
+  const info = [
+    `${t.respondent}: ${target.respondentName}`,
+    `${t.respondentType}: ${respondentKindLabel(target.respondentType, lang)}`,
+    `${t.branch}: ${target.branchName}`,
+    `${t.answeredQuestions}: ${answeredCount}/${survey.questions.length}`,
+  ].join('    ');
+  doc.text(doc.splitTextToSize(info, pageW - 28), 14, y);
+  y += 6;
+  doc.setTextColor(40, 40, 40);
+
+  autoTable(doc, {
+    startY: y,
+    head: [[t.colNum, t.colSection, t.colType, t.colQuestion, t.colAnswer, t.colUpdated]],
+    body: answerRows.map((row) => [
+      String(row.index),
+      row.section,
+      questionTypeLabelL(lang, row.question.question_type),
+      row.question.question_text,
+      row.answerText,
+      reportTimestamp(lang, row.updatedAt),
+    ]),
+    styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+    headStyles: NATIVE_HEAD_STYLES,
+    columnStyles: { 0: { cellWidth: 8 }, 2: { cellWidth: 20 }, 5: { cellWidth: 26 } },
+    margin: { left: 14, right: 14 },
+  });
+
+  doc.save(filename);
+}
+
 export async function exportSurveyResultsPDF(survey: SurveyFull, results: BranchResult[]): Promise<void> {
+  if (!isRtlLang(surveyLang(survey))) {
+    exportSurveyResultsNativePDF(survey, results, surveyLang(survey));
+    return;
+  }
   const aggregates = surveyQuestionAggregates(survey, results);
   const totalRespondents = results.reduce((sum, branch) => sum + branch.totalRespondents, 0);
   const submittedBranches = results.filter((branch) => branch.submitted).length;
@@ -1115,6 +1284,10 @@ export async function exportSurveyIndividualPDF(
   results: BranchResult[],
   target: SurveyIndividualExportTarget,
 ): Promise<void> {
+  if (!isRtlLang(surveyLang(survey))) {
+    exportSurveyIndividualNativePDF(survey, results, target, surveyLang(survey));
+    return;
+  }
   const lang = surveyLang(survey);
   const rtl = isRtlLang(lang);
   const dir = rtl ? 'rtl' : 'ltr';
