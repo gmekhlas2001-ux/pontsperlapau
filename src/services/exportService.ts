@@ -169,7 +169,9 @@ function sectionTitleForQuestion(survey: SurveyFull, sectionId?: string | null):
 }
 
 function respondentKindLabel(kind: SurveyRespondentKind): string {
-  return kind === 'student' ? 'شاگرد / Student' : 'کارمند / Staff';
+  if (kind === 'student') return 'شاگرد / Student';
+  if (kind === 'staff') return 'کارمند / Staff';
+  return 'دستی / Manual';
 }
 
 function answerTextForIndividualExport(survey: SurveyFull, response: SurveyIndividualResponse): string {

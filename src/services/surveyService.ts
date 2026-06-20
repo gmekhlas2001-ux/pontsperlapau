@@ -20,7 +20,7 @@ import { scopedBranchId } from '@/lib/scope';
 export type SurveyStatus = 'draft' | 'active' | 'closed';
 export type Sentiment = 'positive' | 'negative' | 'neutral';
 export type SurveyRespondentType = 'students' | 'staff' | 'students_staff';
-export type SurveyRespondentKind = 'student' | 'staff';
+export type SurveyRespondentKind = 'student' | 'staff' | 'manual';
 export type SurveyQuestionType =
   | 'short_answer'
   | 'paragraph'
@@ -82,6 +82,7 @@ export interface SurveyRespondent {
   respondent_type: SurveyRespondentKind;
   respondent_id: string;
   respondent_name: string;
+  respondent_detail?: string | null;
   created_at: string;
 }
 
@@ -383,6 +384,30 @@ export async function saveBranchData(
 
   logActivity({ action_type: 'UPDATE', table_name: 'survey_branch_responses', description: `Submitted survey data for branch` });
   return { success: true };
+}
+
+/**
+ * Adds a manually-entered respondent to an existing survey — a person who is
+ * not in the students or staff records. The edge function generates the id.
+ * `detail` carries free-text info (e.g. province) shown alongside the name.
+ */
+export async function addSurveyRespondent(
+  surveyId: string,
+  branchId: string,
+  name: string,
+  detail?: string,
+): Promise<{ success: boolean; respondent?: SurveyRespondent; error?: string }> {
+  const res = await callEdgeFunction<{ success: boolean; respondent: SurveyRespondent }>('app-actions', {
+    operation: 'add-survey-respondent',
+    surveyId,
+    branchId,
+    name,
+    detail,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to add respondent' };
+
+  logActivity({ action_type: 'INSERT', table_name: 'survey_respondents', description: `Added survey respondent: ${name}` });
+  return { success: true, respondent: res.data?.respondent };
 }
 
 export async function saveIndividualResponses(

@@ -50,7 +50,7 @@ import {
 import {
   getSurveys, getSurveyFull, getSurveyResults, getBranchSubmission,
   createSurvey, updateSurveyMeta, deleteSurvey, saveBranchData, saveIndividualResponses, getSurveyRespondentOptions,
-  optionsForQuestion,
+  addSurveyRespondent, optionsForQuestion,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
   type SurveyRespondentType, type SurveyRespondentKind, type SurveyQuestionType,
   type SurveyRespondent, type SurveyIndividualResponse,
@@ -1253,7 +1253,7 @@ function isAnswered(value: IndividualAnswerValue | undefined) {
 }
 
 function displayRespondentType(type: SurveyRespondentKind) {
-  return type === 'student' ? 'Student' : 'Staff';
+  return type === 'student' ? 'Student' : type === 'staff' ? 'Staff' : 'Manual';
 }
 
 function answerTextForResponse(survey: SurveyFull, response: SurveyIndividualResponse) {
@@ -1270,10 +1270,20 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   const [totalRespondents, setTotalRespondents] = useState('');
   const [counts, setCounts] = useState<Record<string, Record<string, string>>>({});
   const [individualResponses, setIndividualResponses] = useState<SurveyIndividualResponse[]>([]);
+  const [respondents, setRespondents] = useState<SurveyRespondent[]>(survey.respondents);
   const [selectedRespondentKey, setSelectedRespondentKey] = useState('');
   const [individualAnswers, setIndividualAnswers] = useState<Record<string, IndividualAnswerValue>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Manual respondent form — add a person (name, province, details) directly to
+  // this survey when they are not in the student/staff records.
+  const [addingRespondent, setAddingRespondent] = useState(false);
+  const [manualFirstName, setManualFirstName] = useState('');
+  const [manualLastName, setManualLastName] = useState('');
+  const [manualProvince, setManualProvince] = useState('');
+  const [manualDetails, setManualDetails] = useState('');
+  const [savingRespondent, setSavingRespondent] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -1281,10 +1291,16 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     setTotalRespondents('');
     setCounts({});
     setIndividualResponses([]);
+    setRespondents(survey.respondents);
     setSelectedRespondentKey('');
     setIndividualAnswers({});
+    setAddingRespondent(false);
+    setManualFirstName('');
+    setManualLastName('');
+    setManualProvince('');
+    setManualDetails('');
     setEntryMode(survey.respondents.length > 0 ? 'individual' : 'aggregate');
-  }, [open, defaultBranchId, branches, survey.respondents.length]);
+  }, [open, defaultBranchId, branches, survey.respondents]);
 
   useEffect(() => {
     if (!branchId || !open) return;
@@ -1298,7 +1314,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
       });
       setCounts(c);
       setIndividualResponses(individualResponses);
-      const branchRespondents = survey.respondents.filter((respondent) => respondent.branch_id === branchId);
+      const branchRespondents = respondents.filter((respondent) => respondent.branch_id === branchId);
       setSelectedRespondentKey((current) => (
         current && branchRespondents.some((respondent) => respondentKey(respondent) === current)
           ? current
@@ -1306,14 +1322,14 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
       ));
       setLoading(false);
     });
-  }, [branchId, open, survey.id, survey.respondents]);
+  }, [branchId, open, survey.id, respondents]);
 
   useEffect(() => {
     if (!selectedRespondentKey) {
       setIndividualAnswers({});
       return;
     }
-    const selected = survey.respondents.find((respondent) => respondentKey(respondent) === selectedRespondentKey);
+    const selected = respondents.find((respondent) => respondentKey(respondent) === selectedRespondentKey);
     if (!selected) {
       setIndividualAnswers({});
       return;
@@ -1334,7 +1350,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
       }
     });
     setIndividualAnswers(nextAnswers);
-  }, [selectedRespondentKey, individualResponses, survey.questions, survey.respondents]);
+  }, [selectedRespondentKey, individualResponses, survey.questions, respondents]);
 
   const setCount = (qId: string, oId: string, val: string) => {
     setCounts((prev) => ({ ...prev, [qId]: { ...(prev[qId] ?? {}), [oId]: val } }));
@@ -1357,9 +1373,33 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   const rowTotal = (qId: string) =>
     optionsForQuestion(survey, qId).reduce((s, o) => s + (parseInt(counts[qId]?.[o.id] ?? '0') || 0), 0);
 
+  const handleAddRespondent = async () => {
+    const name = `${manualFirstName.trim()} ${manualLastName.trim()}`.trim();
+    if (!name) { toast.error('Enter a first or last name'); return; }
+    if (!branchId) { toast.error('Select a branch first'); return; }
+    const detail = [manualProvince.trim(), manualDetails.trim()].filter(Boolean).join(' · ');
+    setSavingRespondent(true);
+    try {
+      const res = await addSurveyRespondent(survey.id, branchId, name, detail || undefined);
+      if (!res.success || !res.respondent) { toast.error(res.error ?? 'Failed to add person'); return; }
+      const added = res.respondent;
+      setRespondents((current) => [...current, added]);
+      setEntryMode('individual');
+      setSelectedRespondentKey(respondentKey(added));
+      setManualFirstName('');
+      setManualLastName('');
+      setManualProvince('');
+      setManualDetails('');
+      setAddingRespondent(false);
+      toast.success('Person added');
+    } finally {
+      setSavingRespondent(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!branchId) { toast.error('Please select a branch'); return; }
-    const branchRespondents = survey.respondents.filter((respondent) => respondent.branch_id === branchId);
+    const branchRespondents = respondents.filter((respondent) => respondent.branch_id === branchId);
     const selectedRespondent = branchRespondents.find((respondent) => respondentKey(respondent) === selectedRespondentKey);
 
     setSaving(true);
@@ -1406,7 +1446,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   };
 
   const selectedBranch = branches.find((b) => b.id === branchId);
-  const branchRespondents = survey.respondents.filter((respondent) => respondent.branch_id === branchId);
+  const branchRespondents = respondents.filter((respondent) => respondent.branch_id === branchId);
   const selectedRespondent = branchRespondents.find((respondent) => respondentKey(respondent) === selectedRespondentKey);
   const respondentsNum = parseInt(totalRespondents) || 0;
 
@@ -1506,13 +1546,79 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
           ) : entryMode === 'individual' ? (
             <div className="mx-auto grid w-full max-w-7xl gap-4 p-4 sm:p-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:p-8">
               <aside className="h-fit rounded-lg border bg-background">
-                <div className="border-b p-3">
-                  <p className="text-sm font-semibold">Respondents</p>
-                  <p className="text-xs text-muted-foreground">{branchRespondents.length} selected for this branch</p>
+                <div className="flex items-start justify-between gap-2 border-b p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">Respondents</p>
+                    <p className="text-xs text-muted-foreground">{branchRespondents.length} for this branch</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => setAddingRespondent((value) => !value)}
+                    disabled={!branchId}
+                  >
+                    <Plus className="mr-1.5 h-3.5 w-3.5" /> Add person
+                  </Button>
                 </div>
+                {addingRespondent && (
+                  <div className="space-y-2 border-b bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground">
+                      Add a person manually for this survey. They are not saved to the student or staff records.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        placeholder="First name"
+                        value={manualFirstName}
+                        onChange={(e) => setManualFirstName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddRespondent(); } }}
+                      />
+                      <Input
+                        placeholder="Last name"
+                        value={manualLastName}
+                        onChange={(e) => setManualLastName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddRespondent(); } }}
+                      />
+                    </div>
+                    <Input
+                      placeholder="Province"
+                      value={manualProvince}
+                      onChange={(e) => setManualProvince(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddRespondent(); } }}
+                    />
+                    <Input
+                      placeholder="Other details (optional)"
+                      value={manualDetails}
+                      onChange={(e) => setManualDetails(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddRespondent(); } }}
+                    />
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" className="flex-1" onClick={handleAddRespondent} disabled={savingRespondent}>
+                        {savingRespondent ? 'Adding...' : 'Add person'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setAddingRespondent(false);
+                          setManualFirstName('');
+                          setManualLastName('');
+                          setManualProvince('');
+                          setManualDetails('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div className="max-h-[62vh] space-y-1 overflow-y-auto p-2">
                   {branchRespondents.length === 0 ? (
-                    <div className="p-4 text-sm text-muted-foreground">No students or staff were assigned to this survey branch.</div>
+                    <div className="p-4 text-sm text-muted-foreground">
+                      No students or staff were assigned to this survey branch. Use “Add person” to enter someone manually.
+                    </div>
                   ) : branchRespondents.map((respondent) => {
                     const key = respondentKey(respondent);
                     const progress = respondentProgress(respondent);
@@ -1528,8 +1634,11 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                       >
                         <span className="block truncate text-sm font-medium">{respondent.respondent_name}</span>
                         <span className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                          <span>{displayRespondentType(respondent.respondent_type)}</span>
-                          <span>{progress}/{survey.questions.length}</span>
+                          <span className="truncate">
+                            {displayRespondentType(respondent.respondent_type)}
+                            {respondent.respondent_detail ? ` · ${respondent.respondent_detail}` : ''}
+                          </span>
+                          <span className="shrink-0">{progress}/{survey.questions.length}</span>
                         </span>
                       </button>
                     );
@@ -1548,6 +1657,9 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                           {displayRespondentType(selectedRespondent.respondent_type)}
                         </span>
                       </div>
+                      {selectedRespondent.respondent_detail && (
+                        <p className="mt-1 text-sm text-muted-foreground">{selectedRespondent.respondent_detail}</p>
+                      )}
                     </div>
 
                     {survey.questions.map((question, index) => {

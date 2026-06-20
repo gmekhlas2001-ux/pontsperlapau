@@ -28,6 +28,9 @@ const SURVEY_STATUSES = ["draft", "active", "closed"];
 const SENTIMENTS = ["positive", "negative", "neutral"];
 const SURVEY_RESPONDENT_TYPES = ["students", "staff", "students_staff"];
 const SURVEY_RESPONDENT_KINDS = ["student", "staff"];
+// "manual" respondents are people entered by hand for a single survey; they are
+// not validated against the students/staff tables.
+const SURVEY_RESPONDENT_KINDS_WITH_MANUAL = ["student", "staff", "manual"];
 const SURVEY_QUESTION_TYPES = [
   "short_answer",
   "paragraph",
@@ -686,7 +689,8 @@ Deno.serve(async (req: Request) => {
       op === "update-survey-meta" ||
       op === "delete-survey" ||
       op === "save-branch-survey-data" ||
-      op === "save-individual-survey-responses"
+      op === "save-individual-survey-responses" ||
+      op === "add-survey-respondent"
     ) {
       const roleError = assertRoles(req, caller, ADMIN_ROLES);
       if (roleError) return roleError;
@@ -861,9 +865,43 @@ Deno.serve(async (req: Request) => {
       const branchError = assertBranch(req, caller, branchId);
       if (branchError) return branchError;
 
+      if (op === "add-survey-respondent") {
+        const name = cleanString(body.name);
+        const detail = cleanString(body.detail);
+        if (!surveyId || !branchId || !name) {
+          return errorResponse(req, 400, "A respondent name is required");
+        }
+
+        const { data: survey, error: surveyErr } = await supabase
+          .from("surveys")
+          .select("id, branch_id")
+          .eq("id", surveyId)
+          .maybeSingle();
+        if (surveyErr || !survey) return errorResponse(req, 404, "Survey not found", surveyErr);
+        if (survey.branch_id && survey.branch_id !== branchId) {
+          return errorResponse(req, 403, "Survey is outside this branch");
+        }
+
+        const { data: inserted, error } = await supabase
+          .from("survey_respondents")
+          .insert({
+            survey_id: surveyId,
+            branch_id: branchId,
+            respondent_type: "manual",
+            respondent_id: crypto.randomUUID(),
+            respondent_name: name,
+            respondent_detail: detail,
+          })
+          .select()
+          .single();
+        if (error || !inserted) return errorResponse(req, 400, "Failed to add respondent", error);
+
+        return jsonResponse(req, { success: true, respondent: inserted });
+      }
+
       if (op === "save-individual-survey-responses") {
         const respondent = body.respondent ?? {};
-        const respondentType = isOneOf(respondent.type, SURVEY_RESPONDENT_KINDS) ? respondent.type : null;
+        const respondentType = isOneOf(respondent.type, SURVEY_RESPONDENT_KINDS_WITH_MANUAL) ? respondent.type : null;
         const respondentId = cleanString(respondent.id);
         const respondentName = cleanString(respondent.name);
         if (!surveyId || !branchId || !respondentType || !respondentId || !respondentName) {
