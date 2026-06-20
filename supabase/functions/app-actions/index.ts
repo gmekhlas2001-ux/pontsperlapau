@@ -25,6 +25,7 @@ const TX_TYPES = ["income", "expense"];
 const TX_STATUSES = ["completed", "cancelled", "failed"];
 const ASSESSMENT_TYPES = ["midterm", "final", "assignment", "quiz", "project", "other"];
 const SURVEY_STATUSES = ["draft", "active", "closed"];
+const SURVEY_LANGUAGES = ["en", "es", "ca", "fa"];
 const SENTIMENTS = ["positive", "negative", "neutral"];
 const SURVEY_RESPONDENT_TYPES = ["students", "staff", "students_staff"];
 const SURVEY_RESPONDENT_KINDS = ["student", "staff"];
@@ -714,6 +715,7 @@ Deno.serve(async (req: Request) => {
           period: cleanString(body.period),
           branch_id: surveyBranchId,
           respondent_type: respondentType,
+          language: isOneOf(body.language, SURVEY_LANGUAGES) ? body.language : "fa",
           status: body.status,
           created_by: caller.id,
         };
@@ -843,6 +845,9 @@ Deno.serve(async (req: Request) => {
         const fields = body.fields ?? {};
         if (fields.status && !isOneOf(fields.status, SURVEY_STATUSES)) {
           return errorResponse(req, 400, "Invalid survey status");
+        }
+        if (fields.language && !isOneOf(fields.language, SURVEY_LANGUAGES)) {
+          return errorResponse(req, 400, "Invalid survey language");
         }
         if ("survey_date" in fields) {
           fields.survey_date = cleanString(fields.survey_date);

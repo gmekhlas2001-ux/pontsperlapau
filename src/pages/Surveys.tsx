@@ -53,7 +53,7 @@ import {
   addSurveyRespondent, optionsForQuestion,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
   type SurveyRespondentType, type SurveyRespondentKind, type SurveyQuestionType,
-  type SurveyRespondent, type SurveyIndividualResponse,
+  type SurveyRespondent, type SurveyIndividualResponse, type SurveyLanguage,
 } from '@/services/surveyService';
 import { getBranches, type Branch } from '@/services/branchService';
 import {
@@ -142,6 +142,21 @@ const STATUS_CONFIG: Record<SurveyStatus, { label: string; className: string; ic
 
 const PIE_COLORS = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#65a30d', '#9333ea'];
 
+const SURVEY_LANGUAGE_OPTIONS: Array<{ value: SurveyLanguage; label: string }> = [
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Español' },
+  { value: 'ca', label: 'Català' },
+  { value: 'fa', label: 'دری (Dari)' },
+];
+
+/** Sensible default language for a new survey: the current app language, else Dari. */
+function defaultSurveyLanguage(): SurveyLanguage {
+  const current = (i18n.language || '').split('-')[0];
+  return (['en', 'es', 'ca', 'fa'] as const).includes(current as SurveyLanguage)
+    ? (current as SurveyLanguage)
+    : 'fa';
+}
+
 const QUESTION_TYPES: Array<{ value: SurveyQuestionType; label: string; icon: React.ElementType; usesOptions: boolean; placeholder: string }> = [
   { value: 'short_answer', label: 'Short answer', icon: FileText, usesOptions: false, placeholder: 'Short text response' },
   { value: 'paragraph', label: 'Paragraph', icon: FileText, usesOptions: false, placeholder: 'Long text response' },
@@ -219,6 +234,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
   const [period, setPeriod] = useState('');
   const [surveyDate, setSurveyDate] = useState('');
   const [status, setStatus] = useState<SurveyStatus>('draft');
+  const [language, setLanguage] = useState<SurveyLanguage>('fa');
 
   // Options (response scale)
   const [options, setOptions] = useState<BuilderOption[]>(DEFAULT_OPTIONS);
@@ -239,6 +255,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
         setPeriod(existing.period ?? '');
         setSurveyDate(existing.survey_date ?? '');
         setStatus(existing.status);
+        setLanguage(existing.language ?? 'fa');
         setOptions(existing.options.map((o) => ({ label: o.label, sentiment: o.sentiment })));
         setSections(existing.sections.map((s) => ({ title: s.title, description: s.description ?? '' })));
         setQuestions(
@@ -257,6 +274,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
         );
       } else {
         setTitle(''); setDescription(''); setPeriod(''); setSurveyDate(''); setStatus('draft');
+        setLanguage(defaultSurveyLanguage());
         setOptions(DEFAULT_OPTIONS);
         setSections([]); setQuestions([createBlankQuestion()]);
       }
@@ -289,7 +307,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
     try {
       if (existing) {
         // Update meta only (questions/sections rebuild is complex — for now update meta)
-        const res = await updateSurveyMeta(existing.id, { title: title.trim(), description: description.trim() || undefined, period: period.trim() || undefined, survey_date: surveyDate || undefined, status });
+        const res = await updateSurveyMeta(existing.id, { title: title.trim(), description: description.trim() || undefined, period: period.trim() || undefined, survey_date: surveyDate || undefined, status, language });
         if (!res.success) { toast.error(res.error); return; }
         toast.success('Survey updated');
       } else {
@@ -301,6 +319,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
           branchId: undefined,
           respondentType: 'students',
           respondentIds: [],
+          language,
           status,
           sections: sections.filter((s) => s.title.trim()).map((s) => ({ title: s.title.trim(), description: s.description.trim() || undefined })),
           questions: filledQuestions.map((q) => ({
@@ -422,6 +441,18 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                             <SelectItem value="closed">Closed</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Report Language</Label>
+                        <Select value={language} onValueChange={(v) => setLanguage(v as SurveyLanguage)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {SURVEY_LANGUAGE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">PDF &amp; Excel exports are generated in this language.</p>
                       </div>
                     </div>
                   </div>
@@ -606,6 +637,7 @@ export function SurveyCreatePage() {
   const [period, setPeriod] = useState('');
   const [surveyDate, setSurveyDate] = useState('');
   const [status, setStatus] = useState<SurveyStatus>('draft');
+  const [language, setLanguage] = useState<SurveyLanguage>(defaultSurveyLanguage());
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [respondentType, setRespondentType] = useState<SurveyRespondentType>('students');
@@ -764,6 +796,7 @@ export function SurveyCreatePage() {
         branchId: selectedBranchId,
         respondentType,
         respondentIds: selectedRespondents,
+        language,
         status,
         sections: sections.filter((s) => s.title.trim()).map((s) => ({ title: s.title.trim(), description: s.description.trim() || undefined })),
         questions: filledQuestions.map((q) => ({
@@ -884,6 +917,18 @@ export function SurveyCreatePage() {
                     <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
+	              </div>
+	              <div className="space-y-2">
+	                <Label>Report Language</Label>
+	                <Select value={language} onValueChange={(v) => setLanguage(v as SurveyLanguage)}>
+	                  <SelectTrigger><SelectValue /></SelectTrigger>
+	                  <SelectContent>
+	                    {SURVEY_LANGUAGE_OPTIONS.map((option) => (
+	                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+	                    ))}
+	                  </SelectContent>
+	                </Select>
+	                <p className="text-xs text-muted-foreground">PDF &amp; Excel exports are generated in this language.</p>
 	              </div>
 	            </aside>
 	          </div>

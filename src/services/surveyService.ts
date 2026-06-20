@@ -18,6 +18,7 @@ import { scopedBranchId } from '@/lib/scope';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SurveyStatus = 'draft' | 'active' | 'closed';
+export type SurveyLanguage = 'en' | 'es' | 'ca' | 'fa';
 export type Sentiment = 'positive' | 'negative' | 'neutral';
 export type SurveyRespondentType = 'students' | 'staff' | 'students_staff';
 export type SurveyRespondentKind = 'student' | 'staff' | 'manual';
@@ -42,6 +43,7 @@ export interface Survey {
   survey_date?: string;
   branch_id?: string | null;
   respondent_type?: SurveyRespondentType;
+  language?: SurveyLanguage;
   status: SurveyStatus;
   created_by?: string;
   created_at: string;
@@ -151,6 +153,7 @@ export interface CreateSurveyPayload {
   branchId?: string;
   respondentType: SurveyRespondentType;
   respondentIds: { type: SurveyRespondentKind; id: string; name: string }[];
+  language: SurveyLanguage;
   status: SurveyStatus;
   sections: { title: string; description?: string }[];
   questions: {
@@ -346,7 +349,7 @@ export async function createSurvey(payload: CreateSurveyPayload): Promise<{ succ
   return { success: true, id: res.data?.id };
 }
 
-export async function updateSurveyMeta(surveyId: string, fields: { title?: string; description?: string; period?: string; survey_date?: string; status?: SurveyStatus }) {
+export async function updateSurveyMeta(surveyId: string, fields: { title?: string; description?: string; period?: string; survey_date?: string; status?: SurveyStatus; language?: SurveyLanguage }) {
   const res = await callEdgeFunction('app-actions', {
     operation: 'update-survey-meta',
     surveyId,

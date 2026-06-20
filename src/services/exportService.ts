@@ -23,7 +23,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { saveRowsAsExcel, type ExcelRow } from '@/lib/excel';
 import type { GradeStudent } from './gradesService';
-import { optionsForQuestion, type BranchResult, type SurveyFull, type SurveyIndividualResponse, type SurveyRespondentKind } from './surveyService';
+import { optionsForQuestion, type BranchResult, type SurveyFull, type SurveyIndividualResponse, type SurveyRespondentKind, type SurveyLanguage } from './surveyService';
 
 // ─── shared helpers ──────────────────────────────────────────────────────────
 
@@ -33,7 +33,15 @@ function today(): string {
 }
 
 function safeFilePart(value: string): string {
-  return value.trim().replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '') || 'export';
+  // Keep Unicode letters/digits (so Dari/Arabic titles survive) and collapse the
+  // rest to underscores. Strip characters that are illegal in filenames.
+  return value
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/[^\p{L}\p{N}_-]+/gu, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'export';
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -91,12 +99,6 @@ function addPDFHeader(doc: jsPDF, title: string, subtitle?: string): number {
   return y;
 }
 
-function formatSurveyDate(date?: string): string {
-  if (!date) return '';
-  const parsed = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return date;
-  return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
 
 function surveyQuestionAggregates(survey: SurveyFull, results: BranchResult[]) {
   return survey.questions.map((q) => {
@@ -163,15 +165,194 @@ function questionTypeLabel(value?: string): string {
     .join(' ');
 }
 
+// ─── Survey report localization ──────────────────────────────────────────────
+// Survey PDF/Excel reports are generated entirely in the survey's own language.
+
+interface SurveyStrings {
+  surveyDate: string; status: string; generated: string; individualResponse: string;
+  totalRespondents: string; branchesWithData: string; targetStudentsStaff: string;
+  taggedSatisfaction: string; recordedAnswers: string;
+  branchSummary: string; branchSummarySub: string;
+  colBranch: string; colRespondents: string; colIndividual: string; colStatus: string; colTagged: string;
+  submitted: string; noData: string;
+  questionResults: string; questionResultsSub: string;
+  responses: string; positive: string; neutral: string; negative: string;
+  questionnaire: string; questionnaireSub: string;
+  colNum: string; colSection: string; colType: string; colQuestion: string; colOptions: string; colAnswer: string; colUpdated: string;
+  emptyBranches: string; emptyQuestions: string;
+  noOptionAnswers: string; writtenAnswers: string; useIndividual: string; notAnswered: string;
+  respondent: string; respondentType: string; branch: string; answeredQuestions: string;
+  respondentAnswers: string; savedRecords: string;
+  surveyTitle: string; period: string; targetGroup: string; targetStudents: string; targetStaff: string; targetTotal: string; submittedBranches: string;
+  statusDraft: string; statusActive: string; statusClosed: string;
+  groupStudents: string; groupStaff: string; groupBoth: string;
+  kindStudent: string; kindStaff: string; kindManual: string;
+  sheetSummary: string; sheetBranches: string; sheetQuestions: string; sheetQuestionnaire: string; sheetAnswers: string; noDataYet: string;
+}
+
+const SURVEY_T: Record<SurveyLanguage, SurveyStrings> = {
+  en: {
+    surveyDate: 'Survey date', status: 'Status', generated: 'Generated', individualResponse: 'Individual response',
+    totalRespondents: 'Total respondents', branchesWithData: 'Branches with data', targetStudentsStaff: 'Target students / staff',
+    taggedSatisfaction: 'Tagged satisfaction', recordedAnswers: 'Recorded answers',
+    branchSummary: 'Branch summary', branchSummarySub: 'Respondents and individual answers by branch',
+    colBranch: 'Branch', colRespondents: 'Respondents', colIndividual: 'Individual answers', colStatus: 'Status', colTagged: 'Tagged satisfaction',
+    submitted: 'Submitted', noData: 'No data',
+    questionResults: 'Question results', questionResultsSub: 'Answer distribution for each survey question',
+    responses: 'responses', positive: 'Positive', neutral: 'Neutral', negative: 'Negative',
+    questionnaire: 'Questionnaire', questionnaireSub: 'Questions and answer options',
+    colNum: '#', colSection: 'Section', colType: 'Type', colQuestion: 'Question', colOptions: 'Answer options', colAnswer: 'Answer', colUpdated: 'Updated',
+    emptyBranches: 'No branch results have been recorded yet.', emptyQuestions: 'No questions were found in this survey.',
+    noOptionAnswers: 'No option answers have been submitted yet.', writtenAnswers: 'written/date/time answers', useIndividual: 'Use the individual export to review exact answers.', notAnswered: 'Not answered',
+    respondent: 'Respondent', respondentType: 'Type', branch: 'Branch', answeredQuestions: 'Answered questions',
+    respondentAnswers: 'Respondent answers', savedRecords: 'saved answer records',
+    surveyTitle: 'Survey title', period: 'Period', targetGroup: 'Target group', targetStudents: 'Target students', targetStaff: 'Target staff', targetTotal: 'Target total', submittedBranches: 'Submitted branches',
+    statusDraft: 'Draft', statusActive: 'Active', statusClosed: 'Closed',
+    groupStudents: 'Students', groupStaff: 'Staff', groupBoth: 'Students and staff',
+    kindStudent: 'Student', kindStaff: 'Staff', kindManual: 'Manual',
+    sheetSummary: 'Summary', sheetBranches: 'Branch Results', sheetQuestions: 'Question Results', sheetQuestionnaire: 'Questionnaire', sheetAnswers: 'Answers', noDataYet: 'No data yet',
+  },
+  es: {
+    surveyDate: 'Fecha de la encuesta', status: 'Estado', generated: 'Generado', individualResponse: 'Respuesta individual',
+    totalRespondents: 'Total de encuestados', branchesWithData: 'Sucursales con datos', targetStudentsStaff: 'Alumnos / personal objetivo',
+    taggedSatisfaction: 'Satisfacción etiquetada', recordedAnswers: 'Respuestas registradas',
+    branchSummary: 'Resumen por sucursal', branchSummarySub: 'Encuestados y respuestas individuales por sucursal',
+    colBranch: 'Sucursal', colRespondents: 'Encuestados', colIndividual: 'Respuestas individuales', colStatus: 'Estado', colTagged: 'Satisfacción etiquetada',
+    submitted: 'Enviado', noData: 'Sin datos',
+    questionResults: 'Resultados por pregunta', questionResultsSub: 'Distribución de respuestas por pregunta',
+    responses: 'respuestas', positive: 'Positivo', neutral: 'Neutral', negative: 'Negativo',
+    questionnaire: 'Cuestionario', questionnaireSub: 'Preguntas y opciones de respuesta',
+    colNum: '#', colSection: 'Sección', colType: 'Tipo', colQuestion: 'Pregunta', colOptions: 'Opciones de respuesta', colAnswer: 'Respuesta', colUpdated: 'Actualizado',
+    emptyBranches: 'Todavía no se han registrado resultados de sucursales.', emptyQuestions: 'No se encontraron preguntas en esta encuesta.',
+    noOptionAnswers: 'Aún no se han enviado respuestas de opción.', writtenAnswers: 'respuestas de texto/fecha/hora', useIndividual: 'Use la exportación individual para ver las respuestas exactas.', notAnswered: 'Sin responder',
+    respondent: 'Encuestado', respondentType: 'Tipo', branch: 'Sucursal', answeredQuestions: 'Preguntas respondidas',
+    respondentAnswers: 'Respuestas del encuestado', savedRecords: 'registros de respuesta guardados',
+    surveyTitle: 'Título de la encuesta', period: 'Período', targetGroup: 'Grupo objetivo', targetStudents: 'Alumnos objetivo', targetStaff: 'Personal objetivo', targetTotal: 'Total objetivo', submittedBranches: 'Sucursales enviadas',
+    statusDraft: 'Borrador', statusActive: 'Activa', statusClosed: 'Cerrada',
+    groupStudents: 'Alumnos', groupStaff: 'Personal', groupBoth: 'Alumnos y personal',
+    kindStudent: 'Alumno', kindStaff: 'Personal', kindManual: 'Manual',
+    sheetSummary: 'Resumen', sheetBranches: 'Resultados sucursal', sheetQuestions: 'Resultados pregunta', sheetQuestionnaire: 'Cuestionario', sheetAnswers: 'Respuestas', noDataYet: 'Sin datos',
+  },
+  ca: {
+    surveyDate: 'Data de l\'enquesta', status: 'Estat', generated: 'Generat', individualResponse: 'Resposta individual',
+    totalRespondents: 'Total d\'enquestats', branchesWithData: 'Sucursals amb dades', targetStudentsStaff: 'Alumnes / personal objectiu',
+    taggedSatisfaction: 'Satisfacció etiquetada', recordedAnswers: 'Respostes registrades',
+    branchSummary: 'Resum per sucursal', branchSummarySub: 'Enquestats i respostes individuals per sucursal',
+    colBranch: 'Sucursal', colRespondents: 'Enquestats', colIndividual: 'Respostes individuals', colStatus: 'Estat', colTagged: 'Satisfacció etiquetada',
+    submitted: 'Enviat', noData: 'Sense dades',
+    questionResults: 'Resultats per pregunta', questionResultsSub: 'Distribució de respostes per pregunta',
+    responses: 'respostes', positive: 'Positiu', neutral: 'Neutral', negative: 'Negatiu',
+    questionnaire: 'Qüestionari', questionnaireSub: 'Preguntes i opcions de resposta',
+    colNum: '#', colSection: 'Secció', colType: 'Tipus', colQuestion: 'Pregunta', colOptions: 'Opcions de resposta', colAnswer: 'Resposta', colUpdated: 'Actualitzat',
+    emptyBranches: 'Encara no s\'han registrat resultats de sucursals.', emptyQuestions: 'No s\'han trobat preguntes en aquesta enquesta.',
+    noOptionAnswers: 'Encara no s\'han enviat respostes d\'opció.', writtenAnswers: 'respostes de text/data/hora', useIndividual: 'Utilitzeu l\'exportació individual per veure les respostes exactes.', notAnswered: 'Sense resposta',
+    respondent: 'Enquestat', respondentType: 'Tipus', branch: 'Sucursal', answeredQuestions: 'Preguntes respostes',
+    respondentAnswers: 'Respostes de l\'enquestat', savedRecords: 'registres de resposta desats',
+    surveyTitle: 'Títol de l\'enquesta', period: 'Període', targetGroup: 'Grup objectiu', targetStudents: 'Alumnes objectiu', targetStaff: 'Personal objectiu', targetTotal: 'Total objectiu', submittedBranches: 'Sucursals enviades',
+    statusDraft: 'Esborrany', statusActive: 'Activa', statusClosed: 'Tancada',
+    groupStudents: 'Alumnes', groupStaff: 'Personal', groupBoth: 'Alumnes i personal',
+    kindStudent: 'Alumne', kindStaff: 'Personal', kindManual: 'Manual',
+    sheetSummary: 'Resum', sheetBranches: 'Resultats sucursal', sheetQuestions: 'Resultats pregunta', sheetQuestionnaire: 'Qüestionari', sheetAnswers: 'Respostes', noDataYet: 'Sense dades',
+  },
+  fa: {
+    surveyDate: 'تاریخ سروی', status: 'وضعیت', generated: 'ساخته شد', individualResponse: 'پاسخ فردی',
+    totalRespondents: 'مجموع پاسخ‌دهندگان', branchesWithData: 'شعبه‌های دارای معلومات', targetStudentsStaff: 'شاگردان / کارمندان هدف',
+    taggedSatisfaction: 'رضایت برچسب‌خورده', recordedAnswers: 'جواب‌های ثبت‌شده',
+    branchSummary: 'خلاصه شعبه‌ها', branchSummarySub: 'تعداد پاسخ‌دهندگان و جواب‌های فردی به تفکیک شعبه',
+    colBranch: 'شعبه', colRespondents: 'پاسخ‌دهندگان', colIndividual: 'جواب‌های فردی', colStatus: 'وضعیت', colTagged: 'رضایت برچسب‌خورده',
+    submitted: 'ثبت شده', noData: 'بدون معلومات',
+    questionResults: 'نتایج سوال‌ها', questionResultsSub: 'تقسیم‌بندی جواب‌ها برای هر سوال سروی',
+    responses: 'پاسخ', positive: 'مثبت', neutral: 'عادی', negative: 'منفی',
+    questionnaire: 'پرسشنامه', questionnaireSub: 'سوال‌ها و گزینه‌های جواب',
+    colNum: '#', colSection: 'بخش', colType: 'نوع جواب', colQuestion: 'سوال', colOptions: 'گزینه‌های جواب', colAnswer: 'جواب', colUpdated: 'آخرین تغییر',
+    emptyBranches: 'هنوز نتیجه‌ای از شعبه‌ها ثبت نشده است.', emptyQuestions: 'هیچ سوالی در این سروی پیدا نشد.',
+    noOptionAnswers: 'هنوز جوابی برای گزینه‌ها ثبت نشده است.', writtenAnswers: 'جواب نوشتاری/تاریخ/زمان', useIndividual: 'برای دیدن جواب‌های دقیق از خروجی فردی استفاده کنید.', notAnswered: 'پاسخ داده نشده',
+    respondent: 'پاسخ‌دهنده', respondentType: 'نوع', branch: 'شعبه', answeredQuestions: 'سوال‌های پاسخ‌شده',
+    respondentAnswers: 'جواب‌های پاسخ‌دهنده', savedRecords: 'سابقه جواب ثبت‌شده',
+    surveyTitle: 'عنوان سروی', period: 'دوره', targetGroup: 'گروه هدف', targetStudents: 'شاگردان هدف', targetStaff: 'کارمندان هدف', targetTotal: 'مجموع افراد هدف', submittedBranches: 'شعبه‌های ثبت‌شده',
+    statusDraft: 'پیش‌نویس', statusActive: 'فعال', statusClosed: 'بسته',
+    groupStudents: 'شاگردان', groupStaff: 'کارمندان', groupBoth: 'شاگردان و کارمندان',
+    kindStudent: 'شاگرد', kindStaff: 'کارمند', kindManual: 'دستی',
+    sheetSummary: 'خلاصه', sheetBranches: 'نتایج شعبه', sheetQuestions: 'نتایج سوال', sheetQuestionnaire: 'پرسشنامه', sheetAnswers: 'جواب‌ها', noDataYet: 'بدون معلومات',
+  },
+};
+
+const QUESTION_TYPE_T: Record<SurveyLanguage, Record<string, string>> = {
+  en: {
+    short_answer: 'Short answer', paragraph: 'Paragraph', multiple_choice: 'Multiple choice', checkboxes: 'Checkboxes',
+    dropdown: 'Dropdown', linear_scale: 'Linear scale', rating: 'Rating', multiple_choice_grid: 'Multiple choice grid',
+    checkbox_grid: 'Checkbox grid', date: 'Date', time: 'Time',
+  },
+  es: {
+    short_answer: 'Respuesta corta', paragraph: 'Párrafo', multiple_choice: 'Opción múltiple', checkboxes: 'Casillas',
+    dropdown: 'Desplegable', linear_scale: 'Escala lineal', rating: 'Valoración', multiple_choice_grid: 'Cuadrícula de opción múltiple',
+    checkbox_grid: 'Cuadrícula de casillas', date: 'Fecha', time: 'Hora',
+  },
+  ca: {
+    short_answer: 'Resposta curta', paragraph: 'Paràgraf', multiple_choice: 'Opció múltiple', checkboxes: 'Caselles',
+    dropdown: 'Desplegable', linear_scale: 'Escala lineal', rating: 'Valoració', multiple_choice_grid: 'Graella d\'opció múltiple',
+    checkbox_grid: 'Graella de caselles', date: 'Data', time: 'Hora',
+  },
+  fa: {
+    short_answer: 'جواب کوتاه', paragraph: 'پاراگراف', multiple_choice: 'چند گزینه‌ای', checkboxes: 'چک‌باکس',
+    dropdown: 'فهرست کشویی', linear_scale: 'مقیاس خطی', rating: 'امتیازدهی', multiple_choice_grid: 'جدول چند گزینه‌ای',
+    checkbox_grid: 'جدول چک‌باکس', date: 'تاریخ', time: 'زمان',
+  },
+};
+
+const REPORT_LOCALE: Record<SurveyLanguage, string> = { en: 'en-GB', es: 'es-ES', ca: 'ca-ES', fa: 'fa-AF' };
+
+function surveyLang(survey: Pick<SurveyFull, 'language'>): SurveyLanguage {
+  return survey.language ?? 'fa';
+}
+
+function isRtlLang(lang: SurveyLanguage): boolean {
+  return lang === 'fa';
+}
+
+/** Localized Gregorian date for a YYYY-MM-DD survey date. */
+function formatReportDate(lang: SurveyLanguage, date?: string): string {
+  if (!date) return '';
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString(REPORT_LOCALE[lang], { year: 'numeric', month: 'short', day: 'numeric', calendar: 'gregory' });
+}
+
+function reportNow(lang: SurveyLanguage): string {
+  return new Date().toLocaleString(REPORT_LOCALE[lang], { calendar: 'gregory' });
+}
+
+function reportTimestamp(lang: SurveyLanguage, iso?: string | null): string {
+  if (!iso) return '';
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleString(REPORT_LOCALE[lang], { calendar: 'gregory' });
+}
+
+function surveyStatusLabel(status: string, lang: SurveyLanguage): string {
+  const t = SURVEY_T[lang];
+  return status === 'draft' ? t.statusDraft : status === 'active' ? t.statusActive : status === 'closed' ? t.statusClosed : status;
+}
+
+function targetGroupLabel(type: string | undefined, lang: SurveyLanguage): string {
+  const t = SURVEY_T[lang];
+  return type === 'students' ? t.groupStudents : type === 'staff' ? t.groupStaff : t.groupBoth;
+}
+
+function questionTypeLabelL(lang: SurveyLanguage, type?: string): string {
+  return QUESTION_TYPE_T[lang][type ?? 'multiple_choice'] ?? questionTypeLabel(type);
+}
+
 function sectionTitleForQuestion(survey: SurveyFull, sectionId?: string | null): string {
   if (!sectionId) return '';
   return survey.sections.find((section) => section.id === sectionId)?.title ?? '';
 }
 
-function respondentKindLabel(kind: SurveyRespondentKind): string {
-  if (kind === 'student') return 'شاگرد / Student';
-  if (kind === 'staff') return 'کارمند / Staff';
-  return 'دستی / Manual';
+function respondentKindLabel(kind: SurveyRespondentKind, lang: SurveyLanguage): string {
+  const t = SURVEY_T[lang];
+  if (kind === 'student') return t.kindStudent;
+  if (kind === 'staff') return t.kindStaff;
+  return t.kindManual;
 }
 
 function answerTextForIndividualExport(survey: SurveyFull, response: SurveyIndividualResponse): string {
@@ -203,7 +384,9 @@ function individualAnswerRowsForExport(
   survey: SurveyFull,
   results: BranchResult[],
   target: SurveyIndividualExportTarget,
+  lang: SurveyLanguage,
 ) {
+  const sep = isRtlLang(lang) ? '، ' : ', ';
   const rows = individualRowsForExport(survey, results).filter((row) =>
     row.response.branch_id === target.branchId &&
     row.response.respondent_type === target.respondentType &&
@@ -228,7 +411,7 @@ function individualAnswerRowsForExport(
       section: sectionTitleForQuestion(survey, question.section_id),
       question,
       answers,
-      answerText: answers.length > 0 ? answers.join('، ') : 'پاسخ داده نشده / Not answered',
+      answerText: answers.length > 0 ? answers.join(sep) : SURVEY_T[lang].notAnswered,
       answered: answers.length > 0,
       updatedAt,
     };
@@ -238,12 +421,14 @@ function individualAnswerRowsForExport(
 function buildAnswerDistributionHtml(
   options: { label: string; count: number }[],
   total: number,
+  lang: SurveyLanguage,
   textAnswerTotal = 0,
 ): string {
+  const t = SURVEY_T[lang];
   if (options.length === 0) {
     return textAnswerTotal > 0
-      ? `<span class="muted">${escapeHtml(textAnswerTotal)} written/date/time answers. Use the individual export to review exact answers.</span>`
-      : '<span class="muted">No option answers have been submitted yet.</span>';
+      ? `<span class="muted">${escapeHtml(textAnswerTotal)} ${escapeHtml(t.writtenAnswers)}. ${escapeHtml(t.useIndividual)}</span>`
+      : `<span class="muted">${escapeHtml(t.noOptionAnswers)}</span>`;
   }
   return options.map((option) => {
     const ratio = total > 0 ? Math.round((option.count / total) * 100) : 0;
@@ -309,37 +494,65 @@ async function downloadSurveyReportPDF(filename: string, html: string) {
       frameWindow.requestAnimationFrame(() => resolve());
     });
 
-    const maxCanvasHeight = 30_000;
-    const reportHeight = Math.max(1, reportElement.scrollHeight);
-    const scale = Math.min(1.5, window.devicePixelRatio || 1.25, maxCanvasHeight / reportHeight);
-    const canvas = await html2canvas(reportElement, {
-      backgroundColor: '#ffffff',
-      logging: false,
-      scale,
-      useCORS: true,
-      windowWidth: 1200,
-      windowHeight: Math.max(1600, reportHeight),
-    });
-
+    const scale = Math.min(2, window.devicePixelRatio || 1.5);
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const canvasPageHeight = Math.floor(canvas.width * (pageHeight / pageWidth));
-    const pageCanvas = document.createElement('canvas');
-    pageCanvas.width = canvas.width;
-    pageCanvas.height = canvasPageHeight;
-    const pageContext = pageCanvas.getContext('2d');
-    if (!pageContext) throw new Error('Survey PDF canvas could not be prepared');
+    const margin = 28;
+    const blockGap = 10;
+    const contentWidth = pageWidth - margin * 2;
+    const contentHeight = pageHeight - margin * 2;
 
-    for (let sourceY = 0, pageIndex = 0; sourceY < canvas.height; sourceY += canvasPageHeight, pageIndex += 1) {
-      const sliceHeight = Math.min(canvasPageHeight, canvas.height - sourceY);
-      pageContext.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
-      pageContext.fillStyle = '#ffffff';
-      pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-      pageContext.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+    // Render the report one block at a time and lay the blocks out across pages.
+    // This keeps a question, table row, or card from being sliced in half across
+    // a page boundary (the old full-page-image approach cut content arbitrarily).
+    const blockEls = Array.from(frameDocument.querySelectorAll('.pdf-block')) as HTMLElement[];
+    const blocks = blockEls.length > 0 ? blockEls : [reportElement];
 
-      if (pageIndex > 0) pdf.addPage();
-      pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, pageHeight);
+    let cursorY = margin;
+    let pageStarted = false;
+
+    for (const element of blocks) {
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#ffffff',
+        logging: false,
+        scale,
+        useCORS: true,
+        windowWidth: 1200,
+      });
+      if (canvas.height === 0 || canvas.width === 0) continue;
+      const imgHeight = canvas.height * (contentWidth / canvas.width);
+
+      if (imgHeight > contentHeight) {
+        // Block is taller than a full page — slice just this block across pages.
+        if (pageStarted) { pdf.addPage(); cursorY = margin; pageStarted = false; }
+        const pageSrcHeight = Math.max(1, Math.floor(canvas.width * (contentHeight / contentWidth)));
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        const ctx = sliceCanvas.getContext('2d');
+        if (!ctx) throw new Error('Survey PDF canvas could not be prepared');
+        for (let srcY = 0; srcY < canvas.height; srcY += pageSrcHeight) {
+          const sliceH = Math.min(pageSrcHeight, canvas.height - srcY);
+          sliceCanvas.height = sliceH;
+          ctx.clearRect(0, 0, sliceCanvas.width, sliceH);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, sliceCanvas.width, sliceH);
+          ctx.drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+          if (pageStarted) { pdf.addPage(); }
+          pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentWidth, sliceH * (contentWidth / canvas.width));
+          pageStarted = true;
+        }
+        continue;
+      }
+
+      if (pageStarted && cursorY + imgHeight > pageHeight - margin) {
+        pdf.addPage();
+        cursorY = margin;
+        pageStarted = false;
+      }
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, cursorY, contentWidth, imgHeight);
+      cursorY += imgHeight + blockGap;
+      pageStarted = true;
     }
 
     pdf.save(filename);
@@ -370,6 +583,12 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
   const filename = `survey_results_${safeFilePart(survey.title)}_${today()}.pdf`;
   const branchEmptyColspan = hasSentimentAnalytics ? 5 : 4;
 
+  const lang = surveyLang(survey);
+  const rtl = isRtlLang(lang);
+  const dir = rtl ? 'rtl' : 'ltr';
+  const t = SURVEY_T[lang];
+  const sep = rtl ? '، ' : ', ';
+
   const branchRows = results.map((branch) => {
     const taggedResults = branch.questionResults.filter((question) => taggedQuestionIds.has(question.questionId) && question.total > 0);
     const avg = taggedResults.length > 0
@@ -377,30 +596,30 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
       : 0;
     return `
       <tr>
-        <td>${escapeHtml(branch.branchName)}</td>
+        <td dir="auto">${escapeHtml(branch.branchName)}</td>
         <td>${escapeHtml(branch.totalRespondents)}</td>
         <td>${escapeHtml(branch.individualResponses.length)}</td>
-        <td>${escapeHtml(branch.submitted ? 'ثبت شده / Submitted' : 'بدون معلومات / No data')}</td>
+        <td>${escapeHtml(branch.submitted ? t.submitted : t.noData)}</td>
         ${hasSentimentAnalytics ? `<td>${escapeHtml(pct(avg))}</td>` : ''}
       </tr>
     `;
   }).join('');
 
   const questionRows = aggregates.map((qa, index) => `
-    <article class="question-block">
+    <article class="question-block pdf-block">
       <div class="question-head">
         <span class="question-number">${index + 1}</span>
         <div>
           <h3 dir="auto">${escapeHtml(qa.question.question_text)}</h3>
-          <p>${escapeHtml(questionTypeLabel(qa.question.question_type))} - ${escapeHtml(qa.responseTotal)} responses</p>
+          <p>${escapeHtml(questionTypeLabelL(lang, qa.question.question_type))} · ${escapeHtml(qa.responseTotal)} ${escapeHtml(t.responses)}</p>
         </div>
       </div>
-      <div class="distribution">${buildAnswerDistributionHtml(qa.optionCounts, qa.grandTotal, qa.textAnswerTotal)}</div>
+      <div class="distribution">${buildAnswerDistributionHtml(qa.optionCounts, qa.grandTotal, lang, qa.textAnswerTotal)}</div>
       ${qa.question.sentiment_enabled ? `
         <div class="tag-summary">
-          <span>Positive / مثبت ${escapeHtml(pct(qa.positiveRate))}</span>
-          <span>Neutral / عادی ${escapeHtml(pct(qa.neutralRate))}</span>
-          <span>Negative / منفی ${escapeHtml(pct(qa.negativeRate))}</span>
+          <span>${escapeHtml(t.positive)} ${escapeHtml(pct(qa.positiveRate))}</span>
+          <span>${escapeHtml(t.neutral)} ${escapeHtml(pct(qa.neutralRate))}</span>
+          <span>${escapeHtml(t.negative)} ${escapeHtml(pct(qa.negativeRate))}</span>
         </div>
       ` : ''}
     </article>
@@ -410,14 +629,14 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
     <tr>
       <td>${index + 1}</td>
       <td dir="auto">${escapeHtml(sectionTitleForQuestion(survey, question.section_id))}</td>
-      <td>${escapeHtml(questionTypeLabel(question.question_type))}</td>
-      <td class="rtl-cell" dir="rtl">${escapeHtml(question.question_text)}</td>
-      <td class="rtl-cell" dir="rtl">${escapeHtml(optionsForQuestion(survey, question.id).map((option) => option.label).join('، '))}</td>
+      <td>${escapeHtml(questionTypeLabelL(lang, question.question_type))}</td>
+      <td class="content-cell" dir="auto">${escapeHtml(question.question_text)}</td>
+      <td class="content-cell" dir="auto">${escapeHtml(optionsForQuestion(survey, question.id).map((option) => option.label).join(sep))}</td>
     </tr>
   `).join('');
 
   const html = `<!doctype html>
-    <html lang="fa" dir="rtl">
+    <html lang="${lang}" dir="${dir}">
       <head>
         <meta charset="utf-8" />
         <title>${escapeHtml(filename)}</title>
@@ -427,7 +646,7 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
           body {
             margin: 0;
             color: #0f172a;
-            background: #f8fafc;
+            background: #ffffff;
             font-family: Tahoma, "Noto Naskh Arabic", "Noto Sans Arabic", Arial, sans-serif;
             line-height: 1.65;
             -webkit-print-color-adjust: exact;
@@ -436,15 +655,15 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
           .report {
             max-width: 1100px;
             margin: 0 auto;
-            padding: 28px;
-            direction: rtl;
+            padding: 24px;
+            direction: ${dir};
           }
+          .pdf-block { margin-bottom: 12px; }
           .hero {
             border-radius: 10px;
             padding: 24px;
             color: white;
             background: #0f766e;
-            margin-bottom: 18px;
           }
           .brand {
             direction: ltr;
@@ -478,7 +697,6 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 10px;
-            margin: 18px 0;
           }
           .card {
             border: 1px solid #dbe7e5;
@@ -496,12 +714,7 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
             margin-top: 4px;
             color: #0f766e;
             font-size: 22px;
-            direction: ltr;
-            text-align: right;
-          }
-          section {
-            margin-top: 18px;
-            page-break-inside: avoid;
+            text-align: start;
           }
           .section-title {
             display: flex;
@@ -510,7 +723,6 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
             gap: 12px;
             border-bottom: 2px solid #0f766e;
             padding-bottom: 7px;
-            margin-bottom: 10px;
           }
           .section-title h2 {
             font-size: 17px;
@@ -526,14 +738,14 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
             border: 1px solid #dbe7e5;
             border-radius: 8px;
             overflow: hidden;
-            direction: rtl;
+            direction: ${dir};
           }
           th, td {
             border-bottom: 1px solid #e2e8f0;
             padding: 8px 9px;
             vertical-align: top;
             font-size: 12px;
-            text-align: right;
+            text-align: start;
           }
           th {
             color: white;
@@ -541,9 +753,8 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
             font-weight: 700;
           }
           tr:nth-child(even) td { background: #f0fdfa; }
-          .rtl-cell {
-            direction: rtl;
-            text-align: right;
+          .content-cell {
+            text-align: start;
             unicode-bidi: plaintext;
           }
           .question-block {
@@ -551,8 +762,6 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
             border-radius: 9px;
             background: white;
             padding: 12px;
-            margin-bottom: 10px;
-            page-break-inside: avoid;
           }
           .question-head {
             display: grid;
@@ -592,8 +801,7 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
           .option-label {
             font-size: 12px;
             color: #334155;
-            direction: rtl;
-            text-align: right;
+            text-align: start;
             unicode-bidi: plaintext;
           }
           .bar-track {
@@ -608,8 +816,7 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
             background: #14b8a6;
           }
           .option-count {
-            direction: ltr;
-            text-align: left;
+            text-align: end;
             color: #475569;
             font-size: 11px;
           }
@@ -620,7 +827,6 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
             gap: 8px;
             color: #64748b;
             font-size: 11px;
-            direction: ltr;
           }
           .muted, .empty {
             color: #64748b;
@@ -630,81 +836,67 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
             text-align: center;
             padding: 18px;
           }
-          @media print {
-            body { background: white; }
-            .report { padding: 0; max-width: none; }
-            .hero, .card, .question-block, table { box-shadow: none; }
-            section { break-inside: avoid; }
-            .question-block { break-inside: avoid; }
-          }
         </style>
       </head>
       <body>
         <main class="report">
-          <header class="hero">
+          <header class="hero pdf-block">
             <div class="brand">Ponts per la Pau</div>
             <h1 dir="auto">${escapeHtml(survey.title)}</h1>
             <div class="meta">
               ${survey.period ? `<span class="chip">${escapeHtml(survey.period)}</span>` : ''}
-              ${survey.survey_date ? `<span class="chip">تاریخ سروی / Survey date: ${escapeHtml(formatSurveyDate(survey.survey_date))}</span>` : ''}
-              <span class="chip">وضعیت / Status: ${escapeHtml(survey.status)}</span>
-              <span class="chip">ساخته شد / Generated: ${escapeHtml(new Date().toLocaleString())}</span>
+              ${survey.survey_date ? `<span class="chip">${escapeHtml(t.surveyDate)}: ${escapeHtml(formatReportDate(lang, survey.survey_date))}</span>` : ''}
+              <span class="chip">${escapeHtml(t.status)}: ${escapeHtml(surveyStatusLabel(survey.status, lang))}</span>
+              <span class="chip">${escapeHtml(t.generated)}: ${escapeHtml(reportNow(lang))}</span>
             </div>
           </header>
 
-          <div class="cards">
-            <div class="card"><span>مجموع پاسخ‌دهندگان / Total respondents</span><strong>${escapeHtml(totalRespondents)}</strong></div>
-            <div class="card"><span>شعبه‌های دارای معلومات / Branches with data</span><strong>${escapeHtml(`${submittedBranches} / ${results.length}`)}</strong></div>
-            <div class="card"><span>شاگردان / کارمندان هدف</span><strong>${escapeHtml(`${targetStudents} / ${targetStaff}`)}</strong></div>
-            <div class="card"><span>${hasSentimentAnalytics ? 'رضایت برچسب‌خورده / Tagged satisfaction' : 'جواب‌های ثبت‌شده / Recorded answers'}</span><strong>${escapeHtml(hasSentimentAnalytics ? pct(avgSatisfaction) : recordedAnswerTotal)}</strong></div>
+          <div class="cards pdf-block">
+            <div class="card"><span>${escapeHtml(t.totalRespondents)}</span><strong>${escapeHtml(totalRespondents)}</strong></div>
+            <div class="card"><span>${escapeHtml(t.branchesWithData)}</span><strong>${escapeHtml(`${submittedBranches} / ${results.length}`)}</strong></div>
+            <div class="card"><span>${escapeHtml(t.targetStudentsStaff)}</span><strong>${escapeHtml(`${targetStudents} / ${targetStaff}`)}</strong></div>
+            <div class="card"><span>${escapeHtml(hasSentimentAnalytics ? t.taggedSatisfaction : t.recordedAnswers)}</span><strong>${escapeHtml(hasSentimentAnalytics ? pct(avgSatisfaction) : recordedAnswerTotal)}</strong></div>
           </div>
 
-          <section>
-            <div class="section-title">
-              <h2>خلاصه شعبه‌ها / Branch summary</h2>
-              <p>تعداد پاسخ‌دهندگان و جواب‌های فردی به تفکیک شعبه</p>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>شعبه / Branch</th>
-                  <th>پاسخ‌دهندگان</th>
-                  <th>جواب‌های فردی</th>
-                  <th>وضعیت</th>
-                  ${hasSentimentAnalytics ? '<th>رضایت برچسب‌خورده</th>' : ''}
-                </tr>
-              </thead>
-              <tbody>${branchRows || `<tr><td colspan="${branchEmptyColspan}" class="empty">هنوز نتیجه‌ای از شعبه‌ها ثبت نشده است.</td></tr>`}</tbody>
-            </table>
-          </section>
+          <div class="section-title pdf-block">
+            <h2>${escapeHtml(t.branchSummary)}</h2>
+            <p>${escapeHtml(t.branchSummarySub)}</p>
+          </div>
+          <table class="pdf-block">
+            <thead>
+              <tr>
+                <th>${escapeHtml(t.colBranch)}</th>
+                <th>${escapeHtml(t.colRespondents)}</th>
+                <th>${escapeHtml(t.colIndividual)}</th>
+                <th>${escapeHtml(t.colStatus)}</th>
+                ${hasSentimentAnalytics ? `<th>${escapeHtml(t.colTagged)}</th>` : ''}
+              </tr>
+            </thead>
+            <tbody>${branchRows || `<tr><td colspan="${branchEmptyColspan}" class="empty">${escapeHtml(t.emptyBranches)}</td></tr>`}</tbody>
+          </table>
 
-          <section>
-            <div class="section-title">
-              <h2>نتایج سوال‌ها / Question results</h2>
-              <p>تقسیم‌بندی جواب‌ها برای هر سوال سروی</p>
-            </div>
-            ${questionRows || '<p class="empty">هیچ سوالی در این سروی پیدا نشد.</p>'}
-          </section>
+          <div class="section-title pdf-block">
+            <h2>${escapeHtml(t.questionResults)}</h2>
+            <p>${escapeHtml(t.questionResultsSub)}</p>
+          </div>
+          ${questionRows || `<p class="empty pdf-block">${escapeHtml(t.emptyQuestions)}</p>`}
 
-          <section>
-            <div class="section-title">
-              <h2>متن اصلی سروی (دری) / Dari questionnaire</h2>
-              <p>سوال‌ها و گزینه‌های جواب به همان زبان اصلی</p>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>بخش / Section</th>
-                  <th>نوع جواب / Type</th>
-                  <th>سوال (دری)</th>
-                  <th>گزینه‌های جواب (دری)</th>
-                </tr>
-              </thead>
-              <tbody>${questionnaireRows}</tbody>
-            </table>
-          </section>
-
+          <div class="section-title pdf-block">
+            <h2>${escapeHtml(t.questionnaire)}</h2>
+            <p>${escapeHtml(t.questionnaireSub)}</p>
+          </div>
+          <table class="pdf-block">
+            <thead>
+              <tr>
+                <th>${escapeHtml(t.colNum)}</th>
+                <th>${escapeHtml(t.colSection)}</th>
+                <th>${escapeHtml(t.colType)}</th>
+                <th>${escapeHtml(t.colQuestion)}</th>
+                <th>${escapeHtml(t.colOptions)}</th>
+              </tr>
+            </thead>
+            <tbody>${questionnaireRows}</tbody>
+          </table>
         </main>
       </body>
     </html>`;
@@ -731,16 +923,16 @@ export async function exportSurveyResultsExcel(survey: SurveyFull, results: Bran
     ? taggedAggregates.reduce((sum, q) => sum + q.positiveRate, 0) / taggedAggregates.length
     : 0;
 
+  const lang = surveyLang(survey);
+  const rtl = isRtlLang(lang);
+  const t = SURVEY_T[lang];
+
   type ExportCell = string | number;
   type ExportRow = Record<string, ExportCell>;
-  const targetGroupLabel = {
-    students: 'شاگردان / Students',
-    staff: 'کارمندان / Staff',
-    students_staff: 'شاگردان و کارمندان / Students and staff',
-  }[survey.respondent_type ?? 'students_staff'];
+  const groupLabel = targetGroupLabel(survey.respondent_type, lang);
   const answerDistributionText = (qa: ReturnType<typeof surveyQuestionAggregates>[number]) => {
     const optionLines = qa.optionCounts.map((option) => `${option.label}: ${option.count}`).join('\n');
-    const textLine = qa.textAnswerTotal > 0 ? `${qa.textAnswerTotal} written/date/time answers` : '';
+    const textLine = qa.textAnswerTotal > 0 ? `${qa.textAnswerTotal} ${t.writtenAnswers}` : '';
     return [optionLines, textLine].filter(Boolean).join('\n');
   };
 
@@ -816,103 +1008,99 @@ export async function exportSurveyResultsExcel(survey: SurveyFull, results: Bran
     return sheet;
   };
 
-  addSheet('Summary', [
-    { Metric: 'عنوان سروی / Survey title', Value: survey.title },
-    { Metric: 'دوره / Period', Value: survey.period ?? '' },
-    { Metric: 'تاریخ سروی / Survey date', Value: formatSurveyDate(survey.survey_date) },
-    { Metric: 'وضعیت / Status', Value: survey.status },
-    { Metric: 'گروه هدف / Target group', Value: targetGroupLabel },
-    { Metric: 'شاگردان هدف / Target students', Value: targetStudents },
-    { Metric: 'کارمندان هدف / Target staff', Value: targetStaff },
-    { Metric: 'مجموع افراد هدف / Target total', Value: survey.respondents.length },
-    { Metric: 'مجموع پاسخ‌دهندگان / Total respondents', Value: totalRespondents },
-    { Metric: 'شعبه‌های ثبت‌شده / Submitted branches', Value: submittedBranches },
-    { Metric: 'شعبه‌های دارای معلومات / Branches with data', Value: results.length },
-    { Metric: 'جواب‌های ثبت‌شده / Recorded answers', Value: recordedAnswerTotal },
-    ...(hasSentimentAnalytics ? [{ Metric: 'رضایت برچسب‌خورده / Tagged satisfaction', Value: pct(avgSatisfaction) }] : []),
+  addSheet(t.sheetSummary, [
+    { Metric: t.surveyTitle, Value: survey.title },
+    { Metric: t.period, Value: survey.period ?? '' },
+    { Metric: t.surveyDate, Value: formatReportDate(lang, survey.survey_date) },
+    { Metric: t.status, Value: surveyStatusLabel(survey.status, lang) },
+    { Metric: t.targetGroup, Value: groupLabel },
+    { Metric: t.targetStudents, Value: targetStudents },
+    { Metric: t.targetStaff, Value: targetStaff },
+    { Metric: t.targetTotal, Value: survey.respondents.length },
+    { Metric: t.totalRespondents, Value: totalRespondents },
+    { Metric: t.submittedBranches, Value: submittedBranches },
+    { Metric: t.branchesWithData, Value: results.length },
+    { Metric: t.recordedAnswers, Value: recordedAnswerTotal },
+    ...(hasSentimentAnalytics ? [{ Metric: t.taggedSatisfaction, Value: pct(avgSatisfaction) }] : []),
   ], {
-    rtl: true,
-    rtlColumns: ['Metric', 'Value'],
+    rtl,
     widths: { Metric: 36, Value: 62 },
   });
 
-  addSheet('Branch Results', results.map((branch) => {
+  addSheet(t.sheetBranches, results.map((branch) => {
     const taggedResults = branch.questionResults.filter((question) => taggedQuestionIds.has(question.questionId) && question.total > 0);
     const avg = taggedResults.length > 0
       ? taggedResults.reduce((sum, q) => sum + q.positiveRate, 0) / taggedResults.length
       : 0;
     return {
-      'شعبه / Branch': branch.branchName,
-      'پاسخ‌دهندگان / Respondents': branch.totalRespondents,
-      'جواب‌های فردی / Individual answers': branch.individualResponses.length,
-      'وضعیت / Status': branch.submitted ? 'ثبت شده / Submitted' : 'بدون معلومات / No data',
-      ...(hasSentimentAnalytics ? { 'رضایت برچسب‌خورده / Tagged satisfaction': pct(avg) } : {}),
+      [t.colBranch]: branch.branchName,
+      [t.colRespondents]: branch.totalRespondents,
+      [t.colIndividual]: branch.individualResponses.length,
+      [t.colStatus]: branch.submitted ? t.submitted : t.noData,
+      ...(hasSentimentAnalytics ? { [t.colTagged]: pct(avg) } : {}),
     };
   }), {
-    rtl: true,
-    rtlColumns: ['شعبه / Branch', 'وضعیت / Status'],
+    rtl,
     widths: {
-      'شعبه / Branch': 28,
-      'پاسخ‌دهندگان / Respondents': 20,
-      'جواب‌های فردی / Individual answers': 22,
-      'وضعیت / Status': 24,
-      'رضایت برچسب‌خورده / Tagged satisfaction': 26,
+      [t.colBranch]: 28,
+      [t.colRespondents]: 20,
+      [t.colIndividual]: 22,
+      [t.colStatus]: 24,
+      [t.colTagged]: 26,
     },
-    emptyMessage: 'No branch results yet',
+    emptyMessage: t.emptyBranches,
   });
 
-  addSheet('Question Results', aggregates.map((qa, index) => {
+  addSheet(t.sheetQuestions, aggregates.map((qa, index) => {
     const base: Record<string, string | number> = {
-      '#': index + 1,
-      'بخش / Section': sectionTitleForQuestion(survey, qa.question.section_id),
-      'نوع جواب / Type': questionTypeLabel(qa.question.question_type),
-      'سوال (دری) / Question': qa.question.question_text,
-      'پاسخ‌ها / Responses': qa.responseTotal,
-      'تقسیم جواب‌ها / Answer distribution': answerDistributionText(qa),
+      [t.colNum]: index + 1,
+      [t.colSection]: sectionTitleForQuestion(survey, qa.question.section_id),
+      [t.colType]: questionTypeLabelL(lang, qa.question.question_type),
+      [t.colQuestion]: qa.question.question_text,
+      [t.responses]: qa.responseTotal,
+      [t.colOptions]: answerDistributionText(qa),
     };
     if (!hasSentimentAnalytics) return base;
     return {
       ...base,
-      'Positive tag': qa.question.sentiment_enabled ? qa.positiveTotal : '',
-      'Positive %': qa.question.sentiment_enabled ? pct(qa.positiveRate) : '',
-      'Neutral tag': qa.question.sentiment_enabled ? qa.neutralTotal : '',
-      'Neutral %': qa.question.sentiment_enabled ? pct(qa.neutralRate) : '',
-      'Negative tag': qa.question.sentiment_enabled ? qa.negativeTotal : '',
-      'Negative %': qa.question.sentiment_enabled ? pct(qa.negativeRate) : '',
+      [`${t.positive} #`]: qa.question.sentiment_enabled ? qa.positiveTotal : '',
+      [`${t.positive} %`]: qa.question.sentiment_enabled ? pct(qa.positiveRate) : '',
+      [`${t.neutral} #`]: qa.question.sentiment_enabled ? qa.neutralTotal : '',
+      [`${t.neutral} %`]: qa.question.sentiment_enabled ? pct(qa.neutralRate) : '',
+      [`${t.negative} #`]: qa.question.sentiment_enabled ? qa.negativeTotal : '',
+      [`${t.negative} %`]: qa.question.sentiment_enabled ? pct(qa.negativeRate) : '',
     };
   }), {
-    rtl: true,
-    rtlColumns: ['بخش / Section', 'سوال (دری) / Question', 'تقسیم جواب‌ها / Answer distribution'],
+    rtl,
     widths: {
-      '#': 8,
-      'بخش / Section': 24,
-      'نوع جواب / Type': 18,
-      'سوال (دری) / Question': 56,
-      'پاسخ‌ها / Responses': 16,
-      'تقسیم جواب‌ها / Answer distribution': 52,
+      [t.colNum]: 8,
+      [t.colSection]: 24,
+      [t.colType]: 18,
+      [t.colQuestion]: 56,
+      [t.responses]: 16,
+      [t.colOptions]: 52,
     },
     landscape: true,
-    emptyMessage: 'No questions found',
+    emptyMessage: t.emptyQuestions,
   });
 
-  addSheet('Questionnaire Dari', survey.questions.map((question, index) => ({
-    '#': index + 1,
-    'بخش / Section': sectionTitleForQuestion(survey, question.section_id),
-    'نوع جواب / Type': questionTypeLabel(question.question_type),
-    'سوال (دری)': question.question_text,
-    'گزینه‌های جواب (دری)': optionsForQuestion(survey, question.id).map((option) => option.label).join('\n'),
+  addSheet(t.sheetQuestionnaire, survey.questions.map((question, index) => ({
+    [t.colNum]: index + 1,
+    [t.colSection]: sectionTitleForQuestion(survey, question.section_id),
+    [t.colType]: questionTypeLabelL(lang, question.question_type),
+    [t.colQuestion]: question.question_text,
+    [t.colOptions]: optionsForQuestion(survey, question.id).map((option) => option.label).join('\n'),
   })), {
-    rtl: true,
-    rtlColumns: ['بخش / Section', 'سوال (دری)', 'گزینه‌های جواب (دری)'],
+    rtl,
     widths: {
-      '#': 8,
-      'بخش / Section': 24,
-      'نوع جواب / Type': 18,
-      'سوال (دری)': 58,
-      'گزینه‌های جواب (دری)': 46,
+      [t.colNum]: 8,
+      [t.colSection]: 24,
+      [t.colType]: 18,
+      [t.colQuestion]: 58,
+      [t.colOptions]: 46,
     },
     landscape: true,
-    emptyMessage: 'No questionnaire questions found',
+    emptyMessage: t.emptyQuestions,
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
@@ -927,7 +1115,11 @@ export async function exportSurveyIndividualPDF(
   results: BranchResult[],
   target: SurveyIndividualExportTarget,
 ): Promise<void> {
-  const answerRows = individualAnswerRowsForExport(survey, results, target);
+  const lang = surveyLang(survey);
+  const rtl = isRtlLang(lang);
+  const dir = rtl ? 'rtl' : 'ltr';
+  const t = SURVEY_T[lang];
+  const answerRows = individualAnswerRowsForExport(survey, results, target, lang);
   const answeredCount = answerRows.filter((row) => row.answered).length;
   const answerRecordCount = answerRows.reduce((sum, row) => sum + row.answers.length, 0);
   const filename = `survey_response_${safeFilePart(target.respondentName)}_${safeFilePart(survey.title)}_${today()}.pdf`;
@@ -935,15 +1127,15 @@ export async function exportSurveyIndividualPDF(
     <tr class="${row.answered ? '' : 'muted-row'}">
       <td>${escapeHtml(row.index)}</td>
       <td dir="auto">${escapeHtml(row.section)}</td>
-      <td>${escapeHtml(questionTypeLabel(row.question.question_type))}</td>
-      <td class="rtl-cell" dir="rtl">${escapeHtml(row.question.question_text)}</td>
-      <td class="rtl-cell" dir="rtl">${escapeHtml(row.answerText)}</td>
-      <td>${escapeHtml(row.updatedAt ? new Date(row.updatedAt).toLocaleString() : '')}</td>
+      <td>${escapeHtml(questionTypeLabelL(lang, row.question.question_type))}</td>
+      <td class="content-cell" dir="auto">${escapeHtml(row.question.question_text)}</td>
+      <td class="content-cell" dir="auto">${escapeHtml(row.answerText)}</td>
+      <td>${escapeHtml(reportTimestamp(lang, row.updatedAt))}</td>
     </tr>
   `).join('');
 
   const html = `<!doctype html>
-    <html lang="fa" dir="rtl">
+    <html lang="${lang}" dir="${dir}">
       <head>
         <meta charset="utf-8" />
         <title>${escapeHtml(filename)}</title>
@@ -959,15 +1151,15 @@ export async function exportSurveyIndividualPDF(
           .report {
             max-width: 1100px;
             margin: 0 auto;
-            padding: 28px;
-            direction: rtl;
+            padding: 24px;
+            direction: ${dir};
           }
+          .pdf-block { margin-bottom: 12px; }
           .hero {
             border-radius: 10px;
             padding: 24px;
             color: white;
             background: #0f766e;
-            margin-bottom: 18px;
           }
           .brand {
             direction: ltr;
@@ -1001,7 +1193,6 @@ export async function exportSurveyIndividualPDF(
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 10px;
-            margin: 18px 0;
           }
           .card {
             border: 1px solid #dbe7e5;
@@ -1023,7 +1214,6 @@ export async function exportSurveyIndividualPDF(
           .section-title {
             border-bottom: 2px solid #0f766e;
             padding-bottom: 7px;
-            margin: 18px 0 10px;
           }
           .section-title h2 {
             font-size: 17px;
@@ -1035,14 +1225,14 @@ export async function exportSurveyIndividualPDF(
             border: 1px solid #dbe7e5;
             border-radius: 8px;
             overflow: hidden;
-            direction: rtl;
+            direction: ${dir};
           }
           th, td {
             border-bottom: 1px solid #e2e8f0;
             padding: 8px 9px;
             vertical-align: top;
             font-size: 12px;
-            text-align: right;
+            text-align: start;
           }
           th {
             color: white;
@@ -1051,52 +1241,49 @@ export async function exportSurveyIndividualPDF(
           }
           tr:nth-child(even) td { background: #f0fdfa; }
           .muted-row td { color: #94a3b8; }
-          .rtl-cell {
-            direction: rtl;
-            text-align: right;
+          .content-cell {
+            text-align: start;
             unicode-bidi: plaintext;
           }
         </style>
       </head>
       <body>
         <main class="report">
-          <header class="hero">
+          <header class="hero pdf-block">
             <div class="brand">Ponts per la Pau</div>
             <h1 dir="auto">${escapeHtml(survey.title)}</h1>
             <div class="meta">
-              <span class="chip">پاسخ فردی / Individual response</span>
+              <span class="chip">${escapeHtml(t.individualResponse)}</span>
               ${survey.period ? `<span class="chip">${escapeHtml(survey.period)}</span>` : ''}
-              ${survey.survey_date ? `<span class="chip">تاریخ سروی / Survey date: ${escapeHtml(formatSurveyDate(survey.survey_date))}</span>` : ''}
-              <span class="chip">ساخته شد / Generated: ${escapeHtml(new Date().toLocaleString())}</span>
+              ${survey.survey_date ? `<span class="chip">${escapeHtml(t.surveyDate)}: ${escapeHtml(formatReportDate(lang, survey.survey_date))}</span>` : ''}
+              <span class="chip">${escapeHtml(t.generated)}: ${escapeHtml(reportNow(lang))}</span>
             </div>
           </header>
 
-          <div class="cards">
-            <div class="card"><span>نام / Respondent</span><strong dir="auto">${escapeHtml(target.respondentName)}</strong></div>
-            <div class="card"><span>نوع / Type</span><strong>${escapeHtml(respondentKindLabel(target.respondentType))}</strong></div>
-            <div class="card"><span>شعبه / Branch</span><strong dir="auto">${escapeHtml(target.branchName)}</strong></div>
-            <div class="card"><span>سوال‌های پاسخ‌شده</span><strong>${escapeHtml(`${answeredCount} / ${survey.questions.length}`)}</strong></div>
+          <div class="cards pdf-block">
+            <div class="card"><span>${escapeHtml(t.respondent)}</span><strong dir="auto">${escapeHtml(target.respondentName)}</strong></div>
+            <div class="card"><span>${escapeHtml(t.respondentType)}</span><strong>${escapeHtml(respondentKindLabel(target.respondentType, lang))}</strong></div>
+            <div class="card"><span>${escapeHtml(t.branch)}</span><strong dir="auto">${escapeHtml(target.branchName)}</strong></div>
+            <div class="card"><span>${escapeHtml(t.answeredQuestions)}</span><strong>${escapeHtml(`${answeredCount} / ${survey.questions.length}`)}</strong></div>
           </div>
 
-          <section>
-            <div class="section-title">
-              <h2>جواب‌های پاسخ‌دهنده / Respondent answers</h2>
-              <p>${escapeHtml(answerRecordCount)} saved answer record${answerRecordCount === 1 ? '' : 's'}</p>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>بخش / Section</th>
-                  <th>نوع جواب / Type</th>
-                  <th>سوال (دری)</th>
-                  <th>جواب (دری)</th>
-                  <th>آخرین تغییر</th>
-                </tr>
-              </thead>
-              <tbody>${answerTableRows}</tbody>
-            </table>
-          </section>
+          <div class="section-title pdf-block">
+            <h2>${escapeHtml(t.respondentAnswers)}</h2>
+            <p>${escapeHtml(answerRecordCount)} ${escapeHtml(t.savedRecords)}</p>
+          </div>
+          <table class="pdf-block">
+            <thead>
+              <tr>
+                <th>${escapeHtml(t.colNum)}</th>
+                <th>${escapeHtml(t.colSection)}</th>
+                <th>${escapeHtml(t.colType)}</th>
+                <th>${escapeHtml(t.colQuestion)}</th>
+                <th>${escapeHtml(t.colAnswer)}</th>
+                <th>${escapeHtml(t.colUpdated)}</th>
+              </tr>
+            </thead>
+            <tbody>${answerTableRows}</tbody>
+          </table>
         </main>
       </body>
     </html>`;
@@ -1113,7 +1300,10 @@ export async function exportSurveyIndividualExcel(
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Ponts per la Pau';
   workbook.created = new Date();
-  const answerRows = individualAnswerRowsForExport(survey, results, target);
+  const lang = surveyLang(survey);
+  const rtl = isRtlLang(lang);
+  const t = SURVEY_T[lang];
+  const answerRows = individualAnswerRowsForExport(survey, results, target, lang);
   const answeredCount = answerRows.filter((row) => row.answered).length;
 
   type ExportCell = string | number;
@@ -1121,11 +1311,10 @@ export async function exportSurveyIndividualExcel(
   const addSheet = (
     name: string,
     rows: ExportRow[],
-    rtlColumns: string[] = [],
     widths: Record<string, number> = {},
   ) => {
-    const safeRows = rows.length > 0 ? rows : [{ Notice: 'No data yet' }];
-    const sheet = workbook.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1, rightToLeft: true }] } as any);
+    const safeRows = rows.length > 0 ? rows : [{ Notice: t.noDataYet }];
+    const sheet = workbook.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1, rightToLeft: rtl }] } as any);
     const headers = Object.keys(safeRows[0]);
     sheet.columns = headers.map((header) => ({ header, key: header, width: widths[header] ?? Math.max(14, header.length + 6) }));
     safeRows.forEach((row) => sheet.addRow(row));
@@ -1139,13 +1328,12 @@ export async function exportSurveyIndividualExcel(
     };
     sheet.eachRow({ includeEmpty: true }, (row) => {
       row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
-        const header = headers[columnNumber - 1] ?? '';
-        const isRtl = rtlColumns.includes(header);
+        void columnNumber;
         (cell as any).alignment = {
-          horizontal: isRtl ? 'right' : 'left',
+          horizontal: rtl ? 'right' : 'left',
           vertical: 'top',
           wrapText: true,
-          readingOrder: isRtl ? 'rtl' : 'ltr',
+          readingOrder: rtl ? 'rtl' : 'ltr',
         };
         (cell as any).border = {
           top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
@@ -1161,37 +1349,32 @@ export async function exportSurveyIndividualExcel(
     return sheet;
   };
 
-  addSheet('Summary', [
-    { Metric: 'عنوان سروی / Survey title', Value: survey.title },
-    { Metric: 'نام / Respondent', Value: target.respondentName },
-    { Metric: 'نوع / Type', Value: respondentKindLabel(target.respondentType) },
-    { Metric: 'شعبه / Branch', Value: target.branchName },
-    { Metric: 'دوره / Period', Value: survey.period ?? '' },
-    { Metric: 'تاریخ سروی / Survey date', Value: formatSurveyDate(survey.survey_date) },
-    { Metric: 'سوال‌های پاسخ‌شده / Answered questions', Value: `${answeredCount} / ${survey.questions.length}` },
-  ], ['Metric', 'Value'], { Metric: 34, Value: 58 });
+  addSheet(t.sheetSummary, [
+    { Metric: t.surveyTitle, Value: survey.title },
+    { Metric: t.respondent, Value: target.respondentName },
+    { Metric: t.respondentType, Value: respondentKindLabel(target.respondentType, lang) },
+    { Metric: t.branch, Value: target.branchName },
+    { Metric: t.period, Value: survey.period ?? '' },
+    { Metric: t.surveyDate, Value: formatReportDate(lang, survey.survey_date) },
+    { Metric: t.answeredQuestions, Value: `${answeredCount} / ${survey.questions.length}` },
+  ], { Metric: 34, Value: 58 });
 
-  addSheet('Answers', answerRows.map((row) => ({
-    '#': row.index,
-    'بخش / Section': row.section,
-    'نوع جواب / Type': questionTypeLabel(row.question.question_type),
-    'سوال (دری) / Question': row.question.question_text,
-    'جواب (دری) / Answer': row.answerText,
-    'گزینه‌ها / Options': optionsForQuestion(survey, row.question.id).map((option) => option.label).join('\n'),
-    'آخرین تغییر / Updated': row.updatedAt ? new Date(row.updatedAt).toLocaleString() : '',
-  })), [
-    'بخش / Section',
-    'سوال (دری) / Question',
-    'جواب (دری) / Answer',
-    'گزینه‌ها / Options',
-  ], {
-    '#': 8,
-    'بخش / Section': 24,
-    'نوع جواب / Type': 20,
-    'سوال (دری) / Question': 58,
-    'جواب (دری) / Answer': 44,
-    'گزینه‌ها / Options': 40,
-    'آخرین تغییر / Updated': 24,
+  addSheet(t.sheetAnswers, answerRows.map((row) => ({
+    [t.colNum]: row.index,
+    [t.colSection]: row.section,
+    [t.colType]: questionTypeLabelL(lang, row.question.question_type),
+    [t.colQuestion]: row.question.question_text,
+    [t.colAnswer]: row.answerText,
+    [t.colOptions]: optionsForQuestion(survey, row.question.id).map((option) => option.label).join('\n'),
+    [t.colUpdated]: reportTimestamp(lang, row.updatedAt),
+  })), {
+    [t.colNum]: 8,
+    [t.colSection]: 24,
+    [t.colType]: 20,
+    [t.colQuestion]: 58,
+    [t.colAnswer]: 44,
+    [t.colOptions]: 40,
+    [t.colUpdated]: 24,
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
