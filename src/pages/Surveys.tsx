@@ -41,7 +41,7 @@ import {
 import {
   ClipboardList, Plus, Pencil, Trash2, BarChart3, Send, MoveHorizontal as MoreHorizontal,
   CheckCircle2, Clock, FileText, Users, TrendingUp, ChevronUp, ChevronDown,
-  Grip, X, Building2, ArrowLeft, FileSpreadsheet,
+  Grip, X, Building2, ArrowLeft, FileSpreadsheet, Copy,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -2440,6 +2440,264 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
   );
 }
 
+// ─── Duplicate Survey Dialog (superadmin) ───────────────────────────────────────
+
+interface DuplicateSurveyProps {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  source: SurveyFull;
+  branches: Branch[];
+}
+
+function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: DuplicateSurveyProps) {
+  const [title, setTitle] = useState('');
+  const [period, setPeriod] = useState('');
+  const [surveyDate, setSurveyDate] = useState('');
+  const [status, setStatus] = useState<SurveyStatus>('draft');
+  const [language, setLanguage] = useState<SurveyLanguage>('fa');
+  const [branchId, setBranchId] = useState('');
+  const [respondentType, setRespondentType] = useState<SurveyRespondentType>('students');
+  const [studentOptions, setStudentOptions] = useState<Array<{ type: 'student'; id: string; name: string; meta?: string }>>([]);
+  const [staffOptions, setStaffOptions] = useState<Array<{ type: 'staff'; id: string; name: string; meta?: string }>>([]);
+  const [selected, setSelected] = useState<Array<{ type: SurveyRespondentKind; id: string; name: string }>>([]);
+  const [respondentsLoading, setRespondentsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(`Copy of ${source.title}`);
+    setPeriod(source.period ?? '');
+    setSurveyDate('');
+    setStatus('draft');
+    setLanguage(source.language ?? 'fa');
+    setRespondentType(source.respondent_type ?? 'students');
+    setBranchId(branches[0]?.id ?? '');
+    setSelected([]);
+  }, [open, source, branches]);
+
+  useEffect(() => {
+    if (!open || !branchId) return;
+    setRespondentsLoading(true);
+    setSelected([]);
+    getSurveyRespondentOptions(branchId).then((res) => {
+      if (res.success) { setStudentOptions(res.students); setStaffOptions(res.staff); }
+      else toast.error(res.error);
+      setRespondentsLoading(false);
+    });
+  }, [open, branchId]);
+
+  useEffect(() => {
+    setSelected((current) => current.filter((r) => (
+      respondentType === 'students' ? r.type === 'student' : respondentType === 'staff' ? r.type === 'staff' : true
+    )));
+  }, [respondentType]);
+
+  const visibleStudents = respondentType !== 'staff' ? studentOptions : [];
+  const visibleStaff = respondentType !== 'students' ? staffOptions : [];
+  const selectedStudentCount = selected.filter((r) => r.type === 'student').length;
+  const selectedStaffCount = selected.filter((r) => r.type === 'staff').length;
+
+  const toggle = (r: { type: SurveyRespondentKind; id: string; name: string }) => {
+    setSelected((current) => {
+      const exists = current.some((i) => i.type === r.type && i.id === r.id);
+      return exists ? current.filter((i) => !(i.type === r.type && i.id === r.id)) : [...current, r];
+    });
+  };
+  const selectAll = () => setSelected([...visibleStudents, ...visibleStaff].map((r) => ({ type: r.type, id: r.id, name: r.name })));
+
+  const handleDuplicate = async () => {
+    if (!title.trim()) { toast.error('Survey title is required'); return; }
+    if (!branchId) { toast.error('Select a branch'); return; }
+    if (selected.length === 0) { toast.error('Select at least one respondent'); return; }
+
+    const orderedSections = [...source.sections].sort((a, b) => a.order_index - b.order_index);
+    const sectionIndexById = new Map<string, number>();
+    orderedSections.forEach((s, i) => sectionIndexById.set(s.id, i));
+    const sections = orderedSections.map((s) => ({ title: s.title, description: s.description || undefined }));
+    const questions = [...source.questions]
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((q) => ({
+        text: q.question_text,
+        sectionIndex: q.section_id != null ? (sectionIndexById.get(q.section_id) ?? null) : null,
+        questionType: q.question_type,
+        sentimentEnabled: q.sentiment_enabled,
+        options: questionUsesOptions(q.question_type)
+          ? optionsForQuestion(source, q.id).map((o) => ({ label: o.label, sentiment: o.sentiment }))
+          : [],
+      }));
+    const bankOptions = source.options.filter((o) => !o.question_id).map((o) => ({ label: o.label, sentiment: o.sentiment }));
+
+    setSaving(true);
+    try {
+      const res = await createSurvey({
+        title: title.trim(),
+        description: source.description || undefined,
+        period: period.trim() || undefined,
+        surveyDate: surveyDate || undefined,
+        branchId,
+        respondentType,
+        respondentIds: selected,
+        language,
+        status,
+        sections,
+        questions,
+        options: bankOptions,
+      });
+      if (!res.success) { toast.error(res.error); return; }
+      toast.success('Survey duplicated');
+      onSaved();
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="border-b px-6 py-4 text-left">
+          <DialogTitle className="flex items-center gap-2">
+            <Copy className="h-5 w-5 text-primary" /> Duplicate Survey
+          </DialogTitle>
+          <DialogDescription>
+            Copies all sections, questions, and answer options. Choose a new branch, respondents, and dates.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[calc(90vh-9rem)] space-y-5 overflow-y-auto px-6 py-5">
+          <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+            Copying <span className="font-semibold text-foreground">{source.questions.length}</span> questions ·{' '}
+            <span className="font-semibold text-foreground">{source.sections.length}</span> sections ·{' '}
+            <span className="font-semibold text-foreground">{source.options.length}</span> answer options from “{source.title}”.
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>New Title <span className="text-red-500">*</span></Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Branch <span className="text-red-500">*</span></Label>
+              <Select value={branchId} onValueChange={setBranchId}>
+                <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Respondent Group</Label>
+              <Select value={respondentType} onValueChange={(v) => setRespondentType(v as SurveyRespondentType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="students">Students</SelectItem>
+                  <SelectItem value="staff">Staff</SelectItem>
+                  <SelectItem value="students_staff">Students and Staff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Survey Period</Label>
+              <Input placeholder="e.g. December 2026" value={period} onChange={(e) => setPeriod(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Survey Date</Label>
+              <Input type="date" value={surveyDate} onChange={(e) => setSurveyDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as SurveyStatus)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Report Language</Label>
+              <Select value={language} onValueChange={(v) => setLanguage(v as SurveyLanguage)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SURVEY_LANGUAGE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border bg-background p-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold">Respondents</p>
+                <p className="text-xs text-muted-foreground">{selected.length} selected · {selectedStudentCount} students, {selectedStaffCount} staff</p>
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={selectAll} disabled={respondentsLoading || !branchId}>Select All</Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSelected([])}>Clear</Button>
+              </div>
+            </div>
+
+            {respondentsLoading ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-md" />)}
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {visibleStudents.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Students</h4>
+                    <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border p-2">
+                      {visibleStudents.map((s) => {
+                        const checked = selected.some((i) => i.type === 'student' && i.id === s.id);
+                        return (
+                          <label key={s.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted">
+                            <Checkbox checked={checked} onCheckedChange={() => toggle({ type: 'student', id: s.id, name: s.name })} />
+                            <span className="min-w-0 truncate text-sm">{s.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {visibleStaff.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff</h4>
+                    <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border p-2">
+                      {visibleStaff.map((m) => {
+                        const checked = selected.some((i) => i.type === 'staff' && i.id === m.id);
+                        return (
+                          <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted">
+                            <Checkbox checked={checked} onCheckedChange={() => toggle({ type: 'staff', id: m.id, name: m.name })} />
+                            <span className="min-w-0 truncate text-sm">{m.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {visibleStudents.length === 0 && visibleStaff.length === 0 && (
+                  <p className="text-sm text-muted-foreground sm:col-span-2">No active students or staff in this branch.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t bg-background px-6 py-3">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleDuplicate} disabled={saving}>
+            {saving ? 'Duplicating...' : 'Duplicate Survey'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function Surveys() {
@@ -2447,6 +2705,7 @@ export function Surveys() {
   const navigate = useNavigate();
   useTranslation(); // ensure i18n is active; translations are inline strings
   const isAdmin = user?.role === 'superadmin' || user?.role === 'admin';
+  const isSuperadmin = user?.role === 'superadmin';
 
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -2465,6 +2724,9 @@ export function Surveys() {
 
   const [deleteTarget, setDeleteTarget] = useState<Survey | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [duplicateSource, setDuplicateSource] = useState<SurveyFull | null>(null);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -2506,6 +2768,12 @@ export function Surveys() {
   const openEdit = async (survey: Survey) => {
     const full = await getSurveyFull(survey.id);
     if (full.success && full.data) { setEditingSurvey(full.data); setEditBuilderOpen(true); }
+    else toast.error('Failed to load survey');
+  };
+
+  const openDuplicate = async (survey: Survey) => {
+    const full = await getSurveyFull(survey.id);
+    if (full.success && full.data) { setDuplicateSource(full.data); setDuplicateOpen(true); }
     else toast.error('Failed to load survey');
   };
 
@@ -2628,6 +2896,11 @@ export function Surveys() {
                             <DropdownMenuItem onClick={() => openEdit(survey)}>
                               <Pencil className="mr-2 h-4 w-4" /> Edit
                             </DropdownMenuItem>
+                            {isSuperadmin && (
+                              <DropdownMenuItem onClick={() => openDuplicate(survey)}>
+                                <Copy className="mr-2 h-4 w-4" /> Duplicate
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem className="text-red-600" onClick={() => setDeleteTarget(survey)}>
                               <Trash2 className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
@@ -2692,6 +2965,17 @@ export function Surveys() {
         onSaved={fetchAll}
         existing={editingSurvey}
       />
+
+      {/* Duplicate dialog (superadmin) */}
+      {duplicateSource && (
+        <DuplicateSurveyDialog
+          open={duplicateOpen}
+          onClose={() => { setDuplicateOpen(false); setDuplicateSource(null); }}
+          onSaved={fetchAll}
+          source={duplicateSource}
+          branches={branches}
+        />
+      )}
 
       {/* Data entry dialog */}
       {dataEntrySurvey && (
