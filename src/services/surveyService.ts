@@ -166,6 +166,18 @@ export interface CreateSurveyPayload {
   options: { label: string; sentiment: Sentiment }[];
 }
 
+export interface UpdateSurveyStructurePayload {
+  title: string;
+  description?: string | null;
+  period?: string | null;
+  surveyDate?: string | null;
+  language: SurveyLanguage;
+  status: SurveyStatus;
+  sections: CreateSurveyPayload['sections'];
+  questions: CreateSurveyPayload['questions'];
+  options: CreateSurveyPayload['options'];
+}
+
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 
 export async function getSurveys() {
@@ -349,7 +361,7 @@ export async function createSurvey(payload: CreateSurveyPayload): Promise<{ succ
   return { success: true, id: res.data?.id };
 }
 
-export async function updateSurveyMeta(surveyId: string, fields: { title?: string; description?: string; period?: string; survey_date?: string; status?: SurveyStatus; language?: SurveyLanguage }) {
+export async function updateSurveyMeta(surveyId: string, fields: { title?: string; description?: string | null; period?: string | null; survey_date?: string | null; status?: SurveyStatus; language?: SurveyLanguage }) {
   const res = await callEdgeFunction('app-actions', {
     operation: 'update-survey-meta',
     surveyId,
@@ -357,6 +369,30 @@ export async function updateSurveyMeta(surveyId: string, fields: { title?: strin
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to update survey' };
   logActivity({ action_type: 'UPDATE', table_name: 'surveys', description: `Updated survey` });
+  return { success: true };
+}
+
+export async function updateSurveyStructure(
+  surveyId: string,
+  payload: UpdateSurveyStructurePayload,
+): Promise<{ success: boolean; error?: string }> {
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'update-survey-structure',
+    surveyId,
+    fields: {
+      title: payload.title,
+      description: payload.description ?? null,
+      period: payload.period ?? null,
+      survey_date: payload.surveyDate ?? null,
+      status: payload.status,
+      language: payload.language,
+    },
+    sections: payload.sections,
+    questions: payload.questions,
+    options: payload.options,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to update survey questions' };
+  logActivity({ action_type: 'UPDATE', table_name: 'survey_questions', description: 'Updated survey questions' });
   return { success: true };
 }
 

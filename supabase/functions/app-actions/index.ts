@@ -68,6 +68,34 @@ function cleanString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function cleanSurveyUpdateFields(fields: any): { updates: Record<string, unknown>; error?: string } {
+  const updates: Record<string, unknown> = {};
+  const source = fields && typeof fields === "object" ? fields : {};
+
+  if ("title" in source) {
+    const title = cleanString(source.title);
+    if (!title) return { updates, error: "Survey title is required" };
+    updates.title = title;
+  }
+  if ("description" in source) updates.description = cleanString(source.description);
+  if ("period" in source) updates.period = cleanString(source.period);
+  if ("survey_date" in source) updates.survey_date = cleanString(source.survey_date);
+  if ("status" in source) {
+    if (!isOneOf(source.status, SURVEY_STATUSES)) return { updates, error: "Invalid survey status" };
+    updates.status = source.status;
+  }
+  if ("language" in source) {
+    if (!isOneOf(source.language, SURVEY_LANGUAGES)) return { updates, error: "Invalid survey language" };
+    updates.language = source.language;
+  }
+
+  return { updates };
+}
+
+function surveyQuestionUsesOptions(type: string): boolean {
+  return !["short_answer", "paragraph", "date", "time"].includes(type);
+}
+
 function cleanPositiveInt(value: unknown): number | null {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1) return null;
@@ -688,6 +716,7 @@ Deno.serve(async (req: Request) => {
     if (
       op === "create-survey" ||
       op === "update-survey-meta" ||
+      op === "update-survey-structure" ||
       op === "delete-survey" ||
       op === "save-branch-survey-data" ||
       op === "save-individual-survey-responses" ||
@@ -842,24 +871,212 @@ Deno.serve(async (req: Request) => {
       if (op === "update-survey-meta") {
         const surveyId = cleanString(body.surveyId);
         if (!surveyId) return errorResponse(req, 400, "Missing survey id");
-        const fields = body.fields ?? {};
-        if (fields.status && !isOneOf(fields.status, SURVEY_STATUSES)) {
-          return errorResponse(req, 400, "Invalid survey status");
-        }
-        if (fields.language && !isOneOf(fields.language, SURVEY_LANGUAGES)) {
-          return errorResponse(req, 400, "Invalid survey language");
-        }
-        if ("survey_date" in fields) {
-          fields.survey_date = cleanString(fields.survey_date);
-        }
-        const { error } = await supabase.from("surveys").update(fields).eq("id", surveyId);
+        const { data: survey, error: surveyErr } = await supabase
+          .from("surveys")
+          .select("id, branch_id")
+          .eq("id", surveyId)
+          .maybeSingle();
+        if (surveyErr || !survey) return errorResponse(req, 404, "Survey not found", surveyErr);
+        const branchError = assertBranch(req, caller, survey.branch_id);
+        if (branchError) return branchError;
+
+        const { updates, error: fieldsError } = cleanSurveyUpdateFields(body.fields ?? {});
+        if (fieldsError) return errorResponse(req, 400, fieldsError);
+        if (Object.keys(updates).length === 0) return jsonResponse(req, { success: true });
+
+        const { error } = await supabase.from("surveys").update(updates).eq("id", surveyId);
         if (error) return errorResponse(req, 500, "Failed to update survey", error);
+        return jsonResponse(req, { success: true });
+      }
+
+      if (op === "update-survey-structure") {
+        const surveyId = cleanString(body.surveyId);
+        if (!surveyId) return errorResponse(req, 400, "Missing survey id");
+
+        const { data: survey, error: surveyErr } = await supabase
+          .from("surveys")
+          .select("id, branch_id")
+          .eq("id", surveyId)
+          .maybeSingle();
+        if (surveyErr || !survey) return errorResponse(req, 404, "Survey not found", surveyErr);
+        const branchError = assertBranch(req, caller, survey.branch_id);
+        if (branchError) return branchError;
+
+        const { updates, error: fieldsError } = cleanSurveyUpdateFields(body.fields ?? {});
+        if (fieldsError) return errorResponse(req, 400, fieldsError);
+
+        const sections = Array.isArray(body.sections) ? body.sections : [];
+        const questions = Array.isArray(body.questions) ? body.questions : [];
+        const options = Array.isArray(body.options) ? body.options : [];
+        if (questions.length === 0) return errorResponse(req, 400, "Add at least one question");
+
+        const responseChecks = await Promise.all([
+          supabase.from("survey_branch_responses").select("id", { count: "exact", head: true }).eq("survey_id", surveyId),
+          supabase.from("survey_individual_responses").select("id", { count: "exact", head: true }).eq("survey_id", surveyId),
+          supabase.from("survey_branch_submissions").select("id", { count: "exact", head: true }).eq("survey_id", surveyId),
+        ]);
+        const responseError = responseChecks.find((check) => check.error)?.error;
+        if (responseError) return errorResponse(req, 500, "Failed to verify survey responses", responseError);
+        const recordedResponseCount = responseChecks.reduce((sum, check) => sum + (check.count ?? 0), 0);
+        if (recordedResponseCount > 0) {
+          return errorResponse(
+            req,
+            409,
+            "Survey questions cannot be changed after responses have been recorded. Duplicate the survey or delete the responses first.",
+          );
+        }
+
+        const { data: oldSections, error: oldSectionsErr } = await supabase
+          .from("survey_sections")
+          .select("id")
+          .eq("survey_id", surveyId);
+        if (oldSectionsErr) return errorResponse(req, 500, "Failed to read existing survey sections", oldSectionsErr);
+        const { data: oldQuestions, error: oldQuestionsErr } = await supabase
+          .from("survey_questions")
+          .select("id")
+          .eq("survey_id", surveyId);
+        if (oldQuestionsErr) return errorResponse(req, 500, "Failed to read existing survey questions", oldQuestionsErr);
+        const { data: oldOptions, error: oldOptionsErr } = await supabase
+          .from("survey_response_options")
+          .select("id")
+          .eq("survey_id", surveyId);
+        if (oldOptionsErr) return errorResponse(req, 500, "Failed to read existing survey options", oldOptionsErr);
+
+        const sectionIdMap: Record<number, string> = {};
+        const sectionRows: any[] = [];
+        sections.forEach((section: any, sourceIndex: number) => {
+          const title = cleanString(section.title);
+          if (!title) return;
+          const id = crypto.randomUUID();
+          sectionIdMap[sourceIndex] = id;
+          sectionRows.push({
+            id,
+            survey_id: surveyId,
+            title,
+            description: cleanString(section.description),
+            order_index: sectionRows.length,
+          });
+        });
+
+        const questionIdMap: Record<number, string> = {};
+        const questionRows: any[] = [];
+        let questionPayloadError: string | null = null;
+        questions.forEach((question: any, sourceIndex: number) => {
+          if (questionPayloadError) return;
+          const text = cleanString(question.text);
+          if (!text) return;
+          const questionType = isOneOf(question.questionType, SURVEY_QUESTION_TYPES) ? question.questionType : "multiple_choice";
+          const choiceOptions = Array.isArray(question.options)
+            ? question.options.filter((option: any) => cleanString(option.label))
+            : [];
+          if (surveyQuestionUsesOptions(questionType) && choiceOptions.length === 0) {
+            questionPayloadError = "Choice questions need at least one answer option";
+            return;
+          }
+          const id = crypto.randomUUID();
+          questionIdMap[sourceIndex] = id;
+          questionRows.push({
+            id,
+            survey_id: surveyId,
+            section_id: question.sectionIndex !== null && question.sectionIndex !== undefined
+              ? sectionIdMap[question.sectionIndex] ?? null
+              : null,
+            question_text: text,
+            question_type: questionType,
+            sentiment_enabled: Boolean(question.sentimentEnabled),
+            order_index: questionRows.length,
+          });
+        });
+        if (questionPayloadError) return errorResponse(req, 400, questionPayloadError);
+        if (questionRows.length === 0) return errorResponse(req, 400, "Add at least one question");
+
+        const perQuestionOptions: any[] = [];
+        questions.forEach((question: any, questionIndex: number) => {
+          const questionId = questionIdMap[questionIndex];
+          if (!questionId) return;
+          const questionType = isOneOf(question.questionType, SURVEY_QUESTION_TYPES) ? question.questionType : "multiple_choice";
+          if (!surveyQuestionUsesOptions(questionType)) return;
+          (Array.isArray(question.options) ? question.options : []).forEach((option: any, optionIndex: number) => {
+            const label = cleanString(option.label);
+            if (!label) return;
+            perQuestionOptions.push({
+              survey_id: surveyId,
+              question_id: questionId,
+              label,
+              sentiment: isOneOf(option.sentiment, SENTIMENTS) ? option.sentiment : "neutral",
+              order_index: optionIndex,
+            });
+          });
+        });
+        const optionRows = perQuestionOptions.length > 0
+          ? perQuestionOptions
+          : options
+            .map((option: any, index: number) => {
+              const label = cleanString(option.label);
+              if (!label) return null;
+              return {
+                survey_id: surveyId,
+                question_id: null,
+                label,
+                sentiment: isOneOf(option.sentiment, SENTIMENTS) ? option.sentiment : "neutral",
+                order_index: index,
+              };
+            })
+            .filter(Boolean);
+
+        if (sectionRows.length > 0) {
+          const { error } = await supabase.from("survey_sections").insert(sectionRows);
+          if (error) return errorResponse(req, 400, "Failed to update survey sections", error);
+        }
+        const { error: questionInsertErr } = await supabase.from("survey_questions").insert(questionRows);
+        if (questionInsertErr) {
+          if (sectionRows.length > 0) await supabase.from("survey_sections").delete().in("id", sectionRows.map((row) => row.id));
+          return errorResponse(req, 400, "Failed to update survey questions", questionInsertErr);
+        }
+        if (optionRows.length > 0) {
+          const { error } = await supabase.from("survey_response_options").insert(optionRows);
+          if (error) {
+            await supabase.from("survey_questions").delete().in("id", questionRows.map((row) => row.id));
+            if (sectionRows.length > 0) await supabase.from("survey_sections").delete().in("id", sectionRows.map((row) => row.id));
+            return errorResponse(req, 400, "Failed to update survey options", error);
+          }
+        }
+
+        const oldOptionIds = (oldOptions ?? []).map((row: any) => row.id);
+        const oldQuestionIds = (oldQuestions ?? []).map((row: any) => row.id);
+        const oldSectionIds = (oldSections ?? []).map((row: any) => row.id);
+        if (oldOptionIds.length > 0) {
+          const { error } = await supabase.from("survey_response_options").delete().in("id", oldOptionIds);
+          if (error) return errorResponse(req, 500, "Failed to remove old survey options", error);
+        }
+        if (oldQuestionIds.length > 0) {
+          const { error } = await supabase.from("survey_questions").delete().in("id", oldQuestionIds);
+          if (error) return errorResponse(req, 500, "Failed to remove old survey questions", error);
+        }
+        if (oldSectionIds.length > 0) {
+          const { error } = await supabase.from("survey_sections").delete().in("id", oldSectionIds);
+          if (error) return errorResponse(req, 500, "Failed to remove old survey sections", error);
+        }
+
+        if (Object.keys(updates).length > 0) {
+          const { error } = await supabase.from("surveys").update(updates).eq("id", surveyId);
+          if (error) return errorResponse(req, 500, "Failed to update survey", error);
+        }
+
         return jsonResponse(req, { success: true });
       }
 
       if (op === "delete-survey") {
         const surveyId = cleanString(body.surveyId);
         if (!surveyId) return errorResponse(req, 400, "Missing survey id");
+        const { data: survey, error: surveyErr } = await supabase
+          .from("surveys")
+          .select("id, branch_id")
+          .eq("id", surveyId)
+          .maybeSingle();
+        if (surveyErr || !survey) return errorResponse(req, 404, "Survey not found", surveyErr);
+        const branchError = assertBranch(req, caller, survey.branch_id);
+        if (branchError) return branchError;
         const { error } = await supabase.from("surveys").delete().eq("id", surveyId);
         if (error) return errorResponse(req, 500, "Failed to delete survey", error);
         return jsonResponse(req, { success: true });

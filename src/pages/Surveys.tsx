@@ -49,7 +49,7 @@ import {
 } from 'recharts';
 import {
   getSurveys, getSurveyFull, getSurveyResults, getBranchSubmission,
-  createSurvey, updateSurveyMeta, deleteSurvey, saveBranchData, saveIndividualResponses, getSurveyRespondentOptions,
+  createSurvey, updateSurveyMeta, updateSurveyStructure, deleteSurvey, saveBranchData, saveIndividualResponses, getSurveyRespondentOptions,
   addSurveyRespondent, optionsForQuestion,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
   type SurveyRespondentType, type SurveyRespondentKind, type SurveyQuestionType,
@@ -218,6 +218,66 @@ interface SurveyBuilderProps {
   existing?: SurveyFull | null;
 }
 
+function normalizedBuilderStructure(
+  sections: BuilderSection[],
+  questions: BuilderQuestion[],
+  options: BuilderOption[],
+) {
+  return {
+    sections: sections
+      .filter((section) => section.title.trim())
+      .map((section) => ({ title: section.title.trim(), description: section.description.trim() || undefined })),
+    questions: questions
+      .filter((question) => question.text.trim())
+      .map((question) => ({
+        text: question.text.trim(),
+        sectionIndex: question.sectionIndex,
+        questionType: question.questionType ?? 'multiple_choice',
+        sentimentEnabled: question.sentimentEnabled ?? false,
+        options: questionUsesOptions(question.questionType)
+          ? (question.options ?? options).filter((option) => option.label.trim()).map((option) => ({
+              label: option.label.trim(),
+              sentiment: question.sentimentEnabled ? option.sentiment : 'neutral',
+            }))
+          : [],
+      })),
+    options: options
+      .filter((option) => option.label.trim())
+      .map((option) => ({ label: option.label.trim(), sentiment: option.sentiment })),
+  };
+}
+
+function normalizedExistingStructure(existing: SurveyFull) {
+  const orderedSections = [...existing.sections].sort((a, b) => a.order_index - b.order_index);
+  const sectionIndexById = new Map(orderedSections.map((section, index) => [section.id, index]));
+  const orderedQuestions = [...existing.questions].sort((a, b) => a.order_index - b.order_index);
+  const orderedOptions = [...existing.options].sort((a, b) => a.order_index - b.order_index);
+
+  return {
+    sections: orderedSections.map((section) => ({
+      title: section.title.trim(),
+      description: section.description?.trim() || undefined,
+    })),
+    questions: orderedQuestions.map((question) => ({
+      text: question.question_text.trim(),
+      sectionIndex: question.section_id ? sectionIndexById.get(question.section_id) ?? null : null,
+      questionType: question.question_type ?? 'multiple_choice',
+      sentimentEnabled: question.sentiment_enabled ?? false,
+      options: questionUsesOptions(question.question_type)
+        ? optionsForQuestion(existing, question.id)
+            .filter((option) => option.label.trim())
+            .map((option) => ({
+              label: option.label.trim(),
+              sentiment: question.sentiment_enabled ? option.sentiment : 'neutral',
+            }))
+        : [],
+    })),
+    options: orderedOptions
+      .filter((option) => option.label.trim())
+      .map((option) => ({ label: option.label.trim(), sentiment: option.sentiment })),
+  };
+}
+
 interface SurveyCardStats {
   totalRespondents: number;
   submittedBranches: number;
@@ -297,44 +357,104 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
     setOptions(next);
   };
 
+  const updateQuestion = (index: number, patch: Partial<BuilderQuestion>) => {
+    setQuestions((current) => current.map((question, questionIndex) => (
+      questionIndex === index ? { ...question, ...patch } : question
+    )));
+  };
+
+  const updateQuestionOption = (questionIndex: number, optionIndex: number, patch: Partial<BuilderOption>) => {
+    setQuestions((current) => current.map((question, index) => {
+      if (index !== questionIndex) return question;
+      const nextOptions = cloneOptions(question.options ?? DEFAULT_QUESTION_OPTIONS);
+      nextOptions[optionIndex] = { ...nextOptions[optionIndex], ...patch };
+      return { ...question, options: nextOptions };
+    }));
+  };
+
+  const addQuestionOption = (questionIndex: number) => {
+    setQuestions((current) => current.map((question, index) => {
+      if (index !== questionIndex) return question;
+      const nextOptions = cloneOptions(question.options ?? DEFAULT_QUESTION_OPTIONS);
+      nextOptions.push({ label: `Option ${nextOptions.length + 1}`, sentiment: 'neutral' });
+      return { ...question, options: nextOptions };
+    }));
+  };
+
+  const removeQuestionOption = (questionIndex: number, optionIndex: number) => {
+    setQuestions((current) => current.map((question, index) => {
+      if (index !== questionIndex) return question;
+      const nextOptions = cloneOptions(question.options ?? DEFAULT_QUESTION_OPTIONS).filter((_, itemIndex) => itemIndex !== optionIndex);
+      return { ...question, options: nextOptions.length > 0 ? nextOptions : cloneOptions(DEFAULT_QUESTION_OPTIONS) };
+    }));
+  };
+
+  const applyAnswerBankToQuestion = (questionIndex: number) => {
+    updateQuestion(questionIndex, { options: cloneOptions(options.filter((option) => option.label.trim())) });
+  };
+
+  const changeQuestionType = (questionIndex: number, questionType: SurveyQuestionType) => {
+    setQuestions((current) => current.map((question, index) => {
+      if (index !== questionIndex) return question;
+      return {
+        ...question,
+        questionType,
+        options: questionUsesOptions(questionType)
+          ? cloneOptions(question.options?.length ? question.options : DEFAULT_QUESTION_OPTIONS)
+          : [],
+      };
+    }));
+  };
+
   const handleSave = async () => {
     if (!title.trim()) { toast.error('Survey title is required'); setTab('details'); return; }
-    if (options.length === 0) { toast.error('Add at least one response option'); setTab('scale'); return; }
     const filledQuestions = questions.filter((q) => q.text.trim());
     if (filledQuestions.length === 0) { toast.error('Add at least one question'); setTab('questions'); return; }
+    const missingOptions = filledQuestions.find((q) =>
+      questionUsesOptions(q.questionType) && !(q.options ?? options).some((option) => option.label.trim()),
+    );
+    if (missingOptions) {
+      toast.error('Choice questions need at least one answer option');
+      setTab('questions');
+      return;
+    }
 
     setSaving(true);
     try {
+      const structure = normalizedBuilderStructure(sections, filledQuestions, options);
+      const payload = {
+        title: title.trim(),
+        description: description.trim() || null,
+        period: period.trim() || null,
+        surveyDate: surveyDate || null,
+        language,
+        status,
+        ...structure,
+      };
+
       if (existing) {
-        // Update meta only (questions/sections rebuild is complex — for now update meta)
-        const res = await updateSurveyMeta(existing.id, { title: title.trim(), description: description.trim() || undefined, period: period.trim() || undefined, survey_date: surveyDate || undefined, status, language });
+        const structureChanged = JSON.stringify(structure) !== JSON.stringify(normalizedExistingStructure(existing));
+        const res = structureChanged
+          ? await updateSurveyStructure(existing.id, payload)
+          : await updateSurveyMeta(existing.id, {
+              title: payload.title,
+              description: payload.description,
+              period: payload.period,
+              survey_date: payload.surveyDate,
+              status: payload.status,
+              language: payload.language,
+            });
         if (!res.success) { toast.error(res.error); return; }
         toast.success('Survey updated');
       } else {
         const res = await createSurvey({
-          title: title.trim(),
-          description: description.trim() || undefined,
-          period: period.trim() || undefined,
-          surveyDate: surveyDate || undefined,
+          ...payload,
+          description: payload.description || undefined,
+          period: payload.period || undefined,
+          surveyDate: payload.surveyDate || undefined,
           branchId: undefined,
           respondentType: 'students',
           respondentIds: [],
-          language,
-          status,
-          sections: sections.filter((s) => s.title.trim()).map((s) => ({ title: s.title.trim(), description: s.description.trim() || undefined })),
-          questions: filledQuestions.map((q) => ({
-            text: q.text.trim(),
-            sectionIndex: q.sectionIndex,
-            questionType: q.questionType ?? 'multiple_choice',
-            sentimentEnabled: q.sentimentEnabled ?? false,
-            options: questionUsesOptions(q.questionType)
-              ? (q.options ?? options).filter((option) => option.label.trim()).map((option) => ({
-                  label: option.label.trim(),
-                  sentiment: q.sentimentEnabled ? option.sentiment : 'neutral',
-                }))
-              : [],
-          })),
-          options,
         });
         if (!res.success) { toast.error(res.error); return; }
         toast.success('Survey created successfully');
@@ -384,11 +504,9 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
               <TabsTrigger value="scale" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">
                 Response Scale
               </TabsTrigger>
-              {!existing && (
-                <TabsTrigger value="questions" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">
-                  Questions
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="questions" className="min-h-12 flex-none rounded-none border-b-2 border-transparent px-3 text-xs shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none sm:text-sm">
+                Questions
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -405,7 +523,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                 </div>
                 <div className="rounded-lg border bg-background p-4">
                   <p className="text-xs font-medium text-muted-foreground">Questions</p>
-                  <p className="mt-1 text-lg font-semibold">{existing ? existing.questions.length : questionCount}</p>
+                  <p className="mt-1 text-lg font-semibold">{questionCount}</p>
                 </div>
               </div>
 
@@ -528,88 +646,187 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                   </div>
                 </TabsContent>
 
-                {!existing && (
-                  <TabsContent value="questions" className="m-0 space-y-6 p-4 sm:p-6 lg:p-8">
-                    <div className="rounded-lg border bg-muted/20 p-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <Label className="text-sm font-semibold">Sections <span className="text-xs font-normal text-muted-foreground">(optional grouping)</span></Label>
-                      </div>
-                      <div className="mb-3 flex flex-col gap-2 sm:flex-row">
-                        <Input placeholder="Section title..." value={newSectionTitle} onChange={(e) => setNewSectionTitle(e.target.value)} />
-                        <Button variant="outline" size="sm" onClick={() => {
-                          if (!newSectionTitle.trim()) return;
-                          setSections([...sections, { title: newSectionTitle.trim(), description: '' }]);
-                          setNewSectionTitle('');
-                        }}>Add</Button>
-                      </div>
-                      {sections.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {sections.map((s, i) => (
-                            <div key={i} className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                              {s.title}
-                              <button onClick={() => {
-                                setSections(sections.filter((_, j) => j !== i));
-                                setQuestions(questions.map((q) => q.sectionIndex === i ? { ...q, sectionIndex: null } : q.sectionIndex !== null && q.sectionIndex > i ? { ...q, sectionIndex: q.sectionIndex - 1 } : q));
-                              }}>
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                <TabsContent value="questions" className="m-0 space-y-6 p-4 sm:p-6 lg:p-8">
+                  <section className="rounded-lg border bg-muted/20 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <Label className="text-sm font-semibold">Sections <span className="text-xs font-normal text-muted-foreground">(optional grouping)</span></Label>
                     </div>
-
-                    <Separator />
-
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold">Questions</Label>
-                      {questions.map((q, idx) => (
-                        <div key={idx} className="group flex items-start gap-2 rounded-lg border bg-muted/20 p-3">
-                          <div className="flex flex-col items-center gap-0.5 pt-1">
-                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3 w-3" /></Button>
-                            <span className="text-xs font-mono text-muted-foreground">Q{idx + 1}</span>
-                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveQuestion(idx, 1)} disabled={idx === questions.length - 1}><ChevronDown className="h-3 w-3" /></Button>
+                    <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+                      <Input placeholder="Section title..." value={newSectionTitle} onChange={(e) => setNewSectionTitle(e.target.value)} />
+                      <Button variant="outline" size="sm" onClick={() => {
+                        if (!newSectionTitle.trim()) return;
+                        setSections([...sections, { title: newSectionTitle.trim(), description: '' }]);
+                        setNewSectionTitle('');
+                      }}>Add</Button>
+                    </div>
+                    {sections.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {sections.map((s, i) => (
+                          <div key={i} className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                            {s.title}
+                            <button onClick={() => {
+                              setSections(sections.filter((_, j) => j !== i));
+                              setQuestions(questions.map((q) => q.sectionIndex === i ? { ...q, sectionIndex: null } : q.sectionIndex !== null && q.sectionIndex > i ? { ...q, sectionIndex: q.sectionIndex - 1 } : q));
+                            }}>
+                              <X className="h-3 w-3" />
+                            </button>
                           </div>
-                          <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-start">
-                            <Textarea
-                              rows={2}
-                              placeholder={`Question ${idx + 1}...`}
-                              value={q.text}
-                              onChange={(e) => {
-                                const next = [...questions];
-                                next[idx] = { ...next[idx], text: e.target.value };
-                                setQuestions(next);
-                              }}
-                              className="resize-none text-sm"
-                            />
-                            {sections.length > 0 && (
-                              <Select
-                                value={q.sectionIndex !== null ? String(q.sectionIndex) : 'none'}
-                                onValueChange={(v) => {
-                                  const next = [...questions];
-                                  next[idx] = { ...next[idx], sectionIndex: v === 'none' ? null : Number(v) };
-                                  setQuestions(next);
-                                }}
-                              >
-                                <SelectTrigger className="h-9 w-full shrink-0 text-xs lg:w-44"><SelectValue placeholder="Section" /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">No section</SelectItem>
-                                  {sections.map((s, i) => <SelectItem key={i} value={String(i)}>{s.title}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            )}
-                          </div>
-                          <Button variant="ghost" size="icon" className="mt-1 h-8 w-8 shrink-0 text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100" onClick={() => setQuestions(questions.filter((_, i) => i !== idx))} disabled={questions.length === 1}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button variant="outline" size="sm" className="w-full" onClick={() => setQuestions([...questions, createBlankQuestion()])}>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  <Separator />
+
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold">Questions</h3>
+                        <p className="text-xs text-muted-foreground">Edit the question text, type, section, and answer choices.</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setQuestions([...questions, createBlankQuestion({ options: cloneOptions(options.filter((option) => option.label.trim())) })])}>
                         <Plus className="mr-2 h-3.5 w-3.5" /> Add Question
                       </Button>
                     </div>
-                  </TabsContent>
-                )}
+
+                    {questions.map((q, idx) => {
+                      const config = questionTypeConfig(q.questionType);
+                      const TypeIcon = config.icon;
+                      const optionRows = q.options?.length ? q.options : DEFAULT_QUESTION_OPTIONS;
+
+                      return (
+                        <div key={idx} className="rounded-lg border bg-muted/20 p-3">
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+                            <div className="flex shrink-0 items-center rounded-md border bg-background">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveQuestion(idx, -1)} disabled={idx === 0} aria-label="Move question up">
+                                <ChevronUp className="h-3.5 w-3.5" />
+                              </Button>
+                              <span className="min-w-10 text-center text-xs font-semibold text-muted-foreground">Q{idx + 1}</span>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveQuestion(idx, 1)} disabled={idx === questions.length - 1} aria-label="Move question down">
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+
+                            <div className="min-w-0 flex-1 space-y-3">
+                              <div className="flex flex-col gap-2 xl:flex-row">
+                                <Textarea
+                                  rows={2}
+                                  placeholder={`Question ${idx + 1}...`}
+                                  value={q.text}
+                                  onChange={(event) => updateQuestion(idx, { text: event.target.value })}
+                                  className="min-h-20 resize-none text-sm"
+                                />
+                                <div className="flex shrink-0 flex-col gap-2 sm:flex-row xl:w-[28rem]">
+                                  <Select value={q.questionType ?? 'multiple_choice'} onValueChange={(value) => changeQuestionType(idx, value as SurveyQuestionType)}>
+                                    <SelectTrigger className="h-9 bg-background sm:w-56">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {QUESTION_TYPES.map((type) => {
+                                        const Icon = type.icon;
+                                        return (
+                                          <SelectItem key={type.value} value={type.value}>
+                                            <span className="flex items-center gap-2">
+                                              <Icon className="h-3.5 w-3.5" />
+                                              {type.label}
+                                            </span>
+                                          </SelectItem>
+                                        );
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                  {sections.length > 0 && (
+                                    <Select
+                                      value={q.sectionIndex !== null ? String(q.sectionIndex) : 'none'}
+                                      onValueChange={(value) => updateQuestion(idx, { sectionIndex: value === 'none' ? null : Number(value) })}
+                                    >
+                                      <SelectTrigger className="h-9 bg-background sm:w-44"><SelectValue placeholder="Section" /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">No section</SelectItem>
+                                        {sections.map((s, i) => <SelectItem key={i} value={String(i)}>{s.title}</SelectItem>)}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                  <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-red-500" onClick={() => setQuestions(questions.filter((_, i) => i !== idx))} disabled={questions.length === 1} aria-label="Remove question">
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {questionUsesOptions(q.questionType) ? (
+                                <div className="space-y-3 rounded-lg border bg-background p-3">
+                                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <TypeIcon className="h-4 w-4 shrink-0 text-primary" />
+                                      <div>
+                                        <p className="text-sm font-semibold">Answer choices</p>
+                                        <p className="text-xs text-muted-foreground">{config.placeholder}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      <Button type="button" variant="outline" size="sm" onClick={() => applyAnswerBankToQuestion(idx)}>
+                                        Use Answer Bank
+                                      </Button>
+                                      <label className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-1.5 text-xs font-medium">
+                                        <Checkbox
+                                          checked={q.sentimentEnabled ?? false}
+                                          onCheckedChange={(checked) => updateQuestion(idx, { sentimentEnabled: Boolean(checked) })}
+                                        />
+                                        Result tags
+                                      </label>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    {optionRows.map((option, optionIndex) => (
+                                      <div key={optionIndex} className="flex flex-col gap-2 rounded-md border bg-muted/20 p-2 sm:flex-row sm:items-center">
+                                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-background text-xs text-muted-foreground">
+                                            {optionIndex + 1}
+                                          </span>
+                                          <Input
+                                            className="h-9 text-sm"
+                                            placeholder={`Option ${optionIndex + 1}`}
+                                            value={option.label}
+                                            onChange={(event) => updateQuestionOption(idx, optionIndex, { label: event.target.value })}
+                                          />
+                                        </div>
+                                        {q.sentimentEnabled && (
+                                          <Select value={option.sentiment} onValueChange={(value) => updateQuestionOption(idx, optionIndex, { sentiment: value as Sentiment })}>
+                                            <SelectTrigger className="h-9 w-full text-xs sm:w-32">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="positive">Positive</SelectItem>
+                                              <SelectItem value="neutral">Neutral</SelectItem>
+                                              <SelectItem value="negative">Negative</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        )}
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 self-end text-red-500 sm:self-auto" onClick={() => removeQuestionOption(idx, optionIndex)} aria-label="Remove option">
+                                          <X className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  <Button type="button" variant="outline" size="sm" onClick={() => addQuestionOption(idx)}>
+                                    <Plus className="mr-2 h-3.5 w-3.5" /> Add Option
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="rounded-lg border border-dashed bg-background p-4">
+                                  <p className="text-sm font-medium">{config.label}</p>
+                                  <p className="mt-1 text-sm text-muted-foreground">{config.placeholder}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </section>
+                </TabsContent>
               </div>
             </div>
           </div>
@@ -1344,7 +1561,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     setManualLastName('');
     setManualProvince('');
     setManualDetails('');
-    setEntryMode(survey.respondents.length > 0 ? 'individual' : 'aggregate');
+    setEntryMode('individual');
   }, [open, defaultBranchId, branches, survey.respondents]);
 
   useEffect(() => {
@@ -1368,6 +1585,12 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
       setLoading(false);
     });
   }, [branchId, open, survey.id, respondents]);
+
+  useEffect(() => {
+    if (!open || !branchId) return;
+    const branchRespondents = respondents.filter((respondent) => respondent.branch_id === branchId);
+    if (branchRespondents.length === 0) setEntryMode('individual');
+  }, [branchId, open, respondents]);
 
   useEffect(() => {
     if (!selectedRespondentKey) {
@@ -1551,7 +1774,6 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                 type="button"
                 variant={entryMode === 'individual' ? 'default' : 'outline'}
                 onClick={() => setEntryMode('individual')}
-                disabled={branchRespondents.length === 0}
               >
                 <Users className="mr-2 h-4 w-4" />
                 Individual Responses
@@ -1803,7 +2025,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                       <Users className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <h3 className="mt-4 text-base font-semibold">No respondent selected</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">Assign students or staff to this survey, then enter their individual answers here.</p>
+                    <p className="mt-2 text-sm text-muted-foreground">Choose a respondent from the list or use Add person to create a manual respondent for this branch.</p>
                   </div>
                 )}
               </section>

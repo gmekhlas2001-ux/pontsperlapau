@@ -190,6 +190,65 @@ interface SurveyStrings {
   sheetSummary: string; sheetBranches: string; sheetQuestions: string; sheetQuestionnaire: string; sheetAnswers: string; noDataYet: string;
 }
 
+interface SurveyDashboardStrings {
+  sheet: string;
+  overview: string;
+  branchBars: string;
+  answerDistribution: string;
+  metric: string;
+  value: string;
+  bar: string;
+  option: string;
+  percent: string;
+}
+
+const SURVEY_DASHBOARD_T: Record<SurveyLanguage, SurveyDashboardStrings> = {
+  en: {
+    sheet: 'Dashboard',
+    overview: 'Overview',
+    branchBars: 'Branch response bars',
+    answerDistribution: 'Question answer distribution',
+    metric: 'Metric',
+    value: 'Value',
+    bar: 'Bar',
+    option: 'Answer option',
+    percent: 'Percent',
+  },
+  es: {
+    sheet: 'Panel',
+    overview: 'Resumen visual',
+    branchBars: 'Barras de respuesta por sucursal',
+    answerDistribution: 'Distribución de respuestas por pregunta',
+    metric: 'Métrica',
+    value: 'Valor',
+    bar: 'Barra',
+    option: 'Opción de respuesta',
+    percent: 'Porcentaje',
+  },
+  ca: {
+    sheet: 'Panell',
+    overview: 'Resum visual',
+    branchBars: 'Barres de resposta per sucursal',
+    answerDistribution: 'Distribució de respostes per pregunta',
+    metric: 'Mètrica',
+    value: 'Valor',
+    bar: 'Barra',
+    option: 'Opció de resposta',
+    percent: 'Percentatge',
+  },
+  fa: {
+    sheet: 'نمودارها',
+    overview: 'خلاصه تصویری',
+    branchBars: 'نمودار پاسخ‌ها به تفکیک شعبه',
+    answerDistribution: 'تقسیم‌بندی جواب‌ها برای هر سوال',
+    metric: 'شاخص',
+    value: 'مقدار',
+    bar: 'نمودار',
+    option: 'گزینه جواب',
+    percent: 'درصد',
+  },
+};
+
 const SURVEY_T: Record<SurveyLanguage, SurveyStrings> = {
   en: {
     surveyDate: 'Survey date', status: 'Status', generated: 'Generated', individualResponse: 'Individual response',
@@ -1176,6 +1235,195 @@ export async function exportSurveyResultsExcel(survey: SurveyFull, results: Bran
     };
     return sheet;
   };
+
+  const makeBar = (count: number, total: number, width = 22): string => {
+    if (count <= 0 || total <= 0) return '';
+    return '█'.repeat(Math.max(1, Math.round((count / total) * width)));
+  };
+
+  const addDashboardSheet = () => {
+    const d = SURVEY_DASHBOARD_T[lang];
+    const sheet = workbook.addWorksheet(d.sheet, {
+      views: [{ state: 'frozen', ySplit: 6, rightToLeft: rtl, showGridLines: false }],
+    } as any);
+
+    sheet.columns = [
+      { width: 8 },
+      { width: 28 },
+      { width: 18 },
+      { width: 18 },
+      { width: 16 },
+      { width: 18 },
+      { width: 52 },
+      { width: 18 },
+    ];
+
+    const baseAlignment = {
+      horizontal: rtl ? 'right' : 'left',
+      vertical: 'middle',
+      wrapText: true,
+      readingOrder: rtl ? 'rtl' : 'ltr',
+    } as const;
+    const border = {
+      top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+    } as const;
+    const styleRow = (rowNumber: number, fill = 'FFFFFFFF') => {
+      const row = sheet.getRow(rowNumber);
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        (cell as any).alignment = baseAlignment;
+        (cell as any).border = border;
+        (cell as any).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+      });
+    };
+    const styleHeaderRow = (rowNumber: number) => {
+      const row = sheet.getRow(rowNumber);
+      row.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      row.height = 24;
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        (cell as any).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        (cell as any).border = border;
+        (cell as any).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
+      });
+    };
+
+    sheet.mergeCells('A1:H1');
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = survey.title;
+    titleCell.font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
+    (titleCell as any).alignment = { ...baseAlignment, vertical: 'middle' };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+    sheet.getRow(1).height = 30;
+
+    sheet.mergeCells('A2:H2');
+    const subtitleCell = sheet.getCell('A2');
+    subtitleCell.value = `${d.overview} • ${t.generated}: ${reportNow(lang)}`;
+    subtitleCell.font = { color: { argb: 'FF475569' } };
+    (subtitleCell as any).alignment = baseAlignment;
+    subtitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+
+    const cards = [
+      [t.totalRespondents, totalRespondents],
+      [t.submittedBranches, `${submittedBranches} / ${results.length}`],
+      [t.recordedAnswers, recordedAnswerTotal],
+      [t.targetTotal, survey.respondents.length],
+    ];
+    cards.forEach(([label, value], index) => {
+      const startCol = index * 2 + 1;
+      sheet.mergeCells(4, startCol, 4, startCol + 1);
+      sheet.mergeCells(5, startCol, 5, startCol + 1);
+      const labelCell = sheet.getCell(4, startCol);
+      const valueCell = sheet.getCell(5, startCol);
+      labelCell.value = label;
+      valueCell.value = value;
+      labelCell.font = { bold: true, color: { argb: 'FF64748B' } };
+      valueCell.font = { bold: true, size: 15, color: { argb: 'FF0F766E' } };
+      [labelCell, valueCell].forEach((cell) => {
+        (cell as any).alignment = { ...baseAlignment, horizontal: 'center' };
+        (cell as any).border = border;
+        (cell as any).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDFA' } };
+      });
+    });
+
+    let rowNumber = 8;
+    sheet.mergeCells(rowNumber, 1, rowNumber, 8);
+    sheet.getCell(rowNumber, 1).value = d.branchBars;
+    sheet.getCell(rowNumber, 1).font = { bold: true, size: 13, color: { argb: 'FF0F172A' } };
+    styleRow(rowNumber, 'FFFFFFFF');
+    rowNumber += 1;
+    sheet.getRow(rowNumber).values = [
+      t.colNum,
+      t.colBranch,
+      t.colRespondents,
+      t.colIndividual,
+      t.colStatus,
+      d.percent,
+      d.bar,
+      '',
+    ];
+    styleHeaderRow(rowNumber);
+    const maxBranchRespondents = Math.max(1, ...results.map((branch) => branch.totalRespondents));
+    results.forEach((branch, index) => {
+      rowNumber += 1;
+      const pctOfMax = maxBranchRespondents > 0 ? branch.totalRespondents / maxBranchRespondents : 0;
+      sheet.getRow(rowNumber).values = [
+        index + 1,
+        branch.branchName,
+        branch.totalRespondents,
+        branch.individualResponses.length,
+        branch.submitted ? t.submitted : t.noData,
+        pct(pctOfMax),
+        makeBar(branch.totalRespondents, maxBranchRespondents),
+        '',
+      ];
+      styleRow(rowNumber, index % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC');
+      const barCell = sheet.getCell(rowNumber, 7);
+      barCell.font = { bold: true, color: { argb: branch.totalRespondents > 0 ? 'FF0F766E' : 'FFCBD5E1' } };
+    });
+
+    rowNumber += 3;
+    sheet.mergeCells(rowNumber, 1, rowNumber, 8);
+    sheet.getCell(rowNumber, 1).value = d.answerDistribution;
+    sheet.getCell(rowNumber, 1).font = { bold: true, size: 13, color: { argb: 'FF0F172A' } };
+    styleRow(rowNumber, 'FFFFFFFF');
+    rowNumber += 1;
+    sheet.getRow(rowNumber).values = [
+      t.colNum,
+      t.colSection,
+      t.colQuestion,
+      d.option,
+      t.responses,
+      d.percent,
+      d.bar,
+      t.colType,
+    ];
+    styleHeaderRow(rowNumber);
+
+    aggregates.forEach((qa, questionIndex) => {
+      const optionRows = qa.optionCounts.length > 0
+        ? qa.optionCounts
+        : qa.textAnswerTotal > 0
+          ? [{ label: t.writtenAnswers, count: qa.textAnswerTotal }]
+          : [{ label: t.noData, count: 0 }];
+      optionRows.forEach((option, optionIndex) => {
+        rowNumber += 1;
+        const total = Math.max(qa.responseTotal, 1);
+        sheet.getRow(rowNumber).values = [
+          optionIndex === 0 ? questionIndex + 1 : '',
+          optionIndex === 0 ? sectionTitleForQuestion(survey, qa.question.section_id) : '',
+          optionIndex === 0 ? qa.question.question_text : '',
+          option.label,
+          option.count,
+          pct(option.count / total),
+          makeBar(option.count, total),
+          optionIndex === 0 ? questionTypeLabelL(lang, qa.question.question_type) : '',
+        ];
+        styleRow(rowNumber, questionIndex % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC');
+        const barCell = sheet.getCell(rowNumber, 7);
+        barCell.font = { bold: true, color: { argb: option.count > 0 ? 'FF0F766E' : 'FFCBD5E1' } };
+      });
+    });
+
+    sheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        (cell as any).alignment = {
+          ...(cell as any).alignment,
+          readingOrder: rtl ? 'rtl' : 'ltr',
+          wrapText: true,
+        };
+      });
+    });
+    (sheet as any).pageSetup = {
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+    };
+  };
+
+  addDashboardSheet();
 
   addSheet(t.sheetSummary, [
     { Metric: t.surveyTitle, Value: survey.title },
