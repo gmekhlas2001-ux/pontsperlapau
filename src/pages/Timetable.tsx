@@ -321,7 +321,11 @@ export function Timetable() {
 
   // Unique teachers for filter
   const teachers = Array.from(
-    new Map(classes.map((c) => [`${c.teacherId}`, { id: c.teacherId, name: `${c.teacherFirstName} ${c.teacherLastName}` }])).values()
+    new Map(
+      classes.flatMap((c) => c.teacherId
+        ? [[c.teacherId, { id: c.teacherId, name: `${c.teacherFirstName} ${c.teacherLastName}` }] as const]
+        : [])
+    ).values()
   );
 
   const filtered = filterTeacher === 'all'
