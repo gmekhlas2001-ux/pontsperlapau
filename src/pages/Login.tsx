@@ -74,9 +74,13 @@ export function Login() {
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
+      const result = await login(email, password);
+      if (result.success) {
         navigate('/');
+      } else if (result.code === 'rate_limited') {
+        setError(t('auth.rateLimited'));
+      } else if (result.code === 'student_portal_disabled') {
+        setError(t('auth.studentPortalDisabled'));
       } else {
         setError(t('auth.invalidCredentials'));
       }

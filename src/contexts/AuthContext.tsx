@@ -17,10 +17,16 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => void;
   hasPermission: (requiredRoles: UserRole[]) => boolean;
   isLoading: boolean;
+}
+
+interface LoginResult {
+  success: boolean;
+  code?: string;
+  status?: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
     try {
       const res = await fetch(LOGIN_URL, {
         method: 'POST',
@@ -105,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await res.json();
       if (!res.ok || !result.success) {
         console.error('Login failed:', result?.error);
-        return false;
+        return { success: false, code: result?.code, status: res.status };
       }
 
       const userData: User = {
@@ -121,10 +127,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
       localStorage.setItem(USER_KEY, JSON.stringify(userData));
       localStorage.setItem(TOKEN_KEY, result.token);
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Login error:', error);
-      return false;
+      return { success: false };
     }
   }, []);
 

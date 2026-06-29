@@ -96,6 +96,8 @@
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "loginButton": "Iniciar Sesión",
     "invalidCredentials": "Correo o contraseña inválidos",
+    "rateLimited": "Demasiados intentos fallidos. Espera 15 minutos e inténtalo de nuevo.",
+    "studentPortalDisabled": "Las cuentas de estudiantes no pueden acceder a este portal de gestión.",
     "logoutSuccess": "Sesión cerrada exitosamente"
   },
   "dashboard": {

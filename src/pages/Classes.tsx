@@ -159,7 +159,7 @@ export function Classes() {
     setForm({
       name: cls.name,
       description: cls.description ?? '',
-      teacherId: cls.teacherId,
+      teacherId: cls.teacherId ?? '',
       branchId: cls.branchId ?? '',
       location: cls.location ?? '',
       maxCapacity: String(cls.maxCapacity),
@@ -409,7 +409,9 @@ export function Classes() {
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-lg truncate">{cls.name}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                      {cls.teacherFirstName} {cls.teacherLastName}
+                      {cls.teacherFirstName || cls.teacherLastName
+                        ? `${cls.teacherFirstName} ${cls.teacherLastName}`.trim()
+                        : 'Unassigned teacher'}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 ml-2 shrink-0">
@@ -773,7 +775,9 @@ export function Classes() {
               <DialogHeader>
                 <DialogTitle>{selectedClass.name}</DialogTitle>
                 <DialogDescription>
-                  {selectedClass.teacherFirstName} {selectedClass.teacherLastName}
+                  {selectedClass.teacherFirstName || selectedClass.teacherLastName
+                    ? `${selectedClass.teacherFirstName} ${selectedClass.teacherLastName}`.trim()
+                    : 'Unassigned teacher'}
                   {selectedClass.branchName && ` · ${selectedClass.branchName}`}
                 </DialogDescription>
               </DialogHeader>
@@ -797,7 +801,9 @@ export function Classes() {
                     <div>
                       <Label className="text-xs text-muted-foreground uppercase tracking-wide">Teacher</Label>
                       <p className="font-medium mt-0.5">
-                        {selectedClass.teacherFirstName} {selectedClass.teacherLastName}
+                        {selectedClass.teacherFirstName || selectedClass.teacherLastName
+                          ? `${selectedClass.teacherFirstName} ${selectedClass.teacherLastName}`.trim()
+                          : 'Unassigned teacher'}
                       </p>
                     </div>
                     <div>

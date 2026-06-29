@@ -449,6 +449,24 @@ export async function addSurveyRespondent(
   return { success: true, respondent: res.data?.respondent };
 }
 
+/** Deletes a manually-entered respondent and their individual survey answers. */
+export async function deleteSurveyRespondent(
+  surveyId: string,
+  branchId: string,
+  respondentRowId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const res = await callEdgeFunction('app-actions', {
+    operation: 'delete-survey-respondent',
+    surveyId,
+    branchId,
+    respondentRowId,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to delete respondent' };
+
+  logActivity({ action_type: 'DELETE', table_name: 'survey_respondents', description: 'Deleted manual survey respondent' });
+  return { success: true };
+}
+
 export async function saveIndividualResponses(
   surveyId: string,
   branchId: string,

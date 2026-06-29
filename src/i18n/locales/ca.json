@@ -96,6 +96,8 @@
     "forgotPassword": "Has oblidat la contrasenya?",
     "loginButton": "Iniciar Sessió",
     "invalidCredentials": "Correu o contrasenya invàlids",
+    "rateLimited": "Massa intents fallits. Espera 15 minuts i torna-ho a provar.",
+    "studentPortalDisabled": "Els comptes d'estudiant no poden accedir a aquest portal de gestió.",
     "logoutSuccess": "Sessió tancada amb èxit"
   },
   "dashboard": {

@@ -25,6 +25,7 @@ interface UpdateUserRequest {
   targetUserId: string;
   operation?: "update" | "delete";
   email?: string;
+  currentPassword?: string;
   newPassword?: string;
   firstName?: string;
   lastName?: string;
@@ -110,7 +111,7 @@ Deno.serve(async (req: Request) => {
   // ── Load target ──────────────────────────────────────────────────
   const { data: targetUser } = await supabase
     .from("users")
-    .select("id, role, status, branch_id")
+    .select("id, email, role, status, branch_id")
     .eq("id", targetUserId)
     .maybeSingle();
 
@@ -127,7 +128,6 @@ Deno.serve(async (req: Request) => {
   if (
     callerUser.role === "admin" &&
     callerUser.branch_id &&
-    targetUser.branch_id &&
     callerUser.branch_id !== targetUser.branch_id
   ) {
     return errorResponse(req, 403, "You can only manage users in your branch");
@@ -146,6 +146,73 @@ Deno.serve(async (req: Request) => {
 
   // ── DELETE ───────────────────────────────────────────────────────
   if (operation === "delete") {
+    if (targetUserId === callerUser.id) {
+      return errorResponse(req, 400, "You cannot delete your own account");
+    }
+
+    const { data: staffProfile, error: staffError } = await supabase
+      .from("staff")
+      .select("id")
+      .eq("user_id", targetUserId)
+      .maybeSingle();
+    if (staffError) {
+      return errorResponse(req, 500, "Failed to check user responsibilities", staffError);
+    }
+
+    if (staffProfile) {
+      const { count: classCount, error: classError } = await supabase
+        .from("classes")
+        .select("id", { count: "exact", head: true })
+        .eq("teacher_id", staffProfile.id);
+      if (classError) {
+        return errorResponse(req, 500, "Failed to check class assignments", classError);
+      }
+      if ((classCount ?? 0) > 0) {
+        const noun = classCount === 1 ? "class" : "classes";
+        return jsonResponse(req, {
+          error: `This staff member cannot be deleted because they are assigned as teacher to ${classCount} ${noun}. Reassign the ${noun} first.`,
+          code: "user_has_assigned_classes",
+          dependencyCount: classCount,
+        }, 409);
+      }
+    }
+
+    const { count: borrowingCount, error: borrowingError } = await supabase
+      .from("book_borrowings")
+      .select("id", { count: "exact", head: true })
+      .eq("borrower_id", targetUserId);
+    if (borrowingError) {
+      return errorResponse(req, 500, "Failed to check library records", borrowingError);
+    }
+    if ((borrowingCount ?? 0) > 0) {
+      const noun = borrowingCount === 1 ? "borrowing record" : "borrowing records";
+      return jsonResponse(req, {
+        error: `This user cannot be deleted because they have ${borrowingCount} library ${noun}. Resolve or archive the library history first.`,
+        code: "user_has_library_history",
+        dependencyCount: borrowingCount,
+      }, 409);
+    }
+
+    // Storage blobs are not removed by a database FK cascade. Remove them
+    // through the Storage API before deleting their metadata and owner row.
+    const { data: documents, error: documentsError } = await supabase
+      .from("user_documents")
+      .select("storage_path")
+      .eq("user_id", targetUserId);
+    if (documentsError) {
+      return errorResponse(req, 500, "Failed to prepare user deletion", documentsError);
+    }
+
+    const storagePaths = (documents ?? []).map((document) => document.storage_path);
+    if (storagePaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from("user-documents")
+        .remove(storagePaths);
+      if (storageError) {
+        return errorResponse(req, 500, "Failed to remove user documents", storageError);
+      }
+    }
+
     const { error } = await supabase.rpc("delete_user_cascade", {
       target_user_id: targetUserId,
     });
@@ -187,6 +254,21 @@ Deno.serve(async (req: Request) => {
   if (body.newPassword) {
     if (body.newPassword.length < 8) {
       return errorResponse(req, 400, "Password must be at least 8 characters");
+    }
+    if (body.currentPassword !== undefined) {
+      if (targetUserId !== callerUser.id) {
+        return errorResponse(req, 400, "Current password can only verify your own account");
+      }
+      const { data: isValid, error: verifyError } = await supabase.rpc("verify_password", {
+        user_email: targetUser.email,
+        user_password: body.currentPassword,
+      });
+      if (verifyError) {
+        return errorResponse(req, 500, "Failed to verify current password", verifyError);
+      }
+      if (!isValid) {
+        return errorResponse(req, 400, "Current password is incorrect");
+      }
     }
     const { data: hashData, error: hashError } = await supabase
       .rpc("hash_password", { password: body.newPassword });

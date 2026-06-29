@@ -25,7 +25,7 @@ export interface ClassRecord {
   id: string;
   name: string;
   description: string | null;
-  teacherId: string;
+  teacherId: string | null;
   teacherFirstName: string;
   teacherLastName: string;
   scheduleDays: string[];
@@ -101,7 +101,7 @@ export async function getClassesList() {
       id: c.id,
       name: c.name,
       description: c.description,
-      teacherId: c.teacher_id,
+      teacherId: c.teacher_id ?? null,
       teacherFirstName: c.teacher?.user?.first_name ?? '',
       teacherLastName: c.teacher?.user?.last_name ?? '',
       scheduleDays: c.schedule_day ?? [],

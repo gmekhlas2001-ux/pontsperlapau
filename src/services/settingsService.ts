@@ -93,22 +93,14 @@ export async function saveOrgSettings(updates: Partial<OrgSettings>): Promise<{ 
  */
 export async function changePassword(
   userId: string,
-  userEmail: string,
+  _userEmail: string,
   currentPassword: string,
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data: isValid } = await supabase.rpc('verify_password', {
-      user_email: userEmail.toLowerCase(),
-      user_password: currentPassword,
-    });
-
-    if (!isValid) {
-      return { success: false, error: 'Current password is incorrect' };
-    }
-
     const res = await callEdgeFunction('update-user', {
       targetUserId: userId,
+      currentPassword,
       newPassword,
     });
     if (!res.ok) return { success: false, error: res.error || 'Failed to change password' };

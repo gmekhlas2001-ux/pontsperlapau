@@ -720,7 +720,8 @@ Deno.serve(async (req: Request) => {
       op === "delete-survey" ||
       op === "save-branch-survey-data" ||
       op === "save-individual-survey-responses" ||
-      op === "add-survey-respondent"
+      op === "add-survey-respondent" ||
+      op === "delete-survey-respondent"
     ) {
       const roleError = assertRoles(req, caller, ADMIN_ROLES);
       if (roleError) return roleError;
@@ -1119,6 +1120,34 @@ Deno.serve(async (req: Request) => {
         if (error || !inserted) return errorResponse(req, 400, "Failed to add respondent", error);
 
         return jsonResponse(req, { success: true, respondent: inserted });
+      }
+
+      if (op === "delete-survey-respondent") {
+        const respondentRowId = cleanString(body.respondentRowId);
+        if (!surveyId || !branchId || !respondentRowId) {
+          return errorResponse(req, 400, "Invalid respondent deletion request");
+        }
+
+        const { data: respondent, error: respondentError } = await supabase
+          .from("survey_respondents")
+          .select("id, respondent_type")
+          .eq("id", respondentRowId)
+          .eq("survey_id", surveyId)
+          .eq("branch_id", branchId)
+          .maybeSingle();
+        if (respondentError) return errorResponse(req, 500, "Failed to verify respondent", respondentError);
+        if (!respondent) return errorResponse(req, 404, "Respondent not found");
+        if (respondent.respondent_type !== "manual") {
+          return errorResponse(req, 403, "Only manually added respondents can be deleted here");
+        }
+
+        const { error } = await supabase
+          .from("survey_respondents")
+          .delete()
+          .eq("id", respondent.id);
+        if (error) return errorResponse(req, 500, "Failed to delete respondent", error);
+
+        return jsonResponse(req, { success: true });
       }
 
       if (op === "save-individual-survey-responses") {

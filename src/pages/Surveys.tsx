@@ -41,7 +41,7 @@ import {
 import {
   ClipboardList, Plus, Pencil, Trash2, BarChart3, Send, MoveHorizontal as MoreHorizontal,
   CheckCircle2, Clock, FileText, Users, TrendingUp, ChevronUp, ChevronDown,
-  Grip, X, Building2, ArrowLeft, FileSpreadsheet, Copy,
+  Grip, X, Building2, ArrowLeft, FileSpreadsheet, Copy, Search,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -50,7 +50,7 @@ import {
 import {
   getSurveys, getSurveyFull, getSurveyResults, getBranchSubmission,
   createSurvey, updateSurveyMeta, updateSurveyStructure, deleteSurvey, saveBranchData, saveIndividualResponses, getSurveyRespondentOptions,
-  addSurveyRespondent, optionsForQuestion,
+  addSurveyRespondent, deleteSurveyRespondent, optionsForQuestion,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
   type SurveyRespondentType, type SurveyRespondentKind, type SurveyQuestionType,
   type SurveyRespondent, type SurveyIndividualResponse, type SurveyLanguage,
@@ -1546,6 +1546,9 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   const [manualProvince, setManualProvince] = useState('');
   const [manualDetails, setManualDetails] = useState('');
   const [savingRespondent, setSavingRespondent] = useState(false);
+  const [respondentSearch, setRespondentSearch] = useState('');
+  const [respondentToDelete, setRespondentToDelete] = useState<SurveyRespondent | null>(null);
+  const [deletingRespondent, setDeletingRespondent] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -1561,6 +1564,8 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     setManualLastName('');
     setManualProvince('');
     setManualDetails('');
+    setRespondentSearch('');
+    setRespondentToDelete(null);
     setEntryMode('individual');
   }, [open, defaultBranchId, branches, survey.respondents]);
 
@@ -1665,6 +1670,31 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     }
   };
 
+  const handleDeleteRespondent = async () => {
+    if (!respondentToDelete || respondentToDelete.respondent_type !== 'manual') return;
+    setDeletingRespondent(true);
+    try {
+      const deletedKey = respondentKey(respondentToDelete);
+      const res = await deleteSurveyRespondent(survey.id, respondentToDelete.branch_id, respondentToDelete.id);
+      if (!res.success) { toast.error(res.error ?? 'Failed to delete person'); return; }
+
+      const remaining = respondents.filter((respondent) => respondent.id !== respondentToDelete.id);
+      setRespondents(remaining);
+      setIndividualResponses((current) => current.filter((response) => (
+        response.respondent_type !== respondentToDelete.respondent_type ||
+        response.respondent_id !== respondentToDelete.respondent_id
+      )));
+      if (selectedRespondentKey === deletedKey) {
+        const next = remaining.find((respondent) => respondent.branch_id === branchId);
+        setSelectedRespondentKey(next ? respondentKey(next) : '');
+      }
+      setRespondentToDelete(null);
+      toast.success('Person deleted');
+    } finally {
+      setDeletingRespondent(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!branchId) { toast.error('Please select a branch'); return; }
     const branchRespondents = respondents.filter((respondent) => respondent.branch_id === branchId);
@@ -1696,6 +1726,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
         setTotalRespondents(latest.submission ? String(latest.submission.total_respondents) : totalRespondents);
         toast.success('Individual response saved');
         onSaved();
+        onClose();
         return;
       }
 
@@ -1715,6 +1746,13 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
 
   const selectedBranch = branches.find((b) => b.id === branchId);
   const branchRespondents = respondents.filter((respondent) => respondent.branch_id === branchId);
+  const normalizedRespondentSearch = respondentSearch.trim().toLocaleLowerCase();
+  const filteredBranchRespondents = branchRespondents.filter((respondent) => (
+    !normalizedRespondentSearch ||
+    respondent.respondent_name.toLocaleLowerCase().includes(normalizedRespondentSearch) ||
+    (respondent.respondent_detail ?? '').toLocaleLowerCase().includes(normalizedRespondentSearch) ||
+    displayRespondentType(respondent.respondent_type).toLocaleLowerCase().includes(normalizedRespondentSearch)
+  ));
   const selectedRespondent = branchRespondents.find((respondent) => respondentKey(respondent) === selectedRespondentKey);
   const respondentsNum = parseInt(totalRespondents) || 0;
 
@@ -1881,37 +1919,88 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                     </div>
                   </div>
                 )}
+                <div className="border-b p-2">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      value={respondentSearch}
+                      onChange={(event) => setRespondentSearch(event.target.value)}
+                      placeholder="Search respondents..."
+                      className="h-9 pl-8"
+                    />
+                  </div>
+                </div>
                 <div className="max-h-[62vh] space-y-1 overflow-y-auto p-2">
                   {branchRespondents.length === 0 ? (
                     <div className="p-4 text-sm text-muted-foreground">
                       No students or staff were assigned to this survey branch. Use “Add person” to enter someone manually.
                     </div>
-                  ) : branchRespondents.map((respondent) => {
+                  ) : filteredBranchRespondents.length === 0 ? (
+                    <div className="p-4 text-sm text-muted-foreground">No respondents match your search.</div>
+                  ) : filteredBranchRespondents.map((respondent) => {
                     const key = respondentKey(respondent);
                     const progress = respondentProgress(respondent);
                     return (
-                      <button
+                      <div
                         key={respondent.id}
-                        type="button"
-                        onClick={() => setSelectedRespondentKey(key)}
                         className={cn(
-                          'w-full rounded-md border px-3 py-2 text-left transition-colors',
+                          'flex w-full items-center rounded-md border transition-colors',
                           selectedRespondentKey === key ? 'border-primary bg-primary/10' : 'bg-background hover:bg-muted/50',
                         )}
                       >
-                        <span className="block truncate text-sm font-medium">{respondent.respondent_name}</span>
-                        <span className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                          <span className="truncate">
-                            {displayRespondentType(respondent.respondent_type)}
-                            {respondent.respondent_detail ? ` · ${respondent.respondent_detail}` : ''}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRespondentKey(key)}
+                          className="min-w-0 flex-1 px-3 py-2 text-left"
+                        >
+                          <span className="block truncate text-sm font-medium">{respondent.respondent_name}</span>
+                          <span className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                            <span className="truncate">
+                              {displayRespondentType(respondent.respondent_type)}
+                              {respondent.respondent_detail ? ` · ${respondent.respondent_detail}` : ''}
+                            </span>
+                            <span className="shrink-0">{progress}/{survey.questions.length}</span>
                           </span>
-                          <span className="shrink-0">{progress}/{survey.questions.length}</span>
-                        </span>
-                      </button>
+                        </button>
+                        {respondent.respondent_type === 'manual' && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="mr-1 h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => setRespondentToDelete(respondent)}
+                            aria-label={`Delete ${respondent.respondent_name}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
               </aside>
+
+              <AlertDialog open={!!respondentToDelete} onOpenChange={(value) => { if (!value && !deletingRespondent) setRespondentToDelete(null); }}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this person?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {respondentToDelete?.respondent_name} and their recorded answers will be permanently removed from this survey. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deletingRespondent}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={(event) => { event.preventDefault(); handleDeleteRespondent(); }}
+                      disabled={deletingRespondent}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {deletingRespondent ? 'Deleting...' : 'Delete person'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               <section className="space-y-3">
                 {selectedRespondent ? (

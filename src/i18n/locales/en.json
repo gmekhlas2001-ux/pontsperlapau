@@ -187,6 +187,8 @@
     "forgotPassword": "Forgot password?",
     "loginButton": "Sign In",
     "invalidCredentials": "Invalid email or password",
+    "rateLimited": "Too many failed attempts. Please wait 15 minutes and try again.",
+    "studentPortalDisabled": "Student accounts cannot access this management portal.",
     "logoutSuccess": "Successfully logged out",
     "forgotTitle": "Request a password reset",
     "forgotDescription": "Your request will be sent to a superadmin who will set a new password for you and contact you directly. We do not send password reset emails.",

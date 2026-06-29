@@ -18,7 +18,8 @@
  *
  * @returns {{ success, token, user }} on valid credentials
  * @returns {401} on invalid credentials (generic message to prevent leakage)
- * @returns {429} when rate limit is exceeded
+ * @returns {403} when valid credentials are not permitted in this portal
+ * @returns {429} when rate limit is exceeded, with a Retry-After header
  */
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -93,7 +94,19 @@ Deno.serve(async (req: Request) => {
       (ipFails.count   ?? 0) >= MAX_FAILS_PER_IP) {
     // Constant-time-ish: still wait a bit before responding.
     await new Promise((r) => setTimeout(r, 750));
-    return errorResponse(req, 429, "Too many failed attempts. Try again later.");
+    const retryAfterSeconds = RATE_WINDOW_MIN * 60;
+    return new Response(JSON.stringify({
+      error: "Too many failed attempts. Try again in 15 minutes.",
+      code: "rate_limited",
+      retryAfterSeconds,
+    }), {
+      status: 429,
+      headers: {
+        ...corsHeadersFor(req),
+        "Content-Type": "application/json",
+        "Retry-After": String(retryAfterSeconds),
+      },
+    });
   }
 
   // ── Lookup user ───────────────────────────────────────────────────
@@ -108,13 +121,13 @@ Deno.serve(async (req: Request) => {
   // Security: always execute a bcrypt comparison regardless of whether the
   // account exists. This prevents attackers from distinguishing "email not
   // found" from "wrong password" via response-time analysis.
-  let valid = false;
+  let passwordValid = false;
   if (user?.password_hash) {
     const { data } = await supabase.rpc("verify_password", {
       user_email: email,
       user_password: password,
     });
-    valid = !!data;
+    passwordValid = !!data;
   } else {
     // Burn equivalent CPU time against a dummy account so the response
     // latency is indistinguishable from a real verification.
@@ -126,24 +139,31 @@ Deno.serve(async (req: Request) => {
     } catch { /* expected — no such user */ }
   }
 
-  // Policy: students authenticate via a separate mobile flow, not the
-  // admin web app. Reject them here to enforce access boundaries.
-  if (user?.role === "student") valid = false;
-
   // ── Audit + record attempt ───────────────────────────────────────
   try {
     const { error: insErr } = await supabase.from("login_attempts").insert({
       email,
       ip,
-      success: valid,
+      // A correct password is not a failed attempt even when this particular
+      // portal does not authorize the user's role.
+      success: passwordValid,
     });
     if (insErr) console.error("login_attempts insert failed:", insErr);
   } catch (err) {
     console.error("login_attempts insert threw:", err);
   }
 
-  if (!valid || !user) {
+  if (!passwordValid || !user) {
     return errorResponse(req, 401, "Invalid email or password");
+  }
+
+  // Students use a separate flow. Only disclose this after the password has
+  // been verified, so the response cannot be used to enumerate accounts.
+  if (user.role === "student") {
+    return jsonResponse(req, {
+      error: "Student accounts cannot access the management portal.",
+      code: "student_portal_disabled",
+    }, 403);
   }
 
   // ── Mint session token ────────────────────────────────────────────
