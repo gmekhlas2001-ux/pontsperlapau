@@ -1,0 +1,5222 @@
+{
+  "_none": {
+    "es": "_ninguno",
+    "ca": "_cap",
+    "fa": "_هیچکدام"
+  },
+  "--color-bg": {
+    "es": "--color-bg",
+    "ca": "--color-bg",
+    "fa": "--color-bg"
+  },
+  "--color-border": {
+    "es": "--borde de color",
+    "ca": "--color-borde",
+    "fa": "--رنگ-حاشیه"
+  },
+  "--gap": {
+    "es": "--brecha",
+    "ca": "--gap",
+    "fa": "-- شکاف"
+  },
+  "--normal-bg": {
+    "es": "--normal-bg",
+    "ca": "--normal-bg",
+    "fa": "--normal-bg"
+  },
+  "--normal-border": {
+    "es": "--borde-normal",
+    "ca": "--frontera-normal",
+    "fa": "--مرز عادی"
+  },
+  "--normal-text": {
+    "es": "--texto-normal",
+    "ca": "--text-normal",
+    "fa": "---متن معمولی"
+  },
+  "--sidebar-width": {
+    "es": "--ancho de barra lateral",
+    "ca": "--amplada de la barra lateral",
+    "fa": "-عرض نوار کناری"
+  },
+  "--sidebar-width-icon": {
+    "es": "--icono de ancho de barra lateral",
+    "ca": "--sidebar-width-icona",
+    "fa": "-نماد نوار کناری-عرض"
+  },
+  "--skeleton-width": {
+    "es": "--ancho-esqueleto",
+    "ca": "--amplada de l'esquelet",
+    "fa": "-- اسکلت-عرض"
+  },
+  "-bottom-12 left-1/2 -translate-x-1/2 rotate-90": {
+    "es": "-abajo-12 izquierda-1/2 -traducir-x-1/2 rotar-90",
+    "ca": "-abaix-12 esquerra-1/2 -traduir-x-1/2 girar-90",
+    "fa": "-پایین-12 چپ-1/2 -translate-x-1/2 rotate-90"
+  },
+  "-ml-4": {
+    "es": "-ml-4",
+    "ca": "-ml-4",
+    "fa": "-ml-4"
+  },
+  "-mt-4 flex-col": {
+    "es": "-mt-4 flex-col",
+    "ca": "-mt-4 flex-col",
+    "fa": "-mt-4 flex-col"
+  },
+  "-top-12 left-1/2 -translate-x-1/2 rotate-90": {
+    "es": "-arriba-12 izquierda-1/2 -traducir-x-1/2 rotar-90",
+    "ca": "-top-12 esquerra-1/2 -tradueix-x-1/2 gira-90",
+    "fa": "-top-12 left-1/2 -translate-x-1/2 rotate-90"
+  },
+  "? All questions and submitted data will be permanently removed. This cannot be undone.": {
+    "es": "? Todas las preguntas y datos enviados se eliminarán permanentemente. Esto no se puede deshacer.",
+    "ca": "? Totes les preguntes i dades enviades s'eliminaran permanentment. Això no es pot desfer.",
+    "fa": "? تمام سوالات و داده های ارسالی برای همیشه حذف خواهند شد. این قابل واگرد نیست."
+  },
+  "? This action cannot be undone.": {
+    "es": "? Esta acción no se puede deshacer.",
+    "ca": "? Aquesta acció no es pot desfer.",
+    "fa": "? این عمل قابل لغو نیست."
+  },
+  "? This cannot be undone.": {
+    "es": "? Esto no se puede deshacer.",
+    "ca": "? Això no es pot desfer.",
+    "fa": "? این قابل واگرد نیست."
+  },
+  "? This will remove their record completely from the database and cannot be undone. To keep the staff member but disable their access, use the Inactive status in the edit form instead.": {
+    "es": "? Esto eliminará completamente su registro de la base de datos y no se podrá deshacer. Para conservar al miembro del personal pero deshabilitar su acceso, utilice el estado Inactivo en el formulario de edición.",
+    "ca": "? Això eliminarà completament el seu registre de la base de dades i no es pot desfer. Per mantenir el membre del personal però desactivar-ne l'accés, utilitzeu l'estat Inactiu al formulari d'edició.",
+    "fa": "? با این کار رکورد آنها به طور کامل از پایگاه داده حذف می شود و قابل بازگشت نیست. برای حفظ کارمندان اما غیرفعال کردن دسترسی آنها، به جای آن از وضعیت غیرفعال در فرم ویرایش استفاده کنید."
+  },
+  "? This will remove their record completely from the database and cannot be undone. To keep the student but disable their access, use the Inactive status in the edit form instead.": {
+    "es": "? Esto eliminará completamente su registro de la base de datos y no se podrá deshacer. Para conservar al estudiante pero deshabilitar su acceso, utilice el estado Inactivo en el formulario de edición.",
+    "ca": "? Això eliminarà completament el seu registre de la base de dades i no es pot desfer. Per mantenir l'estudiant però desactivar-ne l'accés, utilitzeu l'estat Inactiu al formulari d'edició.",
+    "fa": "? با این کار رکورد آنها به طور کامل از پایگاه داده حذف می شود و قابل بازگشت نیست. برای حفظ دانش‌آموز اما غیرفعال کردن دسترسی او، به جای آن از وضعیت غیرفعال در فرم ویرایش استفاده کنید."
+  },
+  "· {{0}}% attendance": {
+    "es": "· {{0}}% de asistencia",
+    "ca": "· {{0}}% d'assistència",
+    "fa": "· {{0}}% حضور"
+  },
+  "(leave blank to keep current)": {
+    "es": "(déjelo en blanco para mantenerlo actualizado)",
+    "ca": "(deixar en blanc per mantenir-se actualitzat)",
+    "fa": "(برای حفظ جریان، خالی بگذارید)"
+  },
+  "(optional grouping)": {
+    "es": "(agrupación opcional)",
+    "ca": "(agrupació opcional)",
+    "fa": "(گروه بندی اختیاری)"
+  },
+  "(optional)": {
+    "es": "(opcional)",
+    "ca": "(opcional)",
+    "fa": "(اختیاری)"
+  },
+  "(total copies)": {
+    "es": "(copias totales)",
+    "ca": "(total de còpies)",
+    "fa": "(کل نسخه ها)"
+  },
+  "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2": {
+    "es": "[[lado-datos=izquierda][datos-collapsible=offcanvas]_&]:-derecha-2",
+    "ca": "[[data-side=esquerra][data-collapsible=offcanvas]_&]:-right-2",
+    "fa": "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2"
+  },
+  "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize": {
+    "es": "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
+    "ca": "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
+    "fa": "[[data-side=left][data-state=collapsed]_&]:cursor-e-size [[data-side=right][data-state=collapsed]_&]:cursor-w-resize"
+  },
+  "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2": {
+    "es": "[[lado-datos=derecho][datos-collapsible=fuera del lienzo]_&]:-izquierda-2",
+    "ca": "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+    "fa": "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2"
+  },
+  "[&_svg:not([class*='size-'])]:size-3": {
+    "es": "[&_svg:not([clase*='tamaño-'])]:tamaño-3",
+    "ca": "[&_svg:not([classe*='mida-'])]:mida-3",
+    "fa": "[&_svg:not([class*='size-'])]:size-3"
+  },
+  "[&>svg]:size-3.5": {
+    "es": "[&>svg]:tamaño-3.5",
+    "ca": "[&>svg]:size-3.5",
+    "fa": "[&>svg]:size-3.5"
+  },
+  "{{0}} · Age {{1}}": {
+    "es": "{{0}} · Edad {{1}}",
+    "ca": "{{0}} · Edat {{1}}",
+    "fa": "{{0}} · سن {{1}}"
+  },
+  "{{0}} {{1}} has been activated": {
+    "es": "{{0}} {{1}} ha sido activado",
+    "ca": "{{0}} {{1}} s'ha activat",
+    "fa": "{{0}} {{1}} فعال شده است"
+  },
+  "{{0}} fees created": {
+    "es": "{{0}} tarifas creadas",
+    "ca": "S'han creat {{0}} tarifes",
+    "fa": "هزینه‌های {{0}} ایجاد شد"
+  },
+  "{{0}} on {{1}}": {
+    "es": "{{0}} en {{1}}",
+    "ca": "{{0}} el {{1}}",
+    "fa": "{{0}} در {{1}}"
+  },
+  "{{0}}T00:00:00": {
+    "es": "{{0}}T00:00:00",
+    "ca": "{{0}}T00:00:00",
+    "fa": "{{0}}T00:00:00"
+  },
+  "% att.": {
+    "es": "% att.",
+    "ca": "% at.",
+    "fa": "% att"
+  },
+  "% Attendance": {
+    "es": "% de asistencia",
+    "ca": "% d'assistència",
+    "fa": "درصد حضور و غیاب"
+  },
+  "% rate": {
+    "es": "tasa %",
+    "ca": "percentatge",
+    "fa": "درصد نرخ"
+  },
+  "0-10 Rating": {
+    "es": "Calificación 0-10",
+    "ca": "Valoració 0-10",
+    "fa": "امتیاز 0-10"
+  },
+  "60px repeat({{0}}, 1fr)": {
+    "es": "repetición de 60 px ({{0}}, 1 fr)",
+    "ca": "Repetició de 60 píxels ({{0}}, 1fr)",
+    "fa": "تکرار 60 پیکسل ({{0}}، 1fr)"
+  },
+  "A brief professional background, qualifications, or specialisation...": {
+    "es": "Breve trayectoria profesional, cualificaciones o especialización...",
+    "ca": "Una breu trajectòria professional, qualificacions o especialització...",
+    "fa": "یک پیشینه حرفه ای مختصر، مدارک تحصیلی یا تخصص..."
+  },
+  "A, B+, C…": {
+    "es": "A, B+, C...",
+    "ca": "A, B+, C...",
+    "fa": "A، B+، C…"
+  },
+  "A, B+…": {
+    "es": "A, B+…",
+    "ca": "A, B+...",
+    "fa": "A، B+…"
+  },
+  "Absent": {
+    "es": "ausente",
+    "ca": "Absent",
+    "fa": "غایب"
+  },
+  "Academic": {
+    "es": "Académico",
+    "ca": "Acadèmic",
+    "fa": "دانشگاهی"
+  },
+  "Academic Year": {
+    "es": "Año Académico",
+    "ca": "Any Acadèmic",
+    "fa": "سال تحصیلی"
+  },
+  "Action": {
+    "es": "acción",
+    "ca": "Acció",
+    "fa": "اقدام"
+  },
+  "Activate": {
+    "es": "Activar",
+    "ca": "Activar",
+    "fa": "فعال کنید"
+  },
+  "active": {
+    "es": "activo",
+    "ca": "actiu",
+    "fa": "فعال"
+  },
+  "Active": {
+    "es": "Activo",
+    "ca": "Actiu",
+    "fa": "فعال"
+  },
+  "active grant": {
+    "es": "subvención activa",
+    "ca": "subvenció activa",
+    "fa": "کمک مالی فعال"
+  },
+  "Actor": {
+    "es": "Actor",
+    "ca": "Actor",
+    "fa": "بازیگر"
+  },
+  "Add": {
+    "es": "Añadir",
+    "ca": "Afegir",
+    "fa": "اضافه کردن"
+  },
+  "Add a new book to the library": {
+    "es": "Agregar un nuevo libro a la biblioteca",
+    "ca": "Afegeix un llibre nou a la biblioteca",
+    "fa": "یک کتاب جدید به کتابخانه اضافه کنید"
+  },
+  "Add a person manually for this survey. They are not saved to the student or staff records.": {
+    "es": "Agregue una persona manualmente para esta encuesta. No se guardan en los registros del estudiante o del personal.",
+    "ca": "Afegeix una persona manualment per a aquesta enquesta. No es guarden als registres de l'estudiant o del personal.",
+    "fa": "یک نفر را به صورت دستی برای این نظرسنجی اضافه کنید. آنها در سوابق دانش آموزان یا کارکنان ذخیره نمی شوند."
+  },
+  "Add Assessment": {
+    "es": "Agregar evaluación",
+    "ca": "Afegeix una avaluació",
+    "fa": "افزودن ارزیابی"
+  },
+  "Add at least one question": {
+    "es": "Añade al menos una pregunta",
+    "ca": "Afegeix almenys una pregunta",
+    "fa": "حداقل یک سوال اضافه کنید"
+  },
+  "Add from": {
+    "es": "Agregar desde",
+    "ca": "Afegeix de",
+    "fa": "اضافه کردن از"
+  },
+  "Add Grade": {
+    "es": "Agregar calificación",
+    "ca": "Afegeix qualificació",
+    "fa": "اضافه کردن درجه"
+  },
+  "Add Grade Entry": {
+    "es": "Agregar entrada de calificación",
+    "ca": "Afegeix una entrada de qualificació",
+    "fa": "اضافه کردن درجه ورودی"
+  },
+  "Add Option": {
+    "es": "Agregar opción",
+    "ca": "Afegeix una opció",
+    "fa": "افزودن گزینه"
+  },
+  "Add person": {
+    "es": "Agregar persona",
+    "ca": "Afegeix una persona",
+    "fa": "فرد را اضافه کنید"
+  },
+  "Add Question": {
+    "es": "Agregar pregunta",
+    "ca": "Afegeix una pregunta",
+    "fa": "اضافه کردن سوال"
+  },
+  "Add Section": {
+    "es": "Agregar sección",
+    "ca": "Afegeix secció",
+    "fa": "افزودن بخش"
+  },
+  "Add your first class": {
+    "es": "Añade tu primera clase",
+    "ca": "Afegeix la teva primera classe",
+    "fa": "اولین کلاس خود را اضافه کنید"
+  },
+  "Adding...": {
+    "es": "Añadiendo...",
+    "ca": "S'està afegint...",
+    "fa": "در حال افزودن..."
+  },
+  "Address": {
+    "es": "Dirección",
+    "ca": "Adreça",
+    "fa": "آدرس"
+  },
+  "admin": {
+    "es": "administrador",
+    "ca": "admin",
+    "fa": "مدیر"
+  },
+  "AFN": {
+    "es": "AFN",
+    "ca": "AFN",
+    "fa": "AFN"
+  },
+  "after:absolute after:-inset-2 md:after:hidden": {
+    "es": "después:absoluto después:-inset-2 md:después:oculto",
+    "ca": "after:absolut after:-inset-2 md:after:hidden",
+    "fa": "after:absolute after:-inset-2 md:after:hidden"
+  },
+  "aggregate": {
+    "es": "agregado",
+    "ca": "agregat",
+    "fa": "کل"
+  },
+  "Aggregate branch counts": {
+    "es": "Recuentos agregados de sucursales",
+    "ca": "Recomptes agregats de branques",
+    "fa": "تعداد کل شاخه ها"
+  },
+  "Aggregate Counts": {
+    "es": "Recuentos agregados",
+    "ca": "Recomptes agregats",
+    "fa": "تعداد کل"
+  },
+  "Aggregate data saved": {
+    "es": "Datos agregados guardados",
+    "ca": "Dades agregades desades",
+    "fa": "داده های جمعی ذخیره شد"
+  },
+  "Agree": {
+    "es": "De acuerdo",
+    "ca": "D'acord",
+    "fa": "موافقم"
+  },
+  "Agreement": {
+    "es": "Acuerdo",
+    "ca": "Acord",
+    "fa": "توافق نامه"
+  },
+  "all": {
+    "es": "todos",
+    "ca": "tots",
+    "fa": "همه"
+  },
+  "All": {
+    "es": "Todos",
+    "ca": "Tots",
+    "fa": "همه"
+  },
+  "All actions": {
+    "es": "Todas las acciones",
+    "ca": "Totes les accions",
+    "fa": "تمام اقدامات"
+  },
+  "All active students in branch": {
+    "es": "Todos los estudiantes activos en la sucursal.",
+    "ca": "Tots els estudiants actius de la branca",
+    "fa": "کلیه دانشجویان فعال واحد"
+  },
+  "All branches": {
+    "es": "Todas las sucursales",
+    "ca": "Totes les branques",
+    "fa": "همه شعبه ها"
+  },
+  "All students from this branch are enrolled": {
+    "es": "Todos los estudiantes de esta rama están matriculados.",
+    "ca": "Tots els alumnes d'aquesta branca estan matriculats",
+    "fa": "تمامی دانشجویان این واحد ثبت نام کرده اند"
+  },
+  "All students in a class": {
+    "es": "Todos los estudiantes de una clase.",
+    "ca": "Tots els alumnes d'una classe",
+    "fa": "همه دانش آموزان در یک کلاس"
+  },
+  "All tables": {
+    "es": "Todas las mesas",
+    "ca": "Totes les taules",
+    "fa": "همه میزها"
+  },
+  "All teachers": {
+    "es": "Todos los profesores",
+    "ca": "Tots els professors",
+    "fa": "همه معلمان"
+  },
+  "Allergies": {
+    "es": "Alergias",
+    "ca": "Al·lèrgies",
+    "fa": "آلرژی"
+  },
+  "Always": {
+    "es": "siempre",
+    "ca": "Sempre",
+    "fa": "همیشه"
+  },
+  "An unexpected error occurred": {
+    "es": "Ocurrió un error inesperado",
+    "ca": "S'ha produït un error inesperat",
+    "fa": "یک خطای غیرمنتظره رخ داد"
+  },
+  "and their recorded answers will be permanently removed from this survey. This cannot be undone.": {
+    "es": "y sus respuestas grabadas se eliminarán permanentemente de esta encuesta. Esto no se puede deshacer.",
+    "ca": "i les seves respostes enregistrades s'eliminaran permanentment d'aquesta enquesta. Això no es pot desfer.",
+    "fa": "و پاسخ های ثبت شده آنها برای همیشه از این نظرسنجی حذف خواهد شد. این قابل واگرد نیست."
+  },
+  "animate-spin": {
+    "es": "girar-animar",
+    "ca": "animar-gir",
+    "fa": "متحرک - چرخش"
+  },
+  "Answer": {
+    "es": "respuesta",
+    "ca": "Respon",
+    "fa": "پاسخ دهید"
+  },
+  "Answer choices": {
+    "es": "Opciones de respuesta",
+    "ca": "Opcions de resposta",
+    "fa": "به انتخاب ها پاسخ دهید"
+  },
+  "Answer Distribution": {
+    "es": "Distribución de respuestas",
+    "ca": "Distribució de respostes",
+    "fa": "توزیع پاسخ"
+  },
+  "Answer Options": {
+    "es": "Opciones de respuesta",
+    "ca": "Opcions de resposta",
+    "fa": "گزینه های پاسخ"
+  },
+  "answer options from “": {
+    "es": "opciones de respuesta de “",
+    "ca": "opcions de resposta de \"",
+    "fa": "گزینه های پاسخ از \""
+  },
+  "answered": {
+    "es": "respondió",
+    "ca": "va respondre",
+    "fa": "پاسخ داد"
+  },
+  "Answers": {
+    "es": "Respuestas",
+    "ca": "Respostes",
+    "fa": "پاسخ ها"
+  },
+  "Any relevant medical conditions or notes...": {
+    "es": "Cualquier condición o nota médica relevante...",
+    "ca": "Qualsevol condició mèdica o nota rellevant...",
+    "fa": "هر گونه شرایط پزشکی مرتبط یا یادداشت ..."
+  },
+  "Any relevant medical conditions, medications, or special requirements...": {
+    "es": "Cualquier condición médica relevante, medicamentos o requisitos especiales...",
+    "ca": "Qualsevol condició mèdica rellevant, medicaments o requisits especials...",
+    "fa": "هر گونه شرایط پزشکی مرتبط، داروها، یا شرایط خاص..."
+  },
+  "app-main flex-1 overflow-auto p-3 sm:p-4 md:p-6 lg:p-7": {
+    "es": "aplicación-principal flex-1 desbordamiento-automático p-3 sm:p-4 md:p-6 lg:p-7",
+    "ca": "app-main flex-1 overflow-auto p-3 sm:p-4 md:p-6 lg:p-7",
+    "fa": "app-main flex-1 overflow-auto p-3 sm:p-4 md:p-6 lg:p-7"
+  },
+  "Apply to": {
+    "es": "Aplicar a",
+    "ca": "Aplicar a",
+    "fa": "درخواست به"
+  },
+  "Archive": {
+    "es": "Archivo",
+    "ca": "Arxiu",
+    "fa": "آرشیو"
+  },
+  "archived": {
+    "es": "archivado",
+    "ca": "arxivat",
+    "fa": "بایگانی شد"
+  },
+  "Archived": {
+    "es": "Archivado",
+    "ca": "Arxivat",
+    "fa": "بایگانی شد"
+  },
+  "Are you sure you want to delete": {
+    "es": "¿Estás seguro de que quieres eliminar?",
+    "ca": "Esteu segur que voleu suprimir",
+    "fa": "آیا مطمئن هستید که می خواهید حذف کنید؟"
+  },
+  "Are you sure you want to permanently delete": {
+    "es": "¿Estás seguro de que deseas eliminar permanentemente?",
+    "ca": "Esteu segur que voleu suprimir permanentment",
+    "fa": "آیا مطمئن هستید که می خواهید برای همیشه حذف کنید؟"
+  },
+  "asc": {
+    "es": "asc",
+    "ca": "asc",
+    "fa": "صعودی"
+  },
+  "aspect-square size-full": {
+    "es": "aspecto cuadrado tamaño completo",
+    "ca": "aspecte-mida quadrat-complet",
+    "fa": "ابعاد-مربع اندازه-کامل"
+  },
+  "Assessment Name": {
+    "es": "Nombre de la evaluación",
+    "ca": "Nom de l'avaluació",
+    "fa": "نام ارزیابی"
+  },
+  "Assessment name is required": {
+    "es": "El nombre de la evaluación es obligatorio.",
+    "ca": "El nom de l'avaluació és obligatori",
+    "fa": "نام ارزیابی الزامی است"
+  },
+  "Assign a branch to this class to enroll students": {
+    "es": "Asignar una rama a esta clase para inscribir estudiantes",
+    "ca": "Assigna una branca a aquesta classe per matricular els estudiants",
+    "fa": "برای ثبت نام دانش آموزان شعبه ای به این کلاس اختصاص دهید"
+  },
+  "Assign schedule days to classes on the Classes page.": {
+    "es": "Asigne días programados a las clases en la página Clases.",
+    "ca": "Assigna dies d'horari a les classes a la pàgina Classes.",
+    "fa": "در صفحه کلاس ها، روزهای برنامه ریزی را به کلاس ها اختصاص دهید."
+  },
+  "Assignment": {
+    "es": "tarea",
+    "ca": "Encàrrec",
+    "fa": "تکلیف"
+  },
+  "Attendance": {
+    "es": "Asistencia",
+    "ca": "Assistència",
+    "fa": "حضور و غیاب"
+  },
+  "Attendance rate": {
+    "es": "Tasa de asistencia",
+    "ca": "Taxa d'assistència",
+    "fa": "میزان حضور و غیاب"
+  },
+  "Attendance Rate": {
+    "es": "Tasa de Asistencia",
+    "ca": "Taxa d'Assistència",
+    "fa": "نرخ حضور"
+  },
+  "Attendance saved successfully": {
+    "es": "Asistencia guardada exitosamente",
+    "ca": "L'assistència s'ha desat correctament",
+    "fa": "حضور با موفقیت ذخیره شد"
+  },
+  "AUD": {
+    "es": "AUD",
+    "ca": "AUD",
+    "fa": "AUD"
+  },
+  "Audit Log": {
+    "es": "Registro de Auditoría",
+    "ca": "Registre d'Auditoria",
+    "fa": "گزارش فعالیت‌ها"
+  },
+  "author": {
+    "es": "autor",
+    "ca": "autor",
+    "fa": "نویسنده"
+  },
+  "Available": {
+    "es": "Disponible",
+    "ca": "Disponible",
+    "fa": "موجود"
+  },
+  "avatar": {
+    "es": "avatar",
+    "ca": "avatar",
+    "fa": "آواتار"
+  },
+  "Average": {
+    "es": "Promedio",
+    "ca": "Mitjana",
+    "fa": "میانگین"
+  },
+  "Avg": {
+    "es": "promedio",
+    "ca": "Mitjana",
+    "fa": "میانگین"
+  },
+  "Avg Satisfaction": {
+    "es": "Satisfacción promedio",
+    "ca": "Satisfacció mitjana",
+    "fa": "میانگین رضایت"
+  },
+  "Back to": {
+    "es": "Volver a",
+    "ca": "Torna a",
+    "fa": "بازگشت به"
+  },
+  "Back to surveys": {
+    "es": "Volver a encuestas",
+    "ca": "Tornar a les enquestes",
+    "fa": "بازگشت به نظرسنجی ها"
+  },
+  "Below 80% - click to review": {
+    "es": "Por debajo del 80%: haga clic para revisar",
+    "ca": "Per sota del 80%: feu clic per revisar",
+    "fa": "زیر 80% - برای بررسی کلیک کنید"
+  },
+  "Biography": {
+    "es": "Biografía",
+    "ca": "Biografia",
+    "fa": "بیوگرافی"
+  },
+  "Book cover": {
+    "es": "portada del libro",
+    "ca": "Portada del llibre",
+    "fa": "جلد کتاب"
+  },
+  "Book details": {
+    "es": "Detalles del libro",
+    "ca": "Detalls del llibre",
+    "fa": "جزئیات کتاب"
+  },
+  "books": {
+    "es": "libros",
+    "ca": "llibres",
+    "fa": "کتاب ها"
+  },
+  "border shadow-sm": {
+    "es": "borde sombra-sm",
+    "ca": "frontera ombra-sm",
+    "fa": "مرز shadow-sm"
+  },
+  "borrowed": {
+    "es": "prestado",
+    "ca": "prestat",
+    "fa": "قرض گرفته شده است"
+  },
+  "Borrowed": {
+    "es": "Prestado",
+    "ca": "Prestat",
+    "fa": "قرض داده شده"
+  },
+  "borrowed_count": {
+    "es": "cuenta_prestada",
+    "ca": "compte_prestat",
+    "fa": "تعداد_قرض گرفته شده"
+  },
+  "bottom": {
+    "es": "abajo",
+    "ca": "inferior",
+    "fa": "پایین"
+  },
+  "Branch": {
+    "es": "Sede",
+    "ca": "Seu",
+    "fa": "شعبه"
+  },
+  "branch@example.org": {
+    "es": "sucursal@ejemplo.org",
+    "ca": "branca@exemple.org",
+    "fa": "branch@example.org"
+  },
+  "branches": {
+    "es": "ramas",
+    "ca": "branques",
+    "fa": "شاخه ها"
+  },
+  "Branches Overview": {
+    "es": "Resumen de sucursales",
+    "ca": "Visió general de les oficines",
+    "fa": "مروری بر شعب"
+  },
+  "Branches Submitted": {
+    "es": "Sucursales enviadas",
+    "ca": "Sucursals presentades",
+    "fa": "شعب ارسال شده"
+  },
+  "breadcrumb": {
+    "es": "miga de pan",
+    "ca": "pa ratllat",
+    "fa": "پودر سوخاری"
+  },
+  "Brief description of the class...": {
+    "es": "Breve descripción de la clase...",
+    "ca": "Breu descripció de la classe...",
+    "fa": "شرح مختصری از کلاس ..."
+  },
+  "Brief description of this survey's purpose...": {
+    "es": "Breve descripción del propósito de esta encuesta...",
+    "ca": "Breu descripció de l'objectiu d'aquesta enquesta...",
+    "fa": "شرح مختصری از هدف این نظرسنجی..."
+  },
+  "Browse available books": {
+    "es": "Explorar libros disponibles",
+    "ca": "Consulta els llibres disponibles",
+    "fa": "کتاب های موجود را مرور کنید"
+  },
+  "Build sections, questions, and response options for branch data collection.": {
+    "es": "Cree secciones, preguntas y opciones de respuesta para la recopilación de datos de sucursales.",
+    "ca": "Creeu seccions, preguntes i opcions de resposta per a la recollida de dades de la branca.",
+    "fa": "ساخت بخش ها، پرسش ها و گزینه های پاسخ برای جمع آوری داده های شاخه."
+  },
+  "Build sections, questions, and response options in one workspace.": {
+    "es": "Cree secciones, preguntas y opciones de respuesta en un solo espacio de trabajo.",
+    "ca": "Creeu seccions, preguntes i opcions de resposta en un sol espai de treball.",
+    "fa": "بخش ها، سوالات و گزینه های پاسخ را در یک فضای کاری بسازید."
+  },
+  "Bulk Create": {
+    "es": "Creación masiva",
+    "ca": "Creació massiva",
+    "fa": "ایجاد انبوه"
+  },
+  "Bulk Create Fees": {
+    "es": "Tarifas de creación masiva",
+    "ca": "Comissions de creació massiva",
+    "fa": "هزینه های ایجاد انبوه"
+  },
+  "button": {
+    "es": "botón",
+    "ca": "botó",
+    "fa": "دکمه"
+  },
+  "By Branch": {
+    "es": "Por sucursal",
+    "ca": "Per Sucursal",
+    "fa": "توسط شعبه"
+  },
+  "By Question": {
+    "es": "Por pregunta",
+    "ca": "Per Pregunta",
+    "fa": "با سوال"
+  },
+  "CAD": {
+    "es": "CAD",
+    "ca": "CAD",
+    "fa": "CAD"
+  },
+  "Calculated avg:": {
+    "es": "Promedio calculado:",
+    "ca": "Mitjana calculada:",
+    "fa": "میانگین محاسبه شده:"
+  },
+  "Cancel": {
+    "es": "Cancelar",
+    "ca": "Cancel·lar",
+    "fa": "لغو"
+  },
+  "cancelled": {
+    "es": "cancelado",
+    "ca": "cancel·lat",
+    "fa": "لغو شد"
+  },
+  "Capacity:": {
+    "es": "Capacidad:",
+    "ca": "Capacitat:",
+    "fa": "ظرفیت:"
+  },
+  "capitalize": {
+    "es": "capitalizar",
+    "ca": "majúscules",
+    "fa": "بزرگ کردن"
+  },
+  "card": {
+    "es": "tarjeta",
+    "ca": "targeta",
+    "fa": "کارت"
+  },
+  "Català": {
+    "es": "catalán",
+    "ca": "Català",
+    "fa": "کاتالا"
+  },
+  "category": {
+    "es": "categoría",
+    "ca": "categoria",
+    "fa": "دسته بندی"
+  },
+  "cell-{{0}}": {
+    "es": "celular-{{0}}",
+    "ca": "cel·la-{{0}}",
+    "fa": "سلول-{{0}}"
+  },
+  "Checkbox grid": {
+    "es": "Cuadrícula de casillas de verificación",
+    "ca": "Quadrícula de caselles de selecció",
+    "fa": "شبکه چک باکس"
+  },
+  "Checkboxes": {
+    "es": "Casillas de verificación",
+    "ca": "Caselles de verificació",
+    "fa": "چک باکس ها"
+  },
+  "Choice questions need at least one answer option": {
+    "es": "Las preguntas de elección necesitan al menos una opción de respuesta.",
+    "ca": "Les preguntes d'elecció necessiten almenys una opció de resposta",
+    "fa": "سوالات انتخابی حداقل به یک گزینه پاسخ نیاز دارند"
+  },
+  "Choose a respondent from the list or use Add person to create a manual respondent for this branch.": {
+    "es": "Elija un encuestado de la lista o use Agregar persona para crear un encuestado manual para esta sucursal.",
+    "ca": "Trieu un enquestat de la llista o utilitzeu Afegeix una persona per crear un enquestat manual per a aquesta branca.",
+    "fa": "پاسخ‌دهنده‌ای را از فهرست انتخاب کنید یا از Add person برای ایجاد پاسخ‌گوی دستی برای این شعبه استفاده کنید."
+  },
+  "Choose a response type for each question and add custom answer choices where needed.": {
+    "es": "Elija un tipo de respuesta para cada pregunta y agregue opciones de respuesta personalizadas cuando sea necesario.",
+    "ca": "Trieu un tipus de resposta per a cada pregunta i afegiu opcions de resposta personalitzades quan sigui necessari.",
+    "fa": "برای هر سوال یک نوع پاسخ انتخاب کنید و در صورت نیاز گزینه های پاسخ سفارشی را اضافه کنید."
+  },
+  "Choose an answer": {
+    "es": "Elige una respuesta",
+    "ca": "Tria una resposta",
+    "fa": "پاسخی را انتخاب کنید"
+  },
+  "Choose from a list": {
+    "es": "Elige de una lista",
+    "ca": "Trieu d'una llista",
+    "fa": "از یک لیست انتخاب کنید"
+  },
+  "class": {
+    "es": "clase",
+    "ca": "classe",
+    "fa": "کلاس"
+  },
+  "Class": {
+    "es": "clase",
+    "ca": "Classe",
+    "fa": "کلاس"
+  },
+  "Class Average": {
+    "es": "Promedio de clase",
+    "ca": "Classe mitjana",
+    "fa": "میانگین کلاس"
+  },
+  "Class deleted successfully": {
+    "es": "Clase eliminada exitosamente",
+    "ca": "La classe s'ha suprimit correctament",
+    "fa": "کلاس با موفقیت حذف شد"
+  },
+  "Class marked as {{0}}": {
+    "es": "Clase marcada como {{0}}",
+    "ca": "Classe marcada com a {{0}}",
+    "fa": "کلاس به عنوان {{0}} علامت‌گذاری شد"
+  },
+  "Class name is required": {
+    "es": "El nombre de la clase es obligatorio.",
+    "ca": "El nom de la classe és obligatori",
+    "fa": "نام کلاس الزامی است"
+  },
+  "Classes": {
+    "es": "Clases",
+    "ca": "Classes",
+    "fa": "کلاس‌ها"
+  },
+  "Classes enrolled": {
+    "es": "Clases inscritas",
+    "ca": "Classes matriculades",
+    "fa": "کلاس ها ثبت نام کردند"
+  },
+  "Classes:": {
+    "es": "Clases:",
+    "ca": "Classes:",
+    "fa": "کلاس ها:"
+  },
+  "Clear": {
+    "es": "Borrar",
+    "ca": "Clar",
+    "fa": "پاک کردن"
+  },
+  "Click to open inbox": {
+    "es": "Haga clic para abrir la bandeja de entrada",
+    "ca": "Feu clic per obrir la safata d'entrada",
+    "fa": "برای باز کردن صندوق ورودی کلیک کنید"
+  },
+  "Close": {
+    "es": "Cerrar",
+    "ca": "Tancar",
+    "fa": "بستن"
+  },
+  "Close data entry": {
+    "es": "Cerrar entrada de datos",
+    "ca": "Tanca l'entrada de dades",
+    "fa": "ورود اطلاعات را ببندید"
+  },
+  "Close survey builder": {
+    "es": "Cerrar generador de encuestas",
+    "ca": "Tanca el creador d'enquestes",
+    "fa": "بستن سازنده نظرسنجی"
+  },
+  "Close survey results": {
+    "es": "Cerrar resultados de la encuesta",
+    "ca": "Tanca els resultats de l'enquesta",
+    "fa": "نتایج نظرسنجی را ببندید"
+  },
+  "closed": {
+    "es": "cerrado",
+    "ca": "tancat",
+    "fa": "بسته"
+  },
+  "Closed": {
+    "es": "Cerrado",
+    "ca": "Tancat",
+    "fa": "بسته"
+  },
+  "col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight": {
+    "es": "col-start-2 line-clamp-1 min-h-4 fuente-medio seguimiento-apretado",
+    "ca": "col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight",
+    "fa": "col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight"
+  },
+  "col-start-2 row-span-2 row-start-1 self-start justify-self-end": {
+    "es": "col-inicio-2 fila-span-2 fila-inicio-1 autoinicio justificar-autofin",
+    "ca": "col-start-2 row-span-2 row-start-1 auto-inici justificar-self-end",
+    "fa": "col-start-2 row-span-2 row-start-1 self-start justify-self-end"
+  },
+  "Collapse navigation": {
+    "es": "Contraer navegación",
+    "ca": "Redueix la navegació",
+    "fa": "کوچک کردن پیمایش"
+  },
+  "collapsed": {
+    "es": "colapsado",
+    "ca": "col·lapsada",
+    "fa": "فرو ریخت"
+  },
+  "common.{{0}}": {
+    "es": "común.{{0}}",
+    "ca": "comú.{{0}}",
+    "fa": "رایج است.{{0}}"
+  },
+  "Complete record of all system actions —": {
+    "es": "Registro completo de todas las acciones del sistema.",
+    "ca": "Registre complet de totes les accions del sistema:",
+    "fa": "ثبت کامل تمام اقدامات سیستم -"
+  },
+  "completed": {
+    "es": "completado",
+    "ca": "completat",
+    "fa": "تکمیل شد"
+  },
+  "Completion Certificate": {
+    "es": "Certificado de finalización",
+    "ca": "Certificat de finalització",
+    "fa": "گواهی پایان کار"
+  },
+  "Contact": {
+    "es": "Contacto",
+    "ca": "Contacte",
+    "fa": "تماس بگیرید"
+  },
+  "Contact Email (optional)": {
+    "es": "Correo electrónico de contacto (opcional)",
+    "ca": "Correu electrònic de contacte (opcional)",
+    "fa": "ایمیل تماس (اختیاری)"
+  },
+  "contact@organization.org": {
+    "es": "contacto@organización.org",
+    "ca": "contact@organization.org",
+    "fa": "contact@organization.org"
+  },
+  "Copies all sections, questions, and answer options. Choose a new branch, respondents, and dates.": {
+    "es": "Copia todas las secciones, preguntas y opciones de respuesta. Elija una nueva sucursal, encuestados y fechas.",
+    "ca": "Copia totes les seccions, preguntes i opcions de resposta. Trieu una branca, els enquestats i les dates noves.",
+    "fa": "همه بخش‌ها، پرسش‌ها و گزینه‌های پاسخ را کپی می‌کند. شعبه جدید، پاسخ دهندگان و تاریخ ها را انتخاب کنید."
+  },
+  "Copying": {
+    "es": "Copiando",
+    "ca": "Còpia",
+    "fa": "در حال کپی کردن"
+  },
+  "Counting students…": {
+    "es": "Contando estudiantes...",
+    "ca": "Comptant alumnes...",
+    "fa": "شمارش دانش آموزان…"
+  },
+  "Create {{0}} fees": {
+    "es": "Crear tarifas {{0}}",
+    "ca": "Creeu {{0}} tarifes",
+    "fa": "هزینه های {{0}} ایجاد کنید"
+  },
+  "Create classes and assign schedule days to see the timetable.": {
+    "es": "Crea clases y asigna días de programación para ver el horario.",
+    "ca": "Creeu classes i assigneu dies d'horari per veure l'horari.",
+    "fa": "کلاس ایجاد کنید و روزهای برنامه را برای دیدن جدول زمانی تعیین کنید."
+  },
+  "Create Survey": {
+    "es": "Crear encuesta",
+    "ca": "Crea una enquesta",
+    "fa": "ایجاد نظرسنجی"
+  },
+  "Create your first survey to start collecting data from branches.": {
+    "es": "Crea tu primera encuesta para comenzar a recopilar datos de las sucursales.",
+    "ca": "Crea la teva primera enquesta per començar a recollir dades de les oficines.",
+    "fa": "اولین نظرسنجی خود را برای شروع جمع آوری داده ها از شعب ایجاد کنید."
+  },
+  "Creating…": {
+    "es": "Creando…",
+    "ca": "S'està creant…",
+    "fa": "در حال ایجاد…"
+  },
+  "Credentials (Superadmin only)": {
+    "es": "Credenciales (solo superadministrador)",
+    "ca": "Credencials (només superadministrador)",
+    "fa": "اعتبارنامه (فقط Superadmin)"
+  },
+  "currency": {
+    "es": "moneda",
+    "ca": "moneda",
+    "fa": "ارز"
+  },
+  "cursor-pointer select-none": {
+    "es": "puntero del cursor seleccionar ninguno",
+    "ca": "cursor-punter seleccionar-cap",
+    "fa": "نشانگر مکان نما انتخاب - هیچ"
+  },
+  "D MMMM YYYY (31 December 2024)": {
+    "es": "D MMMM AAAA (31 de diciembre de 2024)",
+    "ca": "D MMMM AAAA (31 de desembre de 2024)",
+    "fa": "D MMMM YYYY (31 دسامبر 2024)"
+  },
+  "Damaged": {
+    "es": "Dañado",
+    "ca": "Danyat",
+    "fa": "آسیب دیده"
+  },
+  "dashed": {
+    "es": "discontinuo",
+    "ca": "puntejat",
+    "fa": "خط خورده"
+  },
+  "data-[motion^=from-]:animate-in data-[motion^=to-]:animate-out data-[motion^=from-]:fade-in data-[motion^=to-]:fade-out data-[motion=from-end]:slide-in-from-right-52 data-[motion=from-start]:slide-in-from-left-52 data-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52 top-0 left-0 w-full p-2 pr-2.5 md:absolute md:w-auto": {
+    "es": "datos-[movimiento^=desde-]:animar-adentro datos-[movimiento^=a-]:animar-salir datos-[movimiento^=desde-]:aparición gradual datos-[movimiento^=a-]:desaparecer datos-[movimiento=desde-final]:deslizar-adentro-desde-derecha-52 datos-[movimiento=desde-inicio]:deslizar-adentro-desde-izquierda-52 datos-[movimiento=hasta el final]:deslizar-hacia-la-derecha-52 datos-[movimiento=para-iniciar]:deslizar-hacia-la-izquierda-52 top-0 izquierda-0 w-full p-2 pr-2.5 md:absolute md:w-auto",
+    "ca": "dades-[motion^=de-]:dades d'entrada d'animació-[motion^=a-]:dades de sortida d'animació-[motion^=from-]:dades d'esvaïment-[motion^=a-]:dades d'esvaïment-[motion=des de l'extrem]: lliscament-des de la dreta-52 dades-[motion=des de l'inici]:2-des de l'inici dades-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52 top-0 left-0 w-full p-2 pr-2.5 md:absolute md:w-auto",
+    "fa": "data-[motion^=from-]:animate-in data-[motion^=to-]:animate-out data-[motion^=from-]:fade-in data-[motion^=to-]:fade-out data-[motion=from-end]:slide-in-from-right-52 data-[motion=from-start]-2-fromde data-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52 top-0 left-0 w-full p-2 pr-2.5 md:absolute md:w-auto"
+  },
+  "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1": {
+    "es": "datos-[lado=abajo]:traducir-y-1 datos-[lado=izquierda]:-traducir-x-1 datos-[lado=derecha]:traducir-x-1 datos-[lado=arriba]:-traducir-y-1",
+    "ca": "dades-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+    "fa": "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+  },
+  "data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out data-[state=visible]:fade-in top-full z-[1] flex h-1.5 items-end justify-center overflow-hidden": {
+    "es": "datos-[estado=visible]:animar-aparecer datos-[estado=oculto]:animar-fuera datos-[estado=oculto]:desaparecer datos-[estado=visible]:aparecer arriba-completo z-[1] flex h-1.5 elementos-final justificar-centro desbordamiento-oculto",
+    "ca": "data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out dades-[state=visible]:fade-in top-full z-[1] flex h-1.5 elements-end justify-center overflow-ocult",
+    "fa": "data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out data-[state=visible]:fade-in top-full z-[1] flex h-1.5 items-end justify-center overflow-hidden"
+  },
+  "date": {
+    "es": "fecha",
+    "ca": "data",
+    "fa": "تاریخ"
+  },
+  "Date": {
+    "es": "Fecha",
+    "ca": "Data",
+    "fa": "تاریخ"
+  },
+  "Date Joined": {
+    "es": "Fecha de Ingreso",
+    "ca": "Data d'Ingres",
+    "fa": "تاریخ پیوستن"
+  },
+  "Date of Birth": {
+    "es": "Fecha de Nacimiento",
+    "ca": "Data de Naixement",
+    "fa": "تاریخ تولد"
+  },
+  "Date response": {
+    "es": "Fecha de respuesta",
+    "ca": "Data resposta",
+    "fa": "پاسخ تاریخ"
+  },
+  "DD/MM/YYYY (31/12/2024)": {
+    "es": "DD/MM/AAAA (31/12/2024)",
+    "ca": "DD/MM/AAAA (31/12/2024)",
+    "fa": "DD/MM/YYYY (31/12/2024)"
+  },
+  "default": {
+    "es": "predeterminado",
+    "ca": "per defecte",
+    "fa": "پیش فرض"
+  },
+  "Define the answer options respondents can choose from and tag each option so results can calculate satisfaction.": {
+    "es": "Defina las opciones de respuesta entre las que los encuestados pueden elegir y etiquete cada opción para que los resultados puedan calcular la satisfacción.",
+    "ca": "Defineix les opcions de resposta que els enquestats poden triar i etiqueta cada opció perquè els resultats puguin calcular la satisfacció.",
+    "fa": "گزینه های پاسخی را که پاسخ دهندگان می توانند انتخاب کنند را تعریف کنید و هر گزینه را برچسب گذاری کنید تا نتایج بتوانند میزان رضایت را محاسبه کنند."
+  },
+  "Define the choices respondents can select and tag each option for result calculations.": {
+    "es": "Defina las opciones que los encuestados pueden seleccionar y etiquete cada opción para los cálculos de resultados.",
+    "ca": "Definiu les opcions que els enquestats poden seleccionar i etiquetar cada opció per als càlculs de resultats.",
+    "fa": "انتخاب هایی را که پاسخ دهندگان می توانند انتخاب کنند را تعریف کنید و هر گزینه را برای محاسبات نتیجه برچسب گذاری کنید."
+  },
+  "Delete": {
+    "es": "Eliminar",
+    "ca": "Eliminar",
+    "fa": "حذف"
+  },
+  "DELETE": {
+    "es": "BORRAR",
+    "ca": "ELIMINAR",
+    "fa": "حذف کنید"
+  },
+  "Delete {{0}}": {
+    "es": "Eliminar {{0}}",
+    "ca": "Suprimeix {{0}}",
+    "fa": "حذف {{0}}"
+  },
+  "Delete Class": {
+    "es": "Eliminar clase",
+    "ca": "Suprimeix la classe",
+    "fa": "حذف کلاس"
+  },
+  "Delete Grade Entry": {
+    "es": "Eliminar entrada de calificación",
+    "ca": "Suprimeix l'entrada de qualificació",
+    "fa": "حذف ورودی نمره"
+  },
+  "Delete person": {
+    "es": "Eliminar persona",
+    "ca": "Suprimeix la persona",
+    "fa": "حذف شخص"
+  },
+  "Delete Staff Member": {
+    "es": "Eliminar miembro del personal",
+    "ca": "Suprimeix el membre del personal",
+    "fa": "عضو کارکنان را حذف کنید"
+  },
+  "Delete Student": {
+    "es": "Eliminar estudiante",
+    "ca": "Suprimeix l'alumne",
+    "fa": "دانش آموز را حذف کنید"
+  },
+  "Delete Survey": {
+    "es": "Eliminar encuesta",
+    "ca": "Suprimeix l'enquesta",
+    "fa": "حذف نظرسنجی"
+  },
+  "Delete this person?": {
+    "es": "¿Eliminar a esta persona?",
+    "ca": "Vols suprimir aquesta persona?",
+    "fa": "این شخص حذف شود؟"
+  },
+  "Deleting...": {
+    "es": "Eliminando...",
+    "ca": "Eliminant...",
+    "fa": "در حال حذف..."
+  },
+  "Department": {
+    "es": "Departamento",
+    "ca": "Departament",
+    "fa": "بخش"
+  },
+  "Description": {
+    "es": "Descripción",
+    "ca": "Descripció",
+    "fa": "توضیحات"
+  },
+  "Details": {
+    "es": "Detalles",
+    "ca": "Detalls",
+    "fa": "جزئیات"
+  },
+  "dialog-close": {
+    "es": "cerrar diálogo",
+    "ca": "diàleg-tancar",
+    "fa": "گفتگو-بستن"
+  },
+  "disabled:cursor-not-allowed": {
+    "es": "deshabilitado: cursor-no-permitido",
+    "ca": "disabled: cursor-no-permès",
+    "fa": "غیرفعال: مکان نما-مجاز"
+  },
+  "Disagree": {
+    "es": "En desacuerdo",
+    "ca": "En desacord",
+    "fa": "مخالف"
+  },
+  "Displays the mobile sidebar.": {
+    "es": "Muestra la barra lateral móvil.",
+    "ca": "Mostra la barra lateral del mòbil.",
+    "fa": "نوار کناری موبایل را نمایش می دهد."
+  },
+  "dob": {
+    "es": "fecha de nacimiento",
+    "ca": "dob",
+    "fa": "dob"
+  },
+  "documents": {
+    "es": "documentos",
+    "ca": "documents",
+    "fa": "اسناد"
+  },
+  "Documents": {
+    "es": "Documentos",
+    "ca": "Documents",
+    "fa": "اسناد"
+  },
+  "donors.statuses.{{0}}": {
+    "es": "donantes.estados.{{0}}",
+    "ca": "estats.donants.{{0}}",
+    "fa": "donors.statuses.{{0}}"
+  },
+  "donors.txTypes.{{0}}": {
+    "es": "donantes.txTypes.{{0}}",
+    "ca": "donants.txTypes.{{0}}",
+    "fa": "donors.txTypes.{{0}}"
+  },
+  "donors.types.{{0}}": {
+    "es": "tipos.de.donantes.{{0}}",
+    "ca": "tipus.donants.{{0}}",
+    "fa": "donors.types.{{0}}"
+  },
+  "dot": {
+    "es": "punto",
+    "ca": "punt",
+    "fa": "نقطه"
+  },
+  "Download report card PDF": {
+    "es": "Descargar boleta de calificaciones en PDF",
+    "ca": "Descarregar el full d'informes en PDF",
+    "fa": "پی دی اف کارنامه را دانلود کنید"
+  },
+  "draft": {
+    "es": "borrador",
+    "ca": "esborrany",
+    "fa": "پیش نویس"
+  },
+  "Draft": {
+    "es": "Borrador",
+    "ca": "Esborrany",
+    "fa": "پیش نویس"
+  },
+  "dropdown": {
+    "es": "menú desplegable",
+    "ca": "desplegable",
+    "fa": "کشویی"
+  },
+  "Dropdown": {
+    "es": "Menú desplegable",
+    "ca": "Menú desplegable",
+    "fa": "کشویی"
+  },
+  "Duplicate": {
+    "es": "Duplicar",
+    "ca": "Duplicat",
+    "fa": "تکراری"
+  },
+  "Duplicate Survey": {
+    "es": "Encuesta duplicada",
+    "ca": "Enquesta duplicada",
+    "fa": "نظرسنجی تکراری"
+  },
+  "Duplicating...": {
+    "es": "Duplicando...",
+    "ca": "S'està duplicant...",
+    "fa": "در حال تکرار..."
+  },
+  "e.g. 2024-2025": {
+    "es": "por ej. 2024-2025",
+    "ca": "p. ex. 2024-2025",
+    "fa": "به عنوان مثال 2024-2025"
+  },
+  "e.g. December 2026": {
+    "es": "por ej. diciembre 2026",
+    "ca": "p. ex. desembre 2026",
+    "fa": "به عنوان مثال دسامبر 2026"
+  },
+  "e.g. Kabul Central": {
+    "es": "por ej. Centro de Kabul",
+    "ca": "p. ex. Kabul Central",
+    "fa": "به عنوان مثال کابل مرکزی"
+  },
+  "e.g. Kabul, Catalonia, Madrid...": {
+    "es": "por ej. Kabul, Cataluña, Madrid...",
+    "ca": "p. ex. Kabul, Catalunya, Madrid...",
+    "fa": "به عنوان مثال کابل، کاتالونیا، مادرید..."
+  },
+  "e.g. Mathematics 101": {
+    "es": "por ej. Matemáticas 101",
+    "ca": "p. ex. Matemàtiques 101",
+    "fa": "به عنوان مثال ریاضی 101"
+  },
+  "e.g. Midterm Exam": {
+    "es": "por ej. examen parcial",
+    "ca": "p. ex. Examen parcial",
+    "fa": "به عنوان مثال امتحان میان ترم"
+  },
+  "e.g. Monthly tuition — May 2026": {
+    "es": "por ej. Matrícula mensual — mayo de 2026",
+    "ca": "p. ex. Matrícula mensual: maig de 2026",
+    "fa": "به عنوان مثال شهریه ماهانه — می 2026"
+  },
+  "e.g. Parent, Sibling, Uncle": {
+    "es": "p.ej. Padre, hermano, tío",
+    "ca": "p. ex. Pare, germà, oncle",
+    "fa": "به عنوان مثال پدر و مادر، خواهر و برادر، عمو"
+  },
+  "e.g. Peanuts, Penicillin, Latex": {
+    "es": "por ej. Cacahuetes, Penicilina, Látex",
+    "ca": "p. ex. Cacauets, penicil·lina, làtex",
+    "fa": "به عنوان مثال بادام زمینی، پنی سیلین، لاتکس"
+  },
+  "e.g. Ponts per la Pau": {
+    "es": "por ej. Puentes por la Pau",
+    "ca": "p. ex. Ponts per la Pau",
+    "fa": "به عنوان مثال Ponts per la Pau"
+  },
+  "e.g. Psychosocial Support Survey 2026": {
+    "es": "por ej. Encuesta de Apoyo Psicosocial 2026",
+    "ca": "p. ex. Enquesta de Suport Psicosocial 2026",
+    "fa": "به عنوان مثال نظرسنجی حمایت روانی اجتماعی 2026"
+  },
+  "e.g. Room 204": {
+    "es": "por ej. Habitación 204",
+    "ca": "p. ex. Sala 204",
+    "fa": "به عنوان مثال اتاق 204"
+  },
+  "Edit": {
+    "es": "Editar",
+    "ca": "Editar",
+    "fa": "ویرایش"
+  },
+  "Edit book details": {
+    "es": "Editar detalles del libro",
+    "ca": "Editeu els detalls del llibre",
+    "fa": "ویرایش جزئیات کتاب"
+  },
+  "Edit Grade Entry": {
+    "es": "Editar entrada de calificación",
+    "ca": "Edita l'entrada de qualificació",
+    "fa": "ویرایش ورودی درجه"
+  },
+  "Edit Staff Member": {
+    "es": "Editar Personal",
+    "ca": "Editar Personal",
+    "fa": "ویرایش کارمند"
+  },
+  "Edit Student": {
+    "es": "Editar Estudiante",
+    "ca": "Editar Estudiant",
+    "fa": "ویرایش دانش‌آموز"
+  },
+  "Edit Survey": {
+    "es": "Editar encuesta",
+    "ca": "Edita l'enquesta",
+    "fa": "ویرایش نظرسنجی"
+  },
+  "Edit the question text, type, section, and answer choices.": {
+    "es": "Edite el texto de la pregunta, el tipo, la sección y las opciones de respuesta.",
+    "ca": "Editeu el text de la pregunta, el tipus, la secció i les opcions de resposta.",
+    "fa": "متن سؤال، نوع، بخش و گزینه‌های پاسخ را ویرایش کنید."
+  },
+  "edit-address": {
+    "es": "editar dirección",
+    "ca": "adreça-edició",
+    "fa": "ویرایش آدرس"
+  },
+  "edit-allergies": {
+    "es": "editar-alergias",
+    "ca": "editar-al·lèrgies",
+    "fa": "ویرایش آلرژی"
+  },
+  "edit-bio": {
+    "es": "editar biografía",
+    "ca": "edit-bio",
+    "fa": "ویرایش-بیو"
+  },
+  "edit-branch": {
+    "es": "editar rama",
+    "ca": "edició-branca",
+    "fa": "ویرایش شعبه"
+  },
+  "edit-dateJoined": {
+    "es": "fecha de ediciónUnido",
+    "ca": "edit-dateJoined",
+    "fa": "edit-dateJoined"
+  },
+  "edit-dateOfBirth": {
+    "es": "editar fecha de nacimiento",
+    "ca": "edit-dateOfBirth",
+    "fa": "edit-dateOfBirth"
+  },
+  "edit-department": {
+    "es": "departamento de edición",
+    "ca": "departament d'edició",
+    "fa": "بخش ویرایش"
+  },
+  "edit-email": {
+    "es": "editar-correo electrónico",
+    "ca": "editar-correu electrònic",
+    "fa": "ویرایش ایمیل"
+  },
+  "edit-emergencyContactName": {
+    "es": "editar-nombre de contacto de emergencia",
+    "ca": "edit-emergencyContactName",
+    "fa": "edit-emergencyContactName"
+  },
+  "edit-emergencyContactPhone": {
+    "es": "editar-emergenciaContactoTeléfono",
+    "ca": "edit-emergencyContactPhone",
+    "fa": "edit-emergencyContactPhone"
+  },
+  "edit-emergencyContactRelationship": {
+    "es": "editar-emergenciaContactoRelación",
+    "ca": "edit-emergencyContactRelationship",
+    "fa": "edit-emergencyContactRelation"
+  },
+  "edit-enrollmentDate": {
+    "es": "editar-fecha de inscripción",
+    "ca": "edit-enrollmentDate",
+    "fa": "ویرایش-ثبت نام تاریخ"
+  },
+  "edit-fatherName": {
+    "es": "editar-padreNombre",
+    "ca": "edit-fatherName",
+    "fa": "edit-fatherName"
+  },
+  "edit-firstName": {
+    "es": "editar-primer nombre",
+    "ca": "edit-firstName",
+    "fa": "edit-firstName"
+  },
+  "edit-gender": {
+    "es": "editar-género",
+    "ca": "editar-gènere",
+    "fa": "ویرایش جنسیت"
+  },
+  "edit-gradeLevel": {
+    "es": "editar nivel de grado",
+    "ca": "edit-gradeLevel",
+    "fa": "edit-gradeLevel"
+  },
+  "edit-lastName": {
+    "es": "editar-apellido",
+    "ca": "edit-cognom",
+    "fa": "ویرایش-نام خانوادگی"
+  },
+  "edit-medicalNotes": {
+    "es": "editar-notas-medicas",
+    "ca": "edit-medicalNotes",
+    "fa": "edit-medicalNotes"
+  },
+  "edit-nationality": {
+    "es": "editar-nacionalidad",
+    "ca": "editar-nacionalitat",
+    "fa": "ویرایش ملیت"
+  },
+  "edit-parentGuardianEmail": {
+    "es": "editar-padreTutorCorreo electrónico",
+    "ca": "edit-parentGuardianEmail",
+    "fa": "edit-parentGuardianEmail"
+  },
+  "edit-parentGuardianName": {
+    "es": "editar-padreGuardianName",
+    "ca": "edit-parentGuardianName",
+    "fa": "edit-parentGuardianName"
+  },
+  "edit-parentGuardianPhone": {
+    "es": "editar-padreGuardianPhone",
+    "ca": "edit-parentGuardianPhone",
+    "fa": "edit-parentGuardianPhone"
+  },
+  "edit-passportNumber": {
+    "es": "editar-pasaporteNúmero",
+    "ca": "edit-passportNumber",
+    "fa": "edit-passportNumber"
+  },
+  "edit-password": {
+    "es": "editar contraseña",
+    "ca": "edició-contrasenya",
+    "fa": "ویرایش - رمز عبور"
+  },
+  "edit-phone": {
+    "es": "editar teléfono",
+    "ca": "editar-telèfon",
+    "fa": "ویرایش تلفن"
+  },
+  "edit-position": {
+    "es": "posición de edición",
+    "ca": "posició d'edició",
+    "fa": "ویرایش موقعیت"
+  },
+  "edit-role": {
+    "es": "rol de edición",
+    "ca": "paper d'edició",
+    "fa": "ویرایش نقش"
+  },
+  "edit-status": {
+    "es": "estado de edición",
+    "ca": "estat d'edició",
+    "fa": "وضعیت ویرایش"
+  },
+  "EEE, MMM d yyyy": {
+    "es": "EEE, MMM d aaaa",
+    "ca": "EEE, MMM d aaaa",
+    "fa": "EEE، MMM d yyyy"
+  },
+  "email": {
+    "es": "correo electrónico",
+    "ca": "correu electrònic",
+    "fa": "ایمیل"
+  },
+  "Email": {
+    "es": "Email",
+    "ca": "Email",
+    "fa": "ایمیل"
+  },
+  "email@example.com": {
+    "es": "correo electrónico@ejemplo.com",
+    "ca": "correu electrònic@example.com",
+    "fa": "email@example.com"
+  },
+  "Emergency Contact": {
+    "es": "Contacto de Emergencia",
+    "ca": "Contacte d'Emergència",
+    "fa": "تماس اضطراری"
+  },
+  "Employee ID": {
+    "es": "ID de empleado",
+    "ca": "Identificador de l'empleat",
+    "fa": "شناسه کارمند"
+  },
+  "Employment": {
+    "es": "Empleo",
+    "ca": "Ocupació",
+    "fa": "استخدام"
+  },
+  "Employment Type": {
+    "es": "Tipo de empleo",
+    "ca": "Tipus d'ocupació",
+    "fa": "نوع استخدام"
+  },
+  "en-US": {
+    "es": "es-US",
+    "ca": "en-US",
+    "fa": "en-US"
+  },
+  "end": {
+    "es": "fin",
+    "ca": "final",
+    "fa": "پایان"
+  },
+  "End Time": {
+    "es": "Hora de finalización",
+    "ca": "Temps de finalització",
+    "fa": "زمان پایان"
+  },
+  "English": {
+    "es": "ingles",
+    "ca": "Anglès",
+    "fa": "انگلیسی"
+  },
+  "Enroll": {
+    "es": "Inscribirse",
+    "ca": "Inscriu-te",
+    "fa": "ثبت نام کنید"
+  },
+  "Enroll students from the Classes page first.": {
+    "es": "Primero inscriba a los estudiantes desde la página Clases.",
+    "ca": "Inscriviu primer els estudiants des de la pàgina Classes.",
+    "fa": "ابتدا دانش آموزان را از صفحه کلاس ها ثبت نام کنید."
+  },
+  "Enrolled": {
+    "es": "Inscrito",
+    "ca": "Inscrits",
+    "fa": "ثبت نام کرد"
+  },
+  "Enrolled (": {
+    "es": "Inscrito (",
+    "ca": "Inscrits (",
+    "fa": "ثبت نام کرد ("
+  },
+  "Enrolled Classes": {
+    "es": "Clases inscritas",
+    "ca": "Classes matriculades",
+    "fa": "کلاس های ثبت نام شده"
+  },
+  "Enrolled since": {
+    "es": "Inscrito desde",
+    "ca": "Inscrit des d'aleshores",
+    "fa": "ثبت نام از"
+  },
+  "Enrollment Certificate": {
+    "es": "Certificado de inscripción",
+    "ca": "Certificat d'inscripció",
+    "fa": "گواهی ثبت نام"
+  },
+  "Enrollment Date": {
+    "es": "Fecha de Inscripción",
+    "ca": "Data d'Inscripció",
+    "fa": "تاریخ ثبت‌نام"
+  },
+  "Enter a first or last name": {
+    "es": "Introduzca un nombre o apellido",
+    "ca": "Introduïu un nom o cognom",
+    "fa": "نام یا نام خانوادگی را وارد کنید"
+  },
+  "Enter Data": {
+    "es": "Introducir datos",
+    "ca": "Introduïu les dades",
+    "fa": "داده ها را وارد کنید"
+  },
+  "Enter new password": {
+    "es": "Ingresa la nueva contraseña",
+    "ca": "Introduïu la nova contrasenya",
+    "fa": "رمز عبور جدید را وارد کنید"
+  },
+  "Enter Survey Data": {
+    "es": "Ingresar datos de la encuesta",
+    "ca": "Introduïu les dades de l'enquesta",
+    "fa": "داده های نظرسنجی را وارد کنید"
+  },
+  "entries": {
+    "es": "entradas",
+    "ca": "entrades",
+    "fa": "مورد"
+  },
+  "Entry deleted": {
+    "es": "Entrada eliminada",
+    "ca": "S'ha suprimit l'entrada",
+    "fa": "ورودی حذف شد"
+  },
+  "es": {
+    "es": "es",
+    "ca": "es",
+    "fa": "es"
+  },
+  "Español": {
+    "es": "Español",
+    "ca": "Espanyol",
+    "fa": "اسپانیا"
+  },
+  "EUR": {
+    "es": "euros",
+    "ca": "EUR",
+    "fa": "یورو"
+  },
+  "Excel": {
+    "es": "excel",
+    "ca": "Excel",
+    "fa": "اکسل"
+  },
+  "Excel export failed": {
+    "es": "La exportación de Excel falló",
+    "ca": "L'exportació d'Excel ha fallat",
+    "fa": "صادرات Excel انجام نشد"
+  },
+  "excellent": {
+    "es": "excelente",
+    "ca": "excel·lent",
+    "fa": "عالی"
+  },
+  "Excellent": {
+    "es": "Excelente",
+    "ca": "Excel·lent",
+    "fa": "عالی"
+  },
+  "excused": {
+    "es": "excusado",
+    "ca": "excusat",
+    "fa": "معذور"
+  },
+  "Excused": {
+    "es": "excusado",
+    "ca": "Disculpada",
+    "fa": "معذور"
+  },
+  "Expand navigation": {
+    "es": "Ampliar navegación",
+    "ca": "Amplia la navegació",
+    "fa": "ناوبری را گسترش دهید"
+  },
+  "expense": {
+    "es": "gasto",
+    "ca": "despesa",
+    "fa": "هزینه"
+  },
+  "Export Excel": {
+    "es": "Exportar Excel",
+    "ca": "Exporta Excel",
+    "fa": "صادرات اکسل"
+  },
+  "Exporting...": {
+    "es": "Exportando...",
+    "ca": "Exportant...",
+    "fa": "در حال خروجی گرفتن..."
+  },
+  "failed": {
+    "es": "falló",
+    "ca": "fracassat",
+    "fa": "شکست خورد"
+  },
+  "Failed to load audit log": {
+    "es": "No se pudo cargar el registro de auditoría",
+    "ca": "No s'ha pogut carregar el registre d'auditoria",
+    "fa": "گزارش حسابرسی بارگیری نشد"
+  },
+  "Failed to load saved responses: {{0}}": {
+    "es": "No se pudieron cargar las respuestas guardadas: {{0}}",
+    "ca": "No s'han pogut carregar les respostes desades: {{0}}",
+    "fa": "پاسخ‌های ذخیره‌شده بارگیری نشد: {{0}}"
+  },
+  "Failed to load survey": {
+    "es": "No se pudo cargar la encuesta",
+    "ca": "No s'ha pogut carregar l'enquesta",
+    "fa": "نظرسنجی بارگیری نشد"
+  },
+  "fair": {
+    "es": "feria",
+    "ca": "justa",
+    "fa": "منصفانه"
+  },
+  "Fair": {
+    "es": "Regular",
+    "ca": "Regular",
+    "fa": "متوسط"
+  },
+  "Fall": {
+    "es": "otoño",
+    "ca": "Tardor",
+    "fa": "پاییز"
+  },
+  "family": {
+    "es": "familia",
+    "ca": "família",
+    "fa": "خانواده"
+  },
+  "Family & Health": {
+    "es": "Familia y Salud",
+    "ca": "Família i Salut",
+    "fa": "خانواده و سلامت"
+  },
+  "Father's Name": {
+    "es": "Nombre del padre",
+    "ca": "Nom del pare",
+    "fa": "نام پدر"
+  },
+  "fatherName": {
+    "es": "padreNombre",
+    "ca": "pareNom",
+    "fa": "نام پدر"
+  },
+  "fees": {
+    "es": "honorarios",
+    "ca": "honoraris",
+    "fa": "هزینه ها"
+  },
+  "fees.status.{{0}}": {
+    "es": "tarifas.status.{{0}}",
+    "ca": "fees.status.{{0}}",
+    "fa": "fees.status.{{0}}"
+  },
+  "female": {
+    "es": "hembra",
+    "ca": "femella",
+    "fa": "زن"
+  },
+  "Female": {
+    "es": "Femenino",
+    "ca": "Dona",
+    "fa": "زن"
+  },
+  "field-separator-content": {
+    "es": "contenido-separador-de-campo",
+    "ca": "camp-separador-contingut",
+    "fa": "زمینه-جداکننده-محتوا"
+  },
+  "file": {
+    "es": "archivo",
+    "ca": "fitxer",
+    "fa": "فایل"
+  },
+  "File is too large (max {{0}} MB)": {
+    "es": "El archivo es demasiado grande (máx. {{0}} MB)",
+    "ca": "El fitxer és massa gran (màxim {{0}} MB)",
+    "fa": "فایل خیلی بزرگ است (حداکثر {{0}} مگابایت)"
+  },
+  "Fill in the details to add a new staff member to the system": {
+    "es": "Complete los detalles para agregar un nuevo miembro del personal al sistema",
+    "ca": "Ompliu els detalls per afegir un nou membre del personal al sistema",
+    "fa": "برای افزودن یک کارمند جدید به سیستم، جزئیات را تکمیل کنید"
+  },
+  "Fill in the details to add a new student to the system": {
+    "es": "Complete los detalles para agregar un nuevo estudiante al sistema",
+    "ca": "Ompliu els detalls per afegir un nou estudiant al sistema",
+    "fa": "برای افزودن دانش آموز جدید به سیستم، مشخصات را تکمیل کنید"
+  },
+  "Fill in the details to create a new class.": {
+    "es": "Complete los detalles para crear una nueva clase.",
+    "ca": "Omple els detalls per crear una nova classe.",
+    "fa": "برای ایجاد کلاس جدید، جزئیات را وارد کنید."
+  },
+  "Filter by branch": {
+    "es": "Filtrar por sucursal",
+    "ca": "Filtra per branca",
+    "fa": "فیلتر بر اساس شاخه"
+  },
+  "Final / Overall Grade": {
+    "es": "Calificación final / general",
+    "ca": "Nota final / general",
+    "fa": "نمره نهایی / کلی"
+  },
+  "Final Exam": {
+    "es": "examen final",
+    "ca": "Examen final",
+    "fa": "امتحان نهایی"
+  },
+  "Final grade saved": {
+    "es": "Nota final guardada",
+    "ca": "S'ha guardat la nota final",
+    "fa": "نمره نهایی ذخیره شد"
+  },
+  "First name": {
+    "es": "nombre",
+    "ca": "Nom de pila",
+    "fa": "نام کوچک"
+  },
+  "first_name, last_name, email, phone, date_of_birth, gender, nationality, grade_level": {
+    "es": "nombre, apellido, correo electrónico, teléfono, fecha de nacimiento, sexo, nacionalidad, nivel de grado",
+    "ca": "nom, cognoms, correu electrònic, telèfon, data_de_naixement, gènere, nacionalitat, nivell de grau",
+    "fa": "first_name، نام خانوادگی، ایمیل، تلفن، تاریخ_تولد، جنسیت، ملیت، درجه_سطح"
+  },
+  "firstName": {
+    "es": "nombre",
+    "ca": "nom",
+    "fa": "نام اول"
+  },
+  "flex-1": {
+    "es": "flexionar-1",
+    "ca": "flexió-1",
+    "fa": "flex-1"
+  },
+  "flex-1 min-w-0": {
+    "es": "flex-1 min-w-0",
+    "ca": "flex-1 min-w-0",
+    "fa": "flex-1 min-w-0"
+  },
+  "flex-1 min-w-0 pt-1": {
+    "es": "flex-1 min-w-0 pt-1",
+    "ca": "flex-1 min-w-0 pt-1",
+    "fa": "flex-1 min-w-0 pt-1"
+  },
+  "flex-1 outline-none": {
+    "es": "flex-1 esquema-ninguno",
+    "ca": "flex-1 contorn-cap",
+    "fa": "flex-1 outline-none"
+  },
+  "flex-1 overflow-y-auto": {
+    "es": "flex-1 desbordamiento-y-auto",
+    "ca": "flex-1 overflow-y-auto",
+    "fa": "flex-1 overflow-y-auto"
+  },
+  "flex-1 space-y-1": {
+    "es": "flex-1 espacio-y-1",
+    "ca": "flex-1 espai-y-1",
+    "fa": "flex-1 space-y-1"
+  },
+  "floating": {
+    "es": "flotando",
+    "ca": "flotant",
+    "fa": "شناور"
+  },
+  "font-medium": {
+    "es": "medio de fuente",
+    "ca": "font-mitjà",
+    "fa": "فونت-متوسط"
+  },
+  "font-medium mt-0.5": {
+    "es": "fuente-medio mt-0.5",
+    "ca": "font-medium mt-0.5",
+    "fa": "font-medium mt-0.5"
+  },
+  "font-medium mt-0.5 capitalize": {
+    "es": "fuente-medio mt-0.5 capitalizar",
+    "ca": "font-medium mt-0.5 majúscules",
+    "fa": "font-medium mt-0.5 بزرگ کنید"
+  },
+  "font-mono font-medium {{0}}": {
+    "es": "fuente-mono fuente-medio {{0}}",
+    "ca": "font-mono font-medium {{0}}",
+    "fa": "font-mono font-medium {{0}}"
+  },
+  "font-semibold": {
+    "es": "fuente seminegrita",
+    "ca": "font-seminegreta",
+    "fa": "فونت نیمه پررنگ"
+  },
+  "for this branch": {
+    "es": "para esta sucursal",
+    "ca": "per aquesta branca",
+    "fa": "برای این شاخه"
+  },
+  "forgot-email": {
+    "es": "olvidé el correo electrónico",
+    "ca": "correu electrònic oblidat",
+    "fa": "ایمیل را فراموش کرده ام"
+  },
+  "forgot-reason": {
+    "es": "razón olvidada",
+    "ca": "oblidat-raó",
+    "fa": "فراموش کردم دلیل"
+  },
+  "Frequency": {
+    "es": "Frecuencia",
+    "ca": "Freqüència",
+    "fa": "فرکانس"
+  },
+  "Fri": {
+    "es": "viernes",
+    "ca": "dv",
+    "fa": "جمعه"
+  },
+  "Friday": {
+    "es": "Viernes",
+    "ca": "Divendres",
+    "fa": "جمعه"
+  },
+  "From": {
+    "es": "De",
+    "ca": "De",
+    "fa": "از"
+  },
+  "Full details for this staff member": {
+    "es": "Detalles completos de este miembro del personal",
+    "ca": "Detalls complets d'aquest membre del personal",
+    "fa": "جزئیات کامل این کارمند"
+  },
+  "Full details for this student": {
+    "es": "Detalles completos de este estudiante",
+    "ca": "Detalls complets per a aquest estudiant",
+    "fa": "مشخصات کامل این دانش آموز"
+  },
+  "Full Name": {
+    "es": "Nombre Completo",
+    "ca": "Nom Complet",
+    "fa": "نام کامل"
+  },
+  "Full profile": {
+    "es": "Perfil completo",
+    "ca": "Perfil complet",
+    "fa": "مشخصات کامل"
+  },
+  "gap-1": {
+    "es": "brecha-1",
+    "ca": "buit-1",
+    "fa": "شکاف-1"
+  },
+  "gap-1 px-2.5 sm:pl-2.5": {
+    "es": "espacio-1 px-2.5 sm:pl-2.5",
+    "ca": "gap-1 px-2,5 sm:pl-2,5",
+    "fa": "gap-1 px-2.5 sm:pl-2.5"
+  },
+  "gap-1 px-2.5 sm:pr-2.5": {
+    "es": "brecha-1 px-2.5 sm:pr-2.5",
+    "ca": "bretxa-1 px-2,5 sm:pr-2,5",
+    "fa": "gap-1 px-2.5 sm:pr-2.5"
+  },
+  "gap-1.5": {
+    "es": "brecha-1.5",
+    "ca": "bretxa-1.5",
+    "fa": "شکاف-1.5"
+  },
+  "gap-2": {
+    "es": "brecha-2",
+    "ca": "buit-2",
+    "fa": "شکاف-2"
+  },
+  "GBP": {
+    "es": "GBP",
+    "ca": "GBP",
+    "fa": "پوند"
+  },
+  "Gender": {
+    "es": "Género",
+    "ca": "Gènere",
+    "fa": "جنسیت"
+  },
+  "general": {
+    "es": "generales",
+    "ca": "general",
+    "fa": "عمومی"
+  },
+  "General": {
+    "es": "General",
+    "ca": "General",
+    "fa": "عمومی"
+  },
+  "General Excel": {
+    "es": "Excel general",
+    "ca": "Excel general",
+    "fa": "اکسل عمومی"
+  },
+  "General PDF": {
+    "es": "PDF generales",
+    "ca": "PDF general",
+    "fa": "PDF عمومی"
+  },
+  "ghost": {
+    "es": "fantasma",
+    "ca": "fantasma",
+    "fa": "روح"
+  },
+  "Go to next page": {
+    "es": "Ir a la página siguiente",
+    "ca": "Aneu a la pàgina següent",
+    "fa": "به صفحه بعد بروید"
+  },
+  "Go to previous page": {
+    "es": "Ir a la página anterior",
+    "ca": "Anar a la pàgina anterior",
+    "fa": "برو به صفحه قبل"
+  },
+  "good": {
+    "es": "bueno",
+    "ca": "bo",
+    "fa": "خوب"
+  },
+  "Good": {
+    "es": "Buena",
+    "ca": "Bona",
+    "fa": "خوب"
+  },
+  "Grade": {
+    "es": "Grado",
+    "ca": "Grau",
+    "fa": "درجه"
+  },
+  "Grade F - click to review": {
+    "es": "Grado F: haga clic para revisar",
+    "ca": "Grau F: feu clic per revisar",
+    "fa": "درجه F - برای بررسی کلیک کنید"
+  },
+  "Grade Level": {
+    "es": "Nivel de Grado",
+    "ca": "Nivell de Grau",
+    "fa": "سطح تحصیلی"
+  },
+  "Graded classes": {
+    "es": "clases graduadas",
+    "ca": "Classes graduades",
+    "fa": "کلاس های درجه بندی شده"
+  },
+  "gradeLevel": {
+    "es": "nivel de grado",
+    "ca": "nivell de grau",
+    "fa": "درجه سطح"
+  },
+  "Grades": {
+    "es": "Calificaciones",
+    "ca": "Qualificacions",
+    "fa": "نمرات"
+  },
+  "Grid": {
+    "es": "Cuadrícula",
+    "ca": "Quadrícula",
+    "fa": "شبکه"
+  },
+  "Grid with multiple answers per row": {
+    "es": "Cuadrícula con múltiples respuestas por fila",
+    "ca": "Quadrícula amb múltiples respostes per fila",
+    "fa": "شبکه ای با چندین پاسخ در هر ردیف"
+  },
+  "Grid with one answer per row": {
+    "es": "Cuadrícula con una respuesta por fila",
+    "ca": "Quadrícula amb una resposta per fila",
+    "fa": "شبکه با یک پاسخ در هر ردیف"
+  },
+  "group": {
+    "es": "grupo",
+    "ca": "grup",
+    "fa": "گروه"
+  },
+  "group flex flex-1 list-none items-center justify-center gap-1": {
+    "es": "grupo flex flex-1 lista-ninguno elementos-centro justificar-centro espacio-1",
+    "ca": "grup flex flex-1 llista-cap d'elements-centre justificar-centre buit-1",
+    "fa": "گروه فلکس فلکس-1 لیست-هیچ مورد-مرکز توجیه-مرکز شکاف-1"
+  },
+  "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0": {
+    "es": "datos-de-grupo-[collapsible=icono]:-mt-8 datos-de-grupo-[collapsible=icono]:opacidad-0",
+    "ca": "grup-dades-[collapsible=icon]:-mt-8 grup-dades-[collapsible=icon]:opacity-0",
+    "fa": "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0"
+  },
+  "group-data-[collapsible=icon]:hidden": {
+    "es": "datos-de-grupo-[collapsible=icono]:oculto",
+    "ca": "group-data-[collapsible=icon]:amagat",
+    "fa": "group-data-[collapsible=icon]:hidden"
+  },
+  "group-data-[collapsible=icon]:w-(--sidebar-width-icon)": {
+    "es": "datos-de-grupo-[collapsible=icono]:w-(--icono-ancho-de-barra lateral)",
+    "ca": "grup-dades-[collapsible=icon]:w-(--sidebar-width-icon)",
+    "fa": "group-data-[collapsible=icon]:w-(-sidebar-width-icon)"
+  },
+  "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]": {
+    "es": "datos-de-grupo-[collapsible=icono]:w-[calc(var(--icono-ancho-de-barra lateral)+(--spacing(4)))]",
+    "ca": "grup-dades-[plegable=icona]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]",
+    "fa": "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
+  },
+  "group-data-[collapsible=offcanvas]:w-0": {
+    "es": "datos-de-grupo-[collapsible=offcanvas]:w-0",
+    "ca": "grup-dades-[plegable=offcanvas]:w-0",
+    "fa": "group-data-[collapsible=offcanvas]:w-0"
+  },
+  "group-data-[side=right]:rotate-180": {
+    "es": "datos-de-grupo-[lado=derecha]:rotar-180",
+    "ca": "grup-dades-[side=right]:rotate-180",
+    "fa": "group-data-[side=right]:rotate-180"
+  },
+  "group/field-content flex flex-1 flex-col gap-1.5 leading-snug": {
+    "es": "contenido de grupo/campo flex flex-1 flex-col gap-1.5 líder-cómodo",
+    "ca": "grup/contingut de camp flex flex-1 flex-col gap-1.5 lideratge-snug",
+    "fa": "گروه/فیلد-محتوا flex flex-1 flex-col gap-1.5 lead-snug"
+  },
+  "group/field-group @container/field-group flex w-full flex-col gap-7 data-[slot=checkbox-group]:gap-3 [&>[data-slot=field-group]]:gap-4": {
+    "es": "grupo/grupo-campo @contenedor/grupo-campo flex w-full flex-col brecha-7 datos-[ranura=grupo-casilla de verificación]:brecha-3 [&>[ranura de datos=grupo-campo]]:brecha-4",
+    "ca": "grup/grup de camps @contenidor/grup de camps flex w-full flex-col gap-7 dades-[slot=checkbox-group]:gap-3 [&>[data-slot=field-group]]:gap-4",
+    "fa": "group/field-group @container/field-group flex w-full flex-col gap-7 data-[slot=checkbox-group]:gap-3 [&>[data-slot=field-group]]:gap-4"
+  },
+  "group/field-label peer/field-label flex w-fit gap-2 leading-snug group-data-[disabled=true]/field:opacity-50": {
+    "es": "grupo/etiqueta de campo par/etiqueta de campo flex w-fit gap-2 líder-snug datos de grupo-[disabled=true]/field:opacity-50",
+    "ca": "grup/etiqueta de camp peer/etiqueta de camp flex w-fit gap-2 líder-snug group-data-[disabled=true]/field:opacity-50",
+    "fa": "group/field-label peer/field-label flex w-fit gap-2 lead-snug group-data-[disabled=true]/field:opacity-50"
+  },
+  "group/item-group flex flex-col": {
+    "es": "grupo/grupo de elementos flex flex-col",
+    "ca": "grup/element-grup flex flex-col",
+    "fa": "گروه/گروه-گروه flex flex-col"
+  },
+  "group/menu-item relative": {
+    "es": "relativo al grupo/elemento del menú",
+    "ca": "grup/element de menú relatiu",
+    "fa": "نسبی گروه/منو آیتم"
+  },
+  "group/menu-sub-item relative": {
+    "es": "relativo al grupo/subelemento del menú",
+    "ca": "grup/menú-subelement relatiu",
+    "fa": "نسبی گروه/منو-زیر آیتم"
+  },
+  "group/navigation-menu relative flex max-w-max flex-1 items-center justify-center": {
+    "es": "grupo/menú de navegación relativo flex max-w-max flex-1 elementos-centro justificar-centro",
+    "ca": "grup/menú de navegació flexió relativa max-w-max flex-1 centre d'elements centre de justificació",
+    "fa": "group/navigation-menu flex نسبی max-w-max flex-1 items-center justify-center"
+  },
+  "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1": {
+    "es": "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1",
+    "ca": "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1",
+    "fa": "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
+  },
+  "h-1.5": {
+    "es": "h-1.5",
+    "ca": "h-1,5",
+    "fa": "h-1.5"
+  },
+  "h-10 w-10 mb-3 opacity-30": {
+    "es": "h-10 w-10 mb-3 opacidad-30",
+    "ca": "h-10 w-10 mb-3 opacitat-30",
+    "fa": "h-10 w-10 mb-3 opacity-30"
+  },
+  "h-10 w-10 mx-auto mb-3 opacity-30": {
+    "es": "h-10 w-10 mx-auto mb-3 opacidad-30",
+    "ca": "h-10 w-10 mx-auto mb-3 opacitat-30",
+    "fa": "h-10 w-10 mx-auto mb-3 opacity-30"
+  },
+  "h-10 w-full max-w-lg": {
+    "es": "h-10 w-full max-w-lg",
+    "ca": "h-10 w-plen max-w-lg",
+    "fa": "h-10 w-full max-w-lg"
+  },
+  "h-12 w-12": {
+    "es": "h-12 w-12",
+    "ca": "h-12 w-12",
+    "fa": "h-12 w-12"
+  },
+  "h-12 w-12 mb-3 opacity-20": {
+    "es": "h-12 w-12 mb-3 opacidad-20",
+    "ca": "h-12 w-12 mb-3 opacitat-20",
+    "fa": "h-12 w-12 mb-3 opacity-20"
+  },
+  "h-2": {
+    "es": "h-2",
+    "ca": "h-2",
+    "fa": "h-2"
+  },
+  "h-2.5 w-2.5": {
+    "es": "h-2.5 w-2.5",
+    "ca": "h-2,5 w-2,5",
+    "fa": "h-2.5 w-2.5"
+  },
+  "h-20 w-20": {
+    "es": "h-20 w-20",
+    "ca": "h-20 w-20",
+    "fa": "h-20 w-20"
+  },
+  "h-20 w-full": {
+    "es": "h-20 w-completo",
+    "ca": "h-20 w-ple",
+    "fa": "h-20 w-full"
+  },
+  "h-3 w-3": {
+    "es": "h-3 w-3",
+    "ca": "h-3 w-3",
+    "fa": "h-3 w-3"
+  },
+  "h-3.5 w-3.5": {
+    "es": "h-3.5 w-3.5",
+    "ca": "h-3,5 w-3,5",
+    "fa": "h-3.5 w-3.5"
+  },
+  "h-3.5 w-3.5 flex-shrink-0": {
+    "es": "h-3.5 w-3.5 flex-encogible-0",
+    "ca": "h-3,5 w-3,5 flex-retràctil-0",
+    "fa": "h-3.5 w-3.5 flex-shrink-0"
+  },
+  "h-3.5 w-3.5 inline mr-1": {
+    "es": "h-3.5 w-3.5 en línea mr-1",
+    "ca": "h-3,5 w-3,5 en línia mr-1",
+    "fa": "h-3.5 w-3.5 inline mr-1"
+  },
+  "h-3.5 w-3.5 mr-1": {
+    "es": "h-3.5 w-3.5 mr-1",
+    "ca": "h-3,5 w-3,5 mr-1",
+    "fa": "h-3.5 w-3.5 mr-1"
+  },
+  "h-3.5 w-3.5 mr-1.5": {
+    "es": "h-3,5 w-3,5 mr-1,5",
+    "ca": "h-3,5 w-3,5 mr-1,5",
+    "fa": "h-3.5 w-3.5 mr-1.5"
+  },
+  "h-4 w-4": {
+    "es": "h-4 w-4",
+    "ca": "h-4 w-4",
+    "fa": "h-4 w-4"
+  },
+  "h-4 w-4 animate-spin": {
+    "es": "h-4 w-4 animar-girar",
+    "ca": "h-4 w-4 animar-gir",
+    "fa": "h-4 w-4 animate-spin"
+  },
+  "h-4 w-4 animate-spin mr-1": {
+    "es": "h-4w-4girar-animarmr-1",
+    "ca": "h-4 w-4 animat-spin mr-1",
+    "fa": "h-4 w-4 animate-spin mr-1"
+  },
+  "h-4 w-4 mr-1": {
+    "es": "h-4 w-4 señor-1",
+    "ca": "h-4 w-4 mr-1",
+    "fa": "h-4 w-4 mr-1"
+  },
+  "h-4 w-4 mr-1.5": {
+    "es": "h-4 w-4 señor-1.5",
+    "ca": "h-4 w-4 mr-1,5",
+    "fa": "h-4 w-4 mr-1.5"
+  },
+  "h-4 w-4 mr-1.5 animate-spin": {
+    "es": "h-4 w-4 mr-1.5 girar-animar",
+    "ca": "h-4 w-4 mr-1,5 animació-gir",
+    "fa": "h-4 w-4 mr-1.5 animate-spin"
+  },
+  "h-4 w-4 mr-2": {
+    "es": "h-4 w-4 señor-2",
+    "ca": "h-4 w-4 mr-2",
+    "fa": "h-4 w-4 mr-2"
+  },
+  "h-4 w-4 mr-2 animate-spin": {
+    "es": "h-4 w-4 mr-2 girar-animar",
+    "ca": "h-4 w-4 mr-2 animar-gir",
+    "fa": "h-4 w-4 mr-2 animate-spin"
+  },
+  "h-4 w-4 shrink-0": {
+    "es": "h-4 w-4 encoger-0",
+    "ca": "h-4 w-4 encongiment-0",
+    "fa": "h-4 w-4 shrink-0"
+  },
+  "h-4 w-4 shrink-0 mt-0.5": {
+    "es": "h-4 w-4 encogimiento-0 mt-0.5",
+    "ca": "h-4 w-4 encogiment-0 mt-0,5",
+    "fa": "h-4 w-4 shrink-0 mt-0.5"
+  },
+  "h-48 w-full": {
+    "es": "h-48 w-completo",
+    "ca": "h-48 w-ple",
+    "fa": "h-48 w-full"
+  },
+  "h-5 w-5": {
+    "es": "h-5 w-5",
+    "ca": "h-5 w-5",
+    "fa": "h-5 w-5"
+  },
+  "h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-105": {
+    "es": "h-5 w-5 flex-shrink-0 transición-transformación duración-200 grupo-hover:escala-105",
+    "ca": "h-5 w-5 flex-shrink-0 transició-transformació durada-200 grup-hover:escala-105",
+    "fa": "h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-105"
+  },
+  "h-6 w-6": {
+    "es": "h-6 w-6",
+    "ca": "h-6 w-6",
+    "fa": "h-6 w-6"
+  },
+  "h-7 w-7 mx-auto mb-1.5 opacity-40": {
+    "es": "h-7 w-7 mx-auto mb-1.5 opacidad-40",
+    "ca": "h-7 w-7 mx-auto mb-1.5 opacitat-40",
+    "fa": "h-7 w-7 mx-auto mb-1.5 opacity-40"
+  },
+  "h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity": {
+    "es": "h-7 w-7 opacidad-0 grupo-hover:opacidad-100 transición-opacidad",
+    "ca": "h-7 w-7 opacitat-0 grup-hover: opacitat-100 transició-opacitat",
+    "fa": "h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+  },
+  "h-8 w-8": {
+    "es": "h-8 w-8",
+    "ca": "h-8 w-8",
+    "fa": "h-8 w-8"
+  },
+  "h-8 w-8 mx-auto mb-2 opacity-30": {
+    "es": "h-8 w-8 mx-auto mb-2 opacidad-30",
+    "ca": "h-8 w-8 mx-auto mb-2 opacitat-30",
+    "fa": "h-8 w-8 mx-auto mb-2 opacity-30"
+  },
+  "h-8 w-8 mx-auto mb-2 opacity-40": {
+    "es": "h-8 w-8 mx-auto mb-2 opacidad-40",
+    "ca": "h-8 w-8 mx-auto mb-2 opacitat-40",
+    "fa": "h-8 w-8 mx-auto mb-2 opacity-40"
+  },
+  "h-9 min-w-0 has-[>textarea]:h-auto": {
+    "es": "h-9 min-w-0 tiene-[>textarea]:h-auto",
+    "ca": "h-9 min-w-0 has-[>textarea]:h-auto",
+    "fa": "h-9 min-w-0 has-[>textarea]:h-auto"
+  },
+  "h-9 pl-8": {
+    "es": "h-9 pl-8",
+    "ca": "h-9 pl-8",
+    "fa": "h-9 pl-8"
+  },
+  "h-9 sm:w-60": {
+    "es": "h-9 sm:w-60",
+    "ca": "h-9 cm: w-60",
+    "fa": "h-9 sm:w-60"
+  },
+  "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-3": {
+    "es": "tiene-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>entrada]:pt-3",
+    "ca": "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>entrada]:pt-3",
+    "fa": "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-3"
+  },
+  "has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-3": {
+    "es": "tiene-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>entrada]:pb-3",
+    "ca": "has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>entrada]:pb-3",
+    "fa": "has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-3"
+  },
+  "has-[>[data-align=inline-end]]:[&>input]:pr-2": {
+    "es": "tiene-[>[data-align=inline-end]]:[&>entrada]:pr-2",
+    "ca": "has-[>[data-align=inline-end]]:[&>entrada]:pr-2",
+    "fa": "has-[>[data-align=inline-end]]:[&>input]:pr-2"
+  },
+  "has-[>[data-align=inline-start]]:[&>input]:pl-2": {
+    "es": "tiene-[>[data-align=inline-start]]:[&>entrada]:pl-2",
+    "ca": "has-[>[data-align=inline-start]]:[&>entrada]:pl-2",
+    "fa": "has-[>[data-align=inline-start]]:[&>input]:pl-2"
+  },
+  "has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3": {
+    "es": "tiene-[>[ranura de datos=grupo-casilla de verificación]]:espacio-3 tiene-[>[ranura de datos=grupo-radio]]:espacio-3",
+    "ca": "has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3",
+    "fa": "has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3"
+  },
+  "Health Notes": {
+    "es": "Notas de salud",
+    "ca": "Notes de salut",
+    "fa": "نکات بهداشتی"
+  },
+  "HH:mm": {
+    "es": "HH:mm",
+    "ca": "HH: mm",
+    "fa": "HH:mm"
+  },
+  "history": {
+    "es": "historia",
+    "ca": "història",
+    "fa": "تاریخچه"
+  },
+  "History": {
+    "es": "Historia",
+    "ca": "Història",
+    "fa": "تاریخچه"
+  },
+  "horizontal": {
+    "es": "horizontales",
+    "ca": "horitzontal",
+    "fa": "افقی"
+  },
+  "hover:brightness-95 dark:hover:brightness-110 transition-all select-none": {
+    "es": "hover:brillo-95 oscuro:hover:brillo-110 transición-todo seleccionar-ninguno",
+    "ca": "hover:brightness-95 dark:hover:brightness-110 transició-tot seleccionar-cap",
+    "fa": "hover:brightness-95 dark:hover:brightness-110 transition-all select-none"
+  },
+  "hover:opacity-90": {
+    "es": "flotar: opacidad-90",
+    "ca": "Hover: opacitat-90",
+    "fa": "hover:opacity-90"
+  },
+  "hsl(var(--background))": {
+    "es": "hsl(var(--fondo))",
+    "ca": "hsl(var(--fons))",
+    "fa": "hsl(var(--پس زمینه))"
+  },
+  "hsl(var(--border))": {
+    "es": "hsl(var(--borde))",
+    "ca": "hsl(var(--border))",
+    "fa": "hsl(var(--border))"
+  },
+  "hsl(var(--foreground))": {
+    "es": "hsl(var(--primer plano))",
+    "ca": "hsl(var(--primer pla))",
+    "fa": "hsl(var(--پیش زمینه))"
+  },
+  "icon": {
+    "es": "icono",
+    "ca": "icona",
+    "fa": "نماد"
+  },
+  "ID:": {
+    "es": "identificación:",
+    "ca": "ID:",
+    "fa": "شناسه:"
+  },
+  "Image uploaded": {
+    "es": "Imagen cargada",
+    "ca": "S'ha penjat la imatge",
+    "fa": "تصویر آپلود شد"
+  },
+  "in grants": {
+    "es": "en subvenciones",
+    "ca": "en subvencions",
+    "fa": "در کمک های مالی"
+  },
+  "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize": {
+    "es": "in-data-[lado=izquierda]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
+    "ca": "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
+    "fa": "in-data-[side=left]:cursor-w-size in-data-[side=right]:cursor-e-size"
+  },
+  "inactive": {
+    "es": "inactivo",
+    "ca": "inactiu",
+    "fa": "غیر فعال"
+  },
+  "Inactive": {
+    "es": "Inactivo",
+    "ca": "Inactiu",
+    "fa": "غیرفعال"
+  },
+  "inbox": {
+    "es": "bandeja de entrada",
+    "ca": "safata d'entrada",
+    "fa": "صندوق ورودی"
+  },
+  "income": {
+    "es": "ingresos",
+    "ca": "ingressos",
+    "fa": "درآمد"
+  },
+  "individual": {
+    "es": "individuo",
+    "ca": "individual",
+    "fa": "فردی"
+  },
+  "Individual": {
+    "es": "Individual",
+    "ca": "Individual",
+    "fa": "فرد"
+  },
+  "Individual Answers": {
+    "es": "Respuestas individuales",
+    "ca": "Respostes individuals",
+    "fa": "پاسخ های فردی"
+  },
+  "Individual Excel export failed": {
+    "es": "Error en la exportación individual de Excel",
+    "ca": "L'exportació individual d'Excel ha fallat",
+    "fa": "صادرات اکسل فردی انجام نشد"
+  },
+  "Individual PDF export failed. Downloaded an HTML fallback instead.": {
+    "es": "La exportación de PDF individual falló. En su lugar, descargué un respaldo HTML.",
+    "ca": "Ha fallat l'exportació de PDF individual. S'ha baixat una alternativa HTML.",
+    "fa": "صادرات PDF فردی انجام نشد. به جای آن یک نسخه بازگشتی HTML دانلود کرد."
+  },
+  "Individual response saved": {
+    "es": "Respuesta individual guardada",
+    "ca": "Resposta individual guardada",
+    "fa": "پاسخ فردی ذخیره شد"
+  },
+  "Individual Responses": {
+    "es": "Respuestas individuales",
+    "ca": "Respostes individuals",
+    "fa": "پاسخ های فردی"
+  },
+  "info": {
+    "es": "información",
+    "ca": "informació",
+    "fa": "اطلاعات"
+  },
+  "inline-flex items-center gap-1": {
+    "es": "artículos flexibles en línea-espacio central-1",
+    "ca": "Inline-flex elements-centre gap-1",
+    "fa": "موارد منعطف درون خطی-شکاف مرکز-1"
+  },
+  "inline-flex items-center gap-1.5": {
+    "es": "artículos flexibles en línea-espacio central-1.5",
+    "ca": "Inline-flex elements-centre gap-1.5",
+    "fa": "موارد منعطف درون خطی-شکاف مرکز-1.5"
+  },
+  "INSERT": {
+    "es": "INSERTAR",
+    "ca": "INSERT",
+    "fa": "درج کنید"
+  },
+  "inset": {
+    "es": "recuadro",
+    "ca": "inserit",
+    "fa": "درونی"
+  },
+  "interactive-card": {
+    "es": "tarjeta interactiva",
+    "ca": "targeta interactiva",
+    "fa": "کارت تعاملی"
+  },
+  "interactive-card overflow-hidden": {
+    "es": "tarjeta-interactiva-desbordamiento-oculto",
+    "ca": "targeta interactiva desbordada-amagada",
+    "fa": "تعاملی-کارت سرریز-مخفی"
+  },
+  "invisible": {
+    "es": "invisibles",
+    "ca": "invisible",
+    "fa": "نامرئی"
+  },
+  "isbn": {
+    "es": "isbn",
+    "ca": "isbn",
+    "fa": "isbn"
+  },
+  "italic": {
+    "es": "cursiva",
+    "ca": "cursiva",
+    "fa": "مورب"
+  },
+  "items-center": {
+    "es": "centro de artículos",
+    "ca": "centre d'elements",
+    "fa": "اقلام-مرکز"
+  },
+  "items-end": {
+    "es": "fin de artículos",
+    "ca": "articles-final",
+    "fa": "موارد-پایان"
+  },
+  "Joined": {
+    "es": "Se unió",
+    "ca": "S'ha unit",
+    "fa": "پیوست"
+  },
+  "justify-center": {
+    "es": "justificar-centro",
+    "ca": "justificar-centre",
+    "fa": "توجیه-مرکز"
+  },
+  "justify-center px-2": {
+    "es": "justificar-centro px-2",
+    "ca": "justify-center px-2",
+    "fa": "justify-center px-2"
+  },
+  "label": {
+    "es": "etiqueta",
+    "ca": "etiqueta",
+    "fa": "برچسب زدن"
+  },
+  "Last name": {
+    "es": "apellido",
+    "ca": "Cognom",
+    "fa": "نام خانوادگی"
+  },
+  "last:mt-0 nth-last-2:-mt-1 [[data-variant=legend]+&]:-mt-1.5": {
+    "es": "último:mt-0 nth-último-2:-mt-1 [[data-variant=leyenda]+&]:-mt-1.5",
+    "ca": "last:mt-0 nth-last-2:-mt-1 [[data-variant=legenda]+&]:-mt-1.5",
+    "fa": "last:mt-0 nth-last-2:-mt-1 [[data-variant=legend]+&]:-mt-1.5"
+  },
+  "lastName": {
+    "es": "apellido",
+    "ca": "cognom",
+    "fa": "نام خانوادگی"
+  },
+  "late": {
+    "es": "tarde",
+    "ca": "tard",
+    "fa": "دیر"
+  },
+  "Late": {
+    "es": "tarde",
+    "ca": "Tard",
+    "fa": "دیر"
+  },
+  "leading-none font-semibold": {
+    "es": "fuente-semibold-ninguna inicial",
+    "ca": "principal-cap font-seminegreta",
+    "fa": "فونت اصلی-بدون-نیمه پررنگ"
+  },
+  "left": {
+    "es": "izquierda",
+    "ca": "esquerra",
+    "fa": "سمت چپ"
+  },
+  "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]": {
+    "es": "left-0 datos de grupo-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]",
+    "ca": "left-0 group-data-[plegable=offcanvas]:esquerra-[calc(var(--sidebar-width)*-1)]",
+    "fa": "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
+  },
+  "Letter": {
+    "es": "carta",
+    "ca": "Carta",
+    "fa": "نامه"
+  },
+  "librarian": {
+    "es": "bibliotecario",
+    "ca": "bibliotecària",
+    "fa": "کتابدار"
+  },
+  "Library": {
+    "es": "Biblioteca",
+    "ca": "Biblioteca",
+    "fa": "کتابخانه"
+  },
+  "line": {
+    "es": "linea",
+    "ca": "línia",
+    "fa": "خط"
+  },
+  "Linear scale": {
+    "es": "escala lineal",
+    "ca": "Escala lineal",
+    "fa": "مقیاس خطی"
+  },
+  "list": {
+    "es": "lista",
+    "ca": "llista",
+    "fa": "فهرست"
+  },
+  "List": {
+    "es": "Lista",
+    "ca": "Llista",
+    "fa": "فهرست کنید"
+  },
+  "Loading": {
+    "es": "Cargando",
+    "ca": "Carregant",
+    "fa": "در حال بارگذاری"
+  },
+  "Loading...": {
+    "es": "Cargando...",
+    "ca": "Carregant...",
+    "fa": "در حال بارگذاری..."
+  },
+  "Loading…": {
+    "es": "Cargando…",
+    "ca": "S'està carregant…",
+    "fa": "در حال بارگیری…"
+  },
+  "Login & Contact": {
+    "es": "Iniciar sesión y contactar",
+    "ca": "Inici de sessió i contacte",
+    "fa": "ورود و تماس"
+  },
+  "Long text response": {
+    "es": "Respuesta de texto largo",
+    "ca": "Resposta de text llarg",
+    "fa": "پاسخ متنی طولانی"
+  },
+  "Lost": {
+    "es": "Perdido",
+    "ca": "Perdut",
+    "fa": "گم شده"
+  },
+  "m-0 mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8": {
+    "es": "m-0 mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8",
+    "ca": "m-0 mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8",
+    "fa": "m-0 mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8"
+  },
+  "m-0 mx-auto w-full max-w-7xl space-y-3 p-4 sm:p-6 lg:p-8": {
+    "es": "m-0 mx-auto w-full max-w-7xl espacio-y-3 p-4 sm:p-6 lg:p-8",
+    "ca": "m-0 mx-auto w-full max-w-7xl espai-y-3 p-4 sm:p-6 lg:p-8",
+    "fa": "m-0 mx-auto w-full max-w-7xl space-y-3 p-4 sm:p-6 lg:p-8"
+  },
+  "m-0 mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8": {
+    "es": "m-0 mx-auto w-full max-w-7xl espacio-y-6 p-4 sm:p-6 lg:p-8",
+    "ca": "m-0 mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8",
+    "fa": "m-0 mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8"
+  },
+  "male": {
+    "es": "masculino",
+    "ca": "mascle",
+    "fa": "مرد"
+  },
+  "Male": {
+    "es": "Masculino",
+    "ca": "Home",
+    "fa": "مرد"
+  },
+  "Manage and collect survey data across branches": {
+    "es": "Gestione y recopile datos de encuestas en todas las sucursales.",
+    "ca": "Gestioneu i recolliu dades d'enquestes a les oficines",
+    "fa": "مدیریت و جمع آوری داده های نظرسنجی در سراسر شعب"
+  },
+  "manual": {
+    "es": "manuales",
+    "ca": "manual",
+    "fa": "کتابچه راهنمای کاربر"
+  },
+  "mark": {
+    "es": "marca",
+    "ca": "marca",
+    "fa": "علامت گذاری کنید"
+  },
+  "Mark all as:": {
+    "es": "Marcar todo como:",
+    "ca": "Marca-ho tot com a:",
+    "fa": "علامت گذاری همه به عنوان:"
+  },
+  "Mark and track student attendance per class session": {
+    "es": "Marcar y realizar un seguimiento de la asistencia de los estudiantes por sesión de clase",
+    "ca": "Marcar i fer un seguiment de l'assistència dels estudiants per sessió de classe",
+    "fa": "علامت گذاری و پیگیری حضور دانش آموزان در هر جلسه کلاس"
+  },
+  "Mark Attendance": {
+    "es": "Marcar asistencia",
+    "ca": "Marca l'assistència",
+    "fa": "حضور و غیاب را علامت بزنید"
+  },
+  "Max": {
+    "es": "máx.",
+    "ca": "Màx",
+    "fa": "حداکثر"
+  },
+  "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto": {
+    "es": "max-h-[300px] desplazamiento-py-1 desbordamiento-x-oculto desbordamiento-y-auto",
+    "ca": "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto",
+    "fa": "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto"
+  },
+  "max-h-[62vh] space-y-1 overflow-y-auto p-2": {
+    "es": "max-h-[62vh] espacio-y-1 desbordamiento-y-auto p-2",
+    "ca": "max-h-[62vh] space-y-1 overflow-y-auto p-2",
+    "fa": "max-h-[62vh] space-y-1 overflow-y-auto p-2"
+  },
+  "MB": {
+    "es": "MB",
+    "ca": "MB",
+    "fa": "مگابایت"
+  },
+  "mb-3 font-medium": {
+    "es": "mb-3 fuente-mediana",
+    "ca": "mb-3 font-medium",
+    "fa": "mb-3 font-medium"
+  },
+  "mb-5": {
+    "es": "mb-5",
+    "ca": "mb-5",
+    "fa": "mb-5"
+  },
+  "md": {
+    "es": "médico",
+    "ca": "md",
+    "fa": "md"
+  },
+  "Medical": {
+    "es": "medico",
+    "ca": "Medicina",
+    "fa": "پزشکی"
+  },
+  "Medical Notes": {
+    "es": "Notas médicas",
+    "ca": "Notes mèdiques",
+    "fa": "نکات پزشکی"
+  },
+  "members": {
+    "es": "miembros",
+    "ca": "membres",
+    "fa": "اعضا"
+  },
+  "menu-skeleton-icon": {
+    "es": "icono-esqueleto-de-menú",
+    "ca": "icona-esquelet-menú",
+    "fa": "منو-اسکلت-آیکون"
+  },
+  "messages.tabs.{{0}}": {
+    "es": "mensajes.pestañas.{{0}}",
+    "ca": "missatges.pestanyes.{{0}}",
+    "fa": "messages.tabs.{{0}}"
+  },
+  "metric": {
+    "es": "métrico",
+    "ca": "mètrica",
+    "fa": "متریک"
+  },
+  "Midterm": {
+    "es": "mitad de período",
+    "ca": "Mitjà termini",
+    "fa": "میان ترم"
+  },
+  "min-w-[130px]": {
+    "es": "min-w-[130px]",
+    "ca": "min-w-[130px]",
+    "fa": "min-w-[130px]"
+  },
+  "min-w-0": {
+    "es": "min-w-0",
+    "ca": "min-w-0",
+    "fa": "min-w-0"
+  },
+  "min-w-0 shrink-0 grow-0 basis-full": {
+    "es": "min-w-0 encogimiento-0 crecimiento-0 base-completa",
+    "ca": "min-w-0 contracció-0 creixement-0 base-ple",
+    "fa": "min-w-0 shrink-0 grow-0 base-full"
+  },
+  "ml-1": {
+    "es": "ml-1",
+    "ca": "ml-1",
+    "fa": "ml-1"
+  },
+  "ml-auto h-4 w-4": {
+    "es": "ml-auto h-4 w-4",
+    "ca": "ml-auto h-4 w-4",
+    "fa": "ml-auto h-4 w-4"
+  },
+  "MM/DD/YYYY (12/31/2024)": {
+    "es": "DD/MM/AAAA (31/12/2024)",
+    "ca": "DD/MM/AAAA (31/12/2024)",
+    "fa": "MM/DD/YYYY (12/31/2024)"
+  },
+  "MMM d, yyyy": {
+    "es": "MMM d, aaaa",
+    "ca": "MMM d, aaaa",
+    "fa": "MMM d، yyyy"
+  },
+  "MMM d, yyyy HH:mm": {
+    "es": "MMM d, aaaa HH:mm",
+    "ca": "MMM d, aaaa HH:mm",
+    "fa": "d MMM، سال ساعت HH:mm"
+  },
+  "Mon": {
+    "es": "lun",
+    "ca": "dl",
+    "fa": "دوشنبه"
+  },
+  "Monday": {
+    "es": "Lunes",
+    "ca": "Dilluns",
+    "fa": "دوشنبه"
+  },
+  "More": {
+    "es": "Más",
+    "ca": "Més",
+    "fa": "بیشتر"
+  },
+  "More pages": {
+    "es": "Más páginas",
+    "ca": "Més pàgines",
+    "fa": "صفحات بیشتر"
+  },
+  "motion-list grid gap-3 sm:grid-cols-2": {
+    "es": "lista de movimiento grid gap-3 sm:grid-cols-2",
+    "ca": "motion-list grid gap-3 sm:grid-cols-2",
+    "fa": "motion-list grid gap-3 sm:grid-cols-2"
+  },
+  "motion-list grid gap-3 sm:grid-cols-3": {
+    "es": "lista de movimiento grid gap-3 sm:grid-cols-3",
+    "ca": "motion-list grid gap-3 sm:grid-cols-3",
+    "fa": "motion-list grid gap-3 sm:grid-cols-3"
+  },
+  "motion-list space-y-2": {
+    "es": "lista de movimiento espacio-y-2",
+    "ca": "espai de llista de moviments-y-2",
+    "fa": "motion-list space-y-2"
+  },
+  "Move question down": {
+    "es": "Mover pregunta hacia abajo",
+    "ca": "Mou la pregunta cap avall",
+    "fa": "سوال را به پایین منتقل کنید"
+  },
+  "Move question up": {
+    "es": "Mover pregunta hacia arriba",
+    "ca": "Mou la pregunta cap amunt",
+    "fa": "سوال را به بالا منتقل کنید"
+  },
+  "mr-1.5 h-3.5 w-3.5": {
+    "es": "señor-1,5 h-3,5 w-3,5",
+    "ca": "mr-1,5 h-3,5 w-3,5",
+    "fa": "mr-1.5 h-3.5 w-3.5"
+  },
+  "mr-1.5 h-3.5 w-3.5 animate-spin": {
+    "es": "mr-1.5 h-3.5 w-3.5 girar-animar",
+    "ca": "mr-1,5 h-3,5 w-3,5 gir animat",
+    "fa": "mr-1.5 h-3.5 w-3.5 animate-spin"
+  },
+  "mr-2 h-3.5 w-3.5": {
+    "es": "señor-2 h-3.5 w-3.5",
+    "ca": "mr-2 h-3,5 w-3,5",
+    "fa": "mr-2 h-3.5 w-3.5"
+  },
+  "mr-2 h-4 w-4": {
+    "es": "señor-2 h-4 w-4",
+    "ca": "mr-2 h-4 w-4",
+    "fa": "mr-2 h-4 w-4"
+  },
+  "mr-2 h-4 w-4 animate-spin": {
+    "es": "mr-2 h-4 w-4 girar-animar",
+    "ca": "mr-2 h-4 w-4 animat-spin",
+    "fa": "mr-2 h-4 w-4 animate-spin"
+  },
+  "mt-0 p-6": {
+    "es": "mt-0p-6",
+    "ca": "mt-0 p-6",
+    "fa": "mt-0 p-6"
+  },
+  "mt-1": {
+    "es": "mt-1",
+    "ca": "mt-1",
+    "fa": "mt-1"
+  },
+  "mt-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between": {
+    "es": "mt-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justificar-entre",
+    "ca": "mt-1 flex flex-col gap-1 sm:flex-row sm:elements-centre sm:justify-between",
+    "fa": "mt-1 flex flex-col gap-1 sm:flex-row sm:items-center sm: justify-between"
+  },
+  "mt-2": {
+    "es": "mt-2",
+    "ca": "mt-2",
+    "fa": "mt-2"
+  },
+  "mt-2 flex items-center gap-2": {
+    "es": "mt-2 elementos flexibles-espacio central-2",
+    "ca": "mt-2 flex elements-centre gap-2",
+    "fa": "mt-2 flex items-center gap-2"
+  },
+  "mt-3": {
+    "es": "mt-3",
+    "ca": "mt-3",
+    "fa": "mt-3"
+  },
+  "mt-3 flex flex-wrap gap-2": {
+    "es": "mt-3 flex flex-wrap espacio-2",
+    "ca": "mt-3 flex flex-wrap gap-2",
+    "fa": "mt-3 flex flex-wrap gap-2"
+  },
+  "mt-3 space-y-2": {
+    "es": "mt-3 espacio-y-2",
+    "ca": "mt-3 espai-y-2",
+    "fa": "mt-3 space-y-2"
+  },
+  "mt-4": {
+    "es": "mt-4",
+    "ca": "mt-4",
+    "fa": "mt-4"
+  },
+  "mt-4 space-y-5": {
+    "es": "mt-4 espacio-y-5",
+    "ca": "mt-4 espai-y-5",
+    "fa": "mt-4 space-y-5"
+  },
+  "mt-6": {
+    "es": "mt-6",
+    "ca": "mt-6",
+    "fa": "mt-6"
+  },
+  "mt-auto flex flex-col gap-2 p-4": {
+    "es": "mt-auto flex flex-col brecha-2 p-4",
+    "ca": "mt-auto flex flex-col gap-2 p-4",
+    "fa": "mt-auto flex flex-col gap-2 p-4"
+  },
+  "Multiple choice": {
+    "es": "opción múltiple",
+    "ca": "Opció múltiple",
+    "fa": "چند انتخابی"
+  },
+  "Multiple choice grid": {
+    "es": "Cuadrícula de opción múltiple",
+    "ca": "Quadrícula d'elecció múltiple",
+    "fa": "شبکه چند گزینه ای"
+  },
+  "multiple_choice": {
+    "es": "opción_múltiple",
+    "ca": "elecció_múltiple",
+    "fa": "انتخاب چندگانه"
+  },
+  "mx-1.5 opacity-40": {
+    "es": "mx-1.5 opacidad-40",
+    "ca": "mx-1,5 opacitat-40",
+    "fa": "mx-1.5 opacity-40"
+  },
+  "mx-auto flex max-w-sm flex-col items-center px-6": {
+    "es": "mx-auto flex max-w-sm flex-col centro de artículos px-6",
+    "ca": "mx-auto flex max-w-sm flex-col elements-center px-6",
+    "fa": "mx-auto flex max-w-sm flex-col items-center px-6"
+  },
+  "mx-auto flex w-full justify-center": {
+    "es": "mx-auto flex con centro de justificación completo",
+    "ca": "mx-auto flex w-full justify-center",
+    "fa": "mx-auto flex w-full justify-center"
+  },
+  "mx-auto grid w-full max-w-7xl gap-4 p-4 sm:p-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:p-8": {
+    "es": "mx-auto grid w-full max-w-7xl gap-4 p-4 sm:p-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:p-8",
+    "ca": "mx-auto grid w-full max-w-7xl gap-4 p-4 sm:p-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:p-8",
+    "fa": "mx-auto grid w-full max-w-7xl gap-4 p-4 sm:p-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:p-8"
+  },
+  "mx-auto w-full max-w-7xl space-y-3 p-4 sm:p-6 lg:p-8": {
+    "es": "mx-auto w-full max-w-7xl espacio-y-3 p-4 sm:p-6 lg:p-8",
+    "ca": "mx-auto w-full max-w-7xl espai-y-3 p-4 sm:p-6 lg:p-8",
+    "fa": "mx-auto w-full max-w-7xl space-y-3 p-4 sm:p-6 lg:p-8"
+  },
+  "mx-auto w-full max-w-7xl space-y-4 p-4 sm:p-6 lg:p-8": {
+    "es": "mx-auto w-full max-w-7xl espacio-y-4 p-4 sm:p-6 lg:p-8",
+    "ca": "mx-auto w-full max-w-7xl espai-y-4 p-4 sm:p-6 lg:p-8",
+    "fa": "mx-auto w-full max-w-7xl space-y-4 p-4 sm:p-6 lg:p-8"
+  },
+  "My Grades": {
+    "es": "Mis Notas",
+    "ca": "Les meves notes",
+    "fa": "نمرات من"
+  },
+  "my-0": {
+    "es": "mi-0",
+    "ca": "el meu-0",
+    "fa": "my-0"
+  },
+  "my-0.5": {
+    "es": "mi-0.5",
+    "ca": "el meu-0,5",
+    "fa": "my-0.5"
+  },
+  "name": {
+    "es": "nombre",
+    "ca": "nom",
+    "fa": "نام"
+  },
+  "Nationality": {
+    "es": "Nacionalidad",
+    "ca": "Nacionalitat",
+    "fa": "ملیت"
+  },
+  "Navigate to different sections of the application": {
+    "es": "Navegar a diferentes secciones de la aplicación.",
+    "ca": "Navegueu a diferents seccions de l'aplicació",
+    "fa": "به بخش های مختلف برنامه بروید"
+  },
+  "Navigation Menu": {
+    "es": "Menú de navegación",
+    "ca": "Menú de navegació",
+    "fa": "منوی ناوبری"
+  },
+  "negative": {
+    "es": "negativo",
+    "ca": "negatiu",
+    "fa": "منفی"
+  },
+  "Negative": {
+    "es": "Negativo",
+    "ca": "Negatiu",
+    "fa": "منفی"
+  },
+  "Neither Agree nor Disagree": {
+    "es": "Ni de acuerdo ni en desacuerdo",
+    "ca": "Ni d'acord ni en desacord",
+    "fa": "نه موافق و نه مخالف"
+  },
+  "neutral": {
+    "es": "neutral",
+    "ca": "neutre",
+    "fa": "خنثی"
+  },
+  "Neutral": {
+    "es": "Neutro",
+    "ca": "Neutre",
+    "fa": "خنثی"
+  },
+  "Never": {
+    "es": "nunca",
+    "ca": "Mai",
+    "fa": "هرگز"
+  },
+  "New option label...": {
+    "es": "Nueva etiqueta de opción...",
+    "ca": "Nova etiqueta d'opció...",
+    "fa": "برچسب گزینه جدید ..."
+  },
+  "New Password": {
+    "es": "Nueva Contraseña",
+    "ca": "Nova Contrasenya",
+    "fa": "رمز عبور جدید"
+  },
+  "New Title": {
+    "es": "Nuevo título",
+    "ca": "Nou títol",
+    "fa": "عنوان جدید"
+  },
+  "Next": {
+    "es": "Siguiente",
+    "ca": "Següent",
+    "fa": "بعدی"
+  },
+  "Next slide": {
+    "es": "Siguiente diapositiva",
+    "ca": "Diapositiva següent",
+    "fa": "اسلاید بعدی"
+  },
+  "No": {
+    "es": "No",
+    "ca": "No",
+    "fa": "خیر"
+  },
+  "No active classes found": {
+    "es": "No se encontraron clases activas",
+    "ca": "No s'han trobat classes actives",
+    "fa": "هیچ کلاس فعالی پیدا نشد"
+  },
+  "No active students or staff in this branch.": {
+    "es": "No hay estudiantes ni personal activo en esta sucursal.",
+    "ca": "No hi ha estudiants ni personal actiu en aquesta branca.",
+    "fa": "هیچ دانشجو یا کارمند فعالی در این شعبه وجود ندارد."
+  },
+  "No Answer": {
+    "es": "Sin respuesta",
+    "ca": "Sense resposta",
+    "fa": "بدون پاسخ"
+  },
+  "No assessments recorded yet.": {
+    "es": "Aún no se han registrado evaluaciones.",
+    "ca": "Encara no s'han registrat avaluacions.",
+    "fa": "هنوز هیچ ارزیابی ثبت نشده است."
+  },
+  "No attendance data available.": {
+    "es": "No hay datos de asistencia disponibles.",
+    "ca": "No hi ha dades d'assistència disponibles.",
+    "fa": "هیچ داده حضور و غیاب در دسترس نیست."
+  },
+  "No attendance recorded yet.": {
+    "es": "Aún no se ha registrado asistencia.",
+    "ca": "Encara no s'ha registrat cap assistència.",
+    "fa": "هنوز هیچ حضوری ثبت نشده است."
+  },
+  "No branch": {
+    "es": "Sin sucursal",
+    "ca": "Cap branca",
+    "fa": "بدون شعبه"
+  },
+  "No branch assigned to your account": {
+    "es": "Ninguna sucursal asignada a su cuenta",
+    "ca": "No hi ha cap sucursal assignada al vostre compte",
+    "fa": "هیچ شعبه ای به حساب شما اختصاص داده نشده است"
+  },
+  "No classes found": {
+    "es": "No se encontraron clases",
+    "ca": "No s'han trobat classes",
+    "fa": "هیچ کلاسی پیدا نشد"
+  },
+  "No classes match your search": {
+    "es": "Ninguna clase coincide con tu búsqueda",
+    "ca": "Cap classe no coincideix amb la teva cerca",
+    "fa": "هیچ کلاسی با جستجوی شما مطابقت ندارد"
+  },
+  "No classes yet": {
+    "es": "Aún no hay clases",
+    "ca": "Encara no hi ha classes",
+    "fa": "هنوز کلاسی وجود ندارد"
+  },
+  "No data submitted yet.": {
+    "es": "Aún no se han enviado datos.",
+    "ca": "Encara no s'ha enviat cap dada.",
+    "fa": "هنوز هیچ داده ای ارسال نشده است."
+  },
+  "No entries yet — add the first one.": {
+    "es": "Aún no hay entradas: agrega la primera.",
+    "ca": "Encara no hi ha cap entrada: afegiu la primera.",
+    "fa": "هنوز هیچ ورودی وجود ندارد - اولین مورد را اضافه کنید."
+  },
+  "No individual student or staff responses have been saved yet.": {
+    "es": "Aún no se han guardado respuestas individuales de estudiantes o personal.",
+    "ca": "Encara no s'ha desat cap resposta individual de l'estudiant o del personal.",
+    "fa": "هنوز هیچ پاسخ فردی یا دانشجویی ذخیره نشده است."
+  },
+  "No log entries match the current filters.": {
+    "es": "Ninguna entrada de registro coincide con los filtros actuales.",
+    "ca": "No hi ha cap entrada de registre que coincideixi amb els filtres actuals.",
+    "fa": "هیچ ورودی گزارشی با فیلترهای فعلی مطابقت ندارد."
+  },
+  "No matching surveys": {
+    "es": "No hay encuestas coincidentes",
+    "ca": "No hi ha enquestes coincidents",
+    "fa": "هیچ نظرسنجی منطبقی وجود ندارد"
+  },
+  "No respondent selected": {
+    "es": "Ningún encuestado seleccionado",
+    "ca": "No s'ha seleccionat cap enquestat",
+    "fa": "هیچ پاسخگویی انتخاب نشد"
+  },
+  "No respondents match your search.": {
+    "es": "Ningún encuestado coincide con su búsqueda.",
+    "ca": "Cap enquestat coincideix amb la teva cerca.",
+    "fa": "هیچ پاسخ دهنده ای با جستجوی شما مطابقت ندارد."
+  },
+  "No results submitted yet": {
+    "es": "Aún no se han enviado resultados",
+    "ca": "Encara no s'ha enviat cap resultat",
+    "fa": "هنوز هیچ نتیجه ای ارسال نشده است"
+  },
+  "No schedule set": {
+    "es": "No hay horario establecido",
+    "ca": "No hi ha horari establert",
+    "fa": "هیچ برنامه زمانی تنظیم نشده است"
+  },
+  "No scheduled classes found": {
+    "es": "No se encontraron clases programadas",
+    "ca": "No s'han trobat classes programades",
+    "fa": "هیچ کلاس برنامه ریزی شده ای پیدا نشد"
+  },
+  "No section": {
+    "es": "Sin sección",
+    "ca": "Cap secció",
+    "fa": "بدون بخش"
+  },
+  "No sessions recorded yet.": {
+    "es": "Aún no se han registrado sesiones.",
+    "ca": "Encara no s'ha registrat cap sessió.",
+    "fa": "هنوز هیچ جلسه ای ضبط نشده است."
+  },
+  "No students enrolled": {
+    "es": "No hay estudiantes matriculados",
+    "ca": "No hi ha alumnes matriculats",
+    "fa": "دانش آموزی ثبت نام نکرده است"
+  },
+  "No students enrolled yet": {
+    "es": "Aún no hay estudiantes matriculados",
+    "ca": "Encara no s'ha matriculat cap alumne",
+    "fa": "هنوز دانش آموزی ثبت نام نکرده است"
+  },
+  "No students found for the selected scope": {
+    "es": "No se encontraron estudiantes para el ámbito seleccionado",
+    "ca": "No s'han trobat estudiants per a l'àmbit seleccionat",
+    "fa": "دانش‌آموزی برای محدوده انتخابی یافت نشد"
+  },
+  "No students match your search": {
+    "es": "Ningún estudiante coincide con tu búsqueda",
+    "ca": "Cap alumne coincideix amb la teva cerca",
+    "fa": "هیچ دانش آموزی با جستجوی شما مطابقت ندارد"
+  },
+  "No students or staff were assigned to this survey branch. Use “Add person” to enter someone manually.": {
+    "es": "No se asignó ningún estudiante ni personal a esta rama de la encuesta. Utilice \"Agregar persona\" para ingresar a alguien manualmente.",
+    "ca": "No s'ha assignat cap alumne ni personal a aquesta branca d'enquesta. Utilitzeu \"Afegeix una persona\" per introduir algú manualment.",
+    "fa": "هیچ دانشجو یا کارمندی به این شاخه نظرسنجی اختصاص داده نشد. از «افزودن شخص» برای وارد کردن شخصی به صورت دستی استفاده کنید."
+  },
+  "No surveys are active right now.": {
+    "es": "No hay encuestas activas en este momento.",
+    "ca": "No hi ha enquestes actives ara mateix.",
+    "fa": "هیچ نظرسنجی در حال حاضر فعال نیست."
+  },
+  "No surveys yet": {
+    "es": "Aún no hay encuestas",
+    "ca": "Encara no hi ha enquestes",
+    "fa": "هنوز نظرسنجی وجود ندارد"
+  },
+  "No teachers found. Add a staff member with the teacher role first.": {
+    "es": "No se encontraron profesores. Primero agregue un miembro del personal con el rol de maestro.",
+    "ca": "No s'han trobat professors. Afegiu primer un membre del personal amb la funció de professor.",
+    "fa": "معلمی پیدا نشد ابتدا یک کارمند با نقش معلم اضافه کنید."
+  },
+  "none": {
+    "es": "ninguno",
+    "ca": "cap",
+    "fa": "هیچ کدام"
+  },
+  "Not at All": {
+    "es": "En absoluto",
+    "ca": "En absolut",
+    "fa": "نه اصلا"
+  },
+  "Not enrolled in any classes yet.": {
+    "es": "Aún no estoy inscrito en ninguna clase.",
+    "ca": "Encara no estàs inscrit a cap classe.",
+    "fa": "هنوز در هیچ کلاسی ثبت نام نکرده ام."
+  },
+  "Not Really": {
+    "es": "Realmente no",
+    "ca": "Realment no",
+    "fa": "نه واقعا"
+  },
+  "Notes": {
+    "es": "Notas",
+    "ca": "Notes",
+    "fa": "یادداشت"
+  },
+  "notifications": {
+    "es": "notificaciones",
+    "ca": "notificacions",
+    "fa": "اطلاعیه ها"
+  },
+  "number": {
+    "es": "numero",
+    "ca": "nombre",
+    "fa": "شماره"
+  },
+  "Number of Borrowed Copies": {
+    "es": "Número de copias prestadas",
+    "ca": "Nombre d'exemplars prestats",
+    "fa": "تعداد نسخه های امانت گرفته شده"
+  },
+  "of": {
+    "es": "de",
+    "ca": "de",
+    "fa": "از"
+  },
+  "Often": {
+    "es": "A menudo",
+    "ca": "Sovint",
+    "fa": "اغلب"
+  },
+  "Once a branch enters survey data, this page will show response distribution, satisfaction by branch, question-level results, and export-ready summaries.": {
+    "es": "Una vez que una sucursal ingresa los datos de la encuesta, esta página mostrará la distribución de las respuestas, la satisfacción por sucursal, los resultados a nivel de preguntas y resúmenes listos para exportar.",
+    "ca": "Quan una sucursal introdueix les dades de l'enquesta, aquesta pàgina mostrarà la distribució de respostes, la satisfacció per branca, els resultats a nivell de preguntes i resums preparats per a l'exportació.",
+    "fa": "هنگامی که یک شعبه داده‌های نظرسنجی را وارد می‌کند، این صفحه توزیع پاسخ، رضایت از شاخه، نتایج سطح سؤال و خلاصه‌های آماده صادرات را نشان می‌دهد."
+  },
+  "Only image files are allowed": {
+    "es": "Sólo se permiten archivos de imagen",
+    "ca": "Només es permeten fitxers d'imatge",
+    "fa": "فقط فایل های تصویری مجاز هستند"
+  },
+  "opacity-60": {
+    "es": "opacidad-60",
+    "ca": "opacitat-60",
+    "fa": "کدورت-60"
+  },
+  "Open navigation": {
+    "es": "Abrir navegación",
+    "ca": "Navegació oberta",
+    "fa": "ناوبری را باز کنید"
+  },
+  "Option {{0}}": {
+    "es": "Opción {{0}}",
+    "ca": "Opció {{0}}",
+    "fa": "گزینه {{0}}"
+  },
+  "Option 1": {
+    "es": "Opción 1",
+    "ca": "Opció 1",
+    "fa": "گزینه 1"
+  },
+  "Option 2": {
+    "es": "Opción 2",
+    "ca": "Opció 2",
+    "fa": "گزینه 2"
+  },
+  "optional": {
+    "es": "opcional",
+    "ca": "opcional",
+    "fa": "اختیاری"
+  },
+  "Optional — a short professional bio shown on the staff profile": {
+    "es": "Opcional: una breve biografía profesional que se muestra en el perfil del personal.",
+    "ca": "Opcional: una breu biografia professional que es mostra al perfil del personal",
+    "fa": "اختیاری - یک بیوگرافی حرفه ای کوتاه که در نمایه کارکنان نشان داده شده است"
+  },
+  "Optional — helps staff respond appropriately in emergencies": {
+    "es": "Opcional: ayuda al personal a responder adecuadamente en emergencias.",
+    "ca": "Opcional: ajuda el personal a respondre adequadament en cas d'emergència",
+    "fa": "اختیاری - به کارکنان کمک می کند تا در مواقع اضطراری واکنش مناسب نشان دهند"
+  },
+  "Optional — person to contact in case of emergency": {
+    "es": "Opcional: persona a contactar en caso de emergencia.",
+    "ca": "Opcional: persona amb qui contactar en cas d'emergència",
+    "fa": "اختیاری - فردی که در مواقع اضطراری باید با آن تماس بگیرید"
+  },
+  "Optional — used for communication and emergency purposes": {
+    "es": "Opcional: se utiliza para fines de comunicación y emergencia.",
+    "ca": "Opcional: s'utilitza per a finalitats de comunicació i d'emergència",
+    "fa": "اختیاری - برای اهداف ارتباطی و اضطراری استفاده می شود"
+  },
+  "Optional note...": {
+    "es": "Nota opcional...",
+    "ca": "Nota opcional...",
+    "fa": "یادداشت اختیاری..."
+  },
+  "Optional teacher comment…": {
+    "es": "Comentario opcional del profesor...",
+    "ca": "Comentari opcional del professor...",
+    "fa": "نظر معلم اختیاری…"
+  },
+  "other": {
+    "es": "otro",
+    "ca": "altres",
+    "fa": "دیگر"
+  },
+  "Other": {
+    "es": "Otro",
+    "ca": "Altre",
+    "fa": "سایر"
+  },
+  "Other details (optional)": {
+    "es": "Otros detalles (opcional)",
+    "ca": "Altres detalls (opcional)",
+    "fa": "سایر جزئیات (اختیاری)"
+  },
+  "Out of": {
+    "es": "Fuera de",
+    "ca": "Fora de",
+    "fa": "خارج از"
+  },
+  "Out of Stock": {
+    "es": "Agotado",
+    "ca": "Esgotat",
+    "fa": "موجود نیست"
+  },
+  "outline": {
+    "es": "esquema",
+    "ca": "esquema",
+    "fa": "طرح کلی"
+  },
+  "outstanding": {
+    "es": "sobresaliente",
+    "ca": "excepcional",
+    "fa": "برجسته"
+  },
+  "Overall average": {
+    "es": "Promedio general",
+    "ca": "Mitjana global",
+    "fa": "میانگین کلی"
+  },
+  "Overall Response Distribution": {
+    "es": "Distribución general de respuestas",
+    "ca": "Distribució global de la resposta",
+    "fa": "توزیع کلی پاسخ"
+  },
+  "Overdue": {
+    "es": "Vencido",
+    "ca": "Vençut",
+    "fa": "معوق"
+  },
+  "overflow-hidden p-0": {
+    "es": "desbordamiento-oculto p-0",
+    "ca": "desbordament-ocult p-0",
+    "fa": "سرریز-مخفی p-0"
+  },
+  "overflow-x-auto": {
+    "es": "desbordamiento-x-auto",
+    "ca": "overflow-x-auto",
+    "fa": "سرریز-x-خودکار"
+  },
+  "overview": {
+    "es": "descripción general",
+    "ca": "visió general",
+    "fa": "نمای کلی"
+  },
+  "Overview": {
+    "es": "Resumen",
+    "ca": "Resum",
+    "fa": "خلاصه"
+  },
+  "p-1": {
+    "es": "p-1",
+    "ca": "p-1",
+    "fa": "p-1"
+  },
+  "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]": {
+    "es": "p-2 align-middle espacio en blanco-nowrap [&:has([rol=casilla de verificación])]:pr-0 [&>[rol=casilla de verificación]]:traducir-y-[2px]",
+    "ca": "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+    "fa": "p-2 align-middle spacespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]"
+  },
+  "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]": {
+    "es": "p-2 datos de grupo-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]",
+    "ca": "p-2 group-data-[plegable=icona]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]",
+    "fa": "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
+  },
+  "p-3": {
+    "es": "p-3",
+    "ca": "pàg-3",
+    "fa": "p-3"
+  },
+  "p-3 {{0}}": {
+    "es": "página 3 {{0}}",
+    "ca": "p-3 {{0}}",
+    "fa": "p-3 {{0}}"
+  },
+  "p-3 w-10": {
+    "es": "p-3 w-10",
+    "ca": "p-3 w-10",
+    "fa": "p-3 w-10"
+  },
+  "p-6": {
+    "es": "página 6",
+    "ca": "pàg-6",
+    "fa": "p-6"
+  },
+  "p-6 flex items-center gap-5 flex-wrap": {
+    "es": "p-6 elementos flexibles-espacio central-5 envoltura flexible",
+    "ca": "p-6 articles flexibles-gap central-5 embolcall flexible",
+    "fa": "p-6 اقلام فلکس-شکاف مرکز-5 فلکس-پوش"
+  },
+  "p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4": {
+    "es": "p-6 cuadrícula grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 espacio-4",
+    "ca": "p-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4",
+    "fa": "p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+  },
+  "p-6 m-0": {
+    "es": "p-6 m-0",
+    "ca": "p-6 m-0",
+    "fa": "p-6 m-0"
+  },
+  "p-6 m-0 space-y-5": {
+    "es": "p-6 m-0 espacio-y-5",
+    "ca": "p-6 m-0 espai-y-5",
+    "fa": "p-6 m-0 space-y-5"
+  },
+  "p-6 space-y-5": {
+    "es": "p-6 espacio-y-5",
+    "ca": "p-6 espai-y-5",
+    "fa": "p-6 space-y-5"
+  },
+  "page": {
+    "es": "página",
+    "ca": "pàgina",
+    "fa": "صفحه"
+  },
+  "Page": {
+    "es": "Página",
+    "ca": "Pàgina",
+    "fa": "صفحه"
+  },
+  "pagination": {
+    "es": "paginación",
+    "ca": "paginació",
+    "fa": "صفحه بندی"
+  },
+  "paid": {
+    "es": "pagado",
+    "ca": "pagat",
+    "fa": "پرداخت شده است"
+  },
+  "paragraph": {
+    "es": "párrafo",
+    "ca": "paràgraf",
+    "fa": "پاراگراف"
+  },
+  "Paragraph": {
+    "es": "Párrafo",
+    "ca": "Paràgraf",
+    "fa": "پاراگراف"
+  },
+  "parent": {
+    "es": "padre",
+    "ca": "pare",
+    "fa": "پدر و مادر"
+  },
+  "Parent / Guardian": {
+    "es": "Padre/Tutor",
+    "ca": "Pare/tutor",
+    "fa": "والدین / سرپرست"
+  },
+  "parent.relationship.{{0}}": {
+    "es": "relación.padre.{{0}}",
+    "ca": "parent.relationship.{{0}}",
+    "fa": "والدین.رابطه.{{0}}"
+  },
+  "parent.tabs.{{0}}": {
+    "es": "pestañas.padres.{{0}}",
+    "ca": "parent.tabs.{{0}}",
+    "fa": "parent.tabs.{{0}}"
+  },
+  "passport": {
+    "es": "pasaporte",
+    "ca": "passaport",
+    "fa": "پاسپورت"
+  },
+  "Passport / ID No.": {
+    "es": "Pasaporte/DNI No.",
+    "ca": "Passaport/Núm.",
+    "fa": "شماره گذرنامه / شناسنامه"
+  },
+  "Passport / ID Number": {
+    "es": "Pasaporte / Número de DNI",
+    "ca": "Número de DNI/passaport",
+    "fa": "گذرنامه / شماره شناسنامه"
+  },
+  "password": {
+    "es": "contraseña",
+    "ca": "contrasenya",
+    "fa": "رمز عبور"
+  },
+  "Password": {
+    "es": "Contraseña",
+    "ca": "Contrasenya",
+    "fa": "رمز عبور"
+  },
+  "passwordResets.{{0}}": {
+    "es": "contraseñaResets.{{0}}",
+    "ca": "restableix la contrasenya.{{0}}",
+    "fa": "رمز عبور بازنشانی می شود.{{0}}"
+  },
+  "passwordResets.{{0}}At": {
+    "es": "contraseñaResets.{{0}}En",
+    "ca": "passwordResets.{{0}}At",
+    "fa": "رمز عبور بازنشانی می شود.{{0}}در"
+  },
+  "pb-3": {
+    "es": "pb-3",
+    "ca": "pb-3",
+    "fa": "pb-3"
+  },
+  "PDF": {
+    "es": "PDF",
+    "ca": "PDF",
+    "fa": "PDF"
+  },
+  "PDF &amp; Excel exports are generated in this language.": {
+    "es": "Las exportaciones de PDF y Excel se generan en este idioma.",
+    "ca": "Les exportacions PDF i Excel es generen en aquest idioma.",
+    "fa": "صادرات PDF و Excel به این زبان ایجاد می شود."
+  },
+  "PDF export failed. Downloaded an HTML fallback instead.": {
+    "es": "La exportación de PDF falló. En su lugar, descargué un respaldo HTML.",
+    "ca": "Ha fallat l'exportació de PDF. S'ha baixat una alternativa HTML.",
+    "fa": "صادرات PDF انجام نشد. به جای آن یک نسخه بازگشتی HTML دانلود کرد."
+  },
+  "peer-data-[size=default]/menu-button:top-1.5": {
+    "es": "datos-peer-[tamaño=predeterminado]/botón-menú:top-1.5",
+    "ca": "peer-data-[size=default]/menu-button:top-1.5",
+    "fa": "peer-data-[size=default]/menu-button:top-1.5"
+  },
+  "peer-data-[size=lg]/menu-button:top-2.5": {
+    "es": "datos-peer-[tamaño=lg]/botón-menú:top-2.5",
+    "ca": "dades-peer-[size=lg]/menu-button:top-2.5",
+    "fa": "peer-data-[size=lg]/menu-button:top-2.5"
+  },
+  "peer-data-[size=sm]/menu-button:top-1": {
+    "es": "datos-peer-[tamaño=sm]/botón-menú:top-1",
+    "ca": "dades-peer-[size=sm]/menu-button:top-1",
+    "fa": "peer-data-[size=sm]/menu-button:top-1"
+  },
+  "pending": {
+    "es": "pendiente",
+    "ca": "pendent",
+    "fa": "در انتظار"
+  },
+  "Pending": {
+    "es": "Pendiente",
+    "ca": "Pendent",
+    "fa": "در انتظار"
+  },
+  "Person added": {
+    "es": "Persona agregada",
+    "ca": "Persona afegida",
+    "fa": "شخص اضافه شد"
+  },
+  "Person deleted": {
+    "es": "Persona eliminada",
+    "ca": "S'ha suprimit la persona",
+    "fa": "شخص حذف شد"
+  },
+  "Person Excel": {
+    "es": "persona excel",
+    "ca": "Persona Excel",
+    "fa": "شخص اکسل"
+  },
+  "Person PDF": {
+    "es": "Persona PDF",
+    "ca": "PDF de la persona",
+    "fa": "شخص پی دی اف"
+  },
+  "personal": {
+    "es": "personales",
+    "ca": "personals",
+    "fa": "شخصی"
+  },
+  "Personal": {
+    "es": "personales",
+    "ca": "Personal",
+    "fa": "شخصی"
+  },
+  "Personal Information": {
+    "es": "Información Personal",
+    "ca": "Informació Personal",
+    "fa": "اطلاعات شخصی"
+  },
+  "phone": {
+    "es": "telefono",
+    "ca": "telèfon",
+    "fa": "تلفن"
+  },
+  "Phone": {
+    "es": "Teléfono",
+    "ca": "Telèfon",
+    "fa": "تلفن"
+  },
+  "pl-10": {
+    "es": "pl-10",
+    "ca": "pl-10",
+    "fa": "pl-10"
+  },
+  "pl-4": {
+    "es": "pl-4",
+    "ca": "pl-4",
+    "fa": "pl-4"
+  },
+  "pl-9": {
+    "es": "pl-9",
+    "ca": "pl-9",
+    "fa": "pl-9"
+  },
+  "Please fill in all required fields including branch": {
+    "es": "Complete todos los campos obligatorios, incluida la sucursal.",
+    "ca": "Si us plau, ompliu tots els camps obligatoris, inclosa la sucursal",
+    "fa": "لطفا تمام فیلدهای الزامی از جمله شعبه را پر کنید"
+  },
+  "Please select a branch": {
+    "es": "Por favor seleccione una sucursal",
+    "ca": "Seleccioneu una sucursal",
+    "fa": "لطفا یک شعبه انتخاب کنید"
+  },
+  "Please select a teacher": {
+    "es": "Por favor seleccione un profesor",
+    "ca": "Seleccioneu un professor",
+    "fa": "لطفا یک معلم انتخاب کنید"
+  },
+  "PNG / JPG / WebP, max": {
+    "es": "PNG / JPG / WebP, máx.",
+    "ca": "PNG/JPG/WebP, màx",
+    "fa": "PNG / JPG / WebP، حداکثر"
+  },
+  "pointer-events-none absolute inset-0 flex items-center justify-center": {
+    "es": "puntero-eventos-ninguno absoluto inserción-0 centro-de-elementos flexibles centro-de-justificación",
+    "ca": "punter-esdeveniments-cap inserció absoluta-0 flex elements-center justify-center",
+    "fa": "pointer-events-none inset absolute-0 flex items-center justify-center"
+  },
+  "Ponts per la Pau": {
+    "es": "Ponts per la Pau",
+    "ca": "Ponts per la Pau",
+    "fa": "Ponts per la Pau"
+  },
+  "poor": {
+    "es": "pobre",
+    "ca": "pobres",
+    "fa": "فقیر"
+  },
+  "Poor": {
+    "es": "pobre",
+    "ca": "Pobre",
+    "fa": "بیچاره"
+  },
+  "popper": {
+    "es": "popper",
+    "ca": "popper",
+    "fa": "پوپر"
+  },
+  "position": {
+    "es": "posición",
+    "ca": "posició",
+    "fa": "موقعیت"
+  },
+  "Position": {
+    "es": "Cargo",
+    "ca": "Càrrec",
+    "fa": "سمت"
+  },
+  "positive": {
+    "es": "positivo",
+    "ca": "positiu",
+    "fa": "مثبت"
+  },
+  "Positive": {
+    "es": "Positivo",
+    "ca": "Positiu",
+    "fa": "مثبت"
+  },
+  "PPP p": {
+    "es": "APP p",
+    "ca": "PPP pàg",
+    "fa": "PPP ص"
+  },
+  "Prefer not to say": {
+    "es": "Prefiero no decir",
+    "ca": "Prefereixo no dir-ho",
+    "fa": "ترجیح می دهم نگوییم"
+  },
+  "prefer_not_to_say": {
+    "es": "preferir_no_decir",
+    "ca": "prefereixo_no_dir",
+    "fa": "ترجیح می دهند_نگو"
+  },
+  "present": {
+    "es": "presente",
+    "ca": "present",
+    "fa": "حاضر"
+  },
+  "Present": {
+    "es": "presente",
+    "ca": "Present",
+    "fa": "حاضر شود"
+  },
+  "preview": {
+    "es": "vista previa",
+    "ca": "vista prèvia",
+    "fa": "پیش نمایش"
+  },
+  "Previous": {
+    "es": "Anterior",
+    "ca": "Anterior",
+    "fa": "قبلی"
+  },
+  "Previous slide": {
+    "es": "Diapositiva anterior",
+    "ca": "Diapositiva anterior",
+    "fa": "اسلاید قبلی"
+  },
+  "Profile picture": {
+    "es": "Foto de perfil",
+    "ca": "Imatge de perfil",
+    "fa": "عکس پروفایل"
+  },
+  "Project": {
+    "es": "Proyecto",
+    "ca": "Projecte",
+    "fa": "پروژه"
+  },
+  "Province": {
+    "es": "Provincia",
+    "ca": "Província",
+    "fa": "استان"
+  },
+  "pt-0 pb-4": {
+    "es": "pt-0 pb-4",
+    "ca": "pt-0 pb-4",
+    "fa": "pt-0 pb-4"
+  },
+  "pt-3": {
+    "es": "parte-3",
+    "ca": "pt-3",
+    "fa": "pt-3"
+  },
+  "pt-4": {
+    "es": "parte-4",
+    "ca": "pt-4",
+    "fa": "pt-4"
+  },
+  "Publication Year": {
+    "es": "Año de publicación",
+    "ca": "Any de publicació",
+    "fa": "سال انتشار"
+  },
+  "px-10 pb-4 space-y-3": {
+    "es": "px-10 pb-4 espacio-y-3",
+    "ca": "px-10 pb-4 espai-y-3",
+    "fa": "px-10 pb-4 space-y-3"
+  },
+  "px-2": {
+    "es": "px-2",
+    "ca": "px-2",
+    "fa": "px-2"
+  },
+  "px-5 sm:px-6": {
+    "es": "px-5: px-6",
+    "ca": "px-5 sm:px-6",
+    "fa": "px-5 sm:px-6"
+  },
+  "Question": {
+    "es": "Pregunta",
+    "ca": "Pregunta",
+    "fa": "سوال"
+  },
+  "Question {{0}}...": {
+    "es": "Pregunta {{0}}....",
+    "ca": "Pregunta {{0}}...",
+    "fa": "سوال {{0}}..."
+  },
+  "questions": {
+    "es": "preguntas",
+    "ca": "preguntes",
+    "fa": "سوالات"
+  },
+  "Questions": {
+    "es": "Preguntas",
+    "ca": "Preguntes",
+    "fa": "سوالات"
+  },
+  "questions ·": {
+    "es": "preguntas ·",
+    "ca": "preguntes ·",
+    "fa": "سوالات ·"
+  },
+  "Quiz": {
+    "es": "cuestionario",
+    "ca": "Quiz",
+    "fa": "امتحان"
+  },
+  "Rarely": {
+    "es": "Rara vez",
+    "ca": "Poques vegades",
+    "fa": "به ندرت"
+  },
+  "Rate on a scale": {
+    "es": "Calificar en una escala",
+    "ca": "Valora a escala",
+    "fa": "بر اساس مقیاس امتیاز دهید"
+  },
+  "Rating": {
+    "es": "Calificación",
+    "ca": "Valoració",
+    "fa": "رتبه بندی"
+  },
+  "Record a new assessment score for this student.": {
+    "es": "Registre una nueva puntuación de evaluación para este estudiante.",
+    "ca": "Anoteu una nova puntuació d'avaluació per a aquest estudiant.",
+    "fa": "برای این دانش آموز نمره ارزشیابی جدید ثبت کنید."
+  },
+  "Record and manage student assessment grades per class": {
+    "es": "Registre y administre las calificaciones de evaluación de los estudiantes por clase",
+    "ca": "Registrar i gestionar les notes de l'avaluació dels estudiants per classe",
+    "fa": "ثبت و مدیریت نمرات ارزیابی دانش آموزان در هر کلاس"
+  },
+  "Recording for": {
+    "es": "Grabación para",
+    "ca": "Gravació per",
+    "fa": "ضبط برای"
+  },
+  "Refresh": {
+    "es": "Actualizar",
+    "ca": "Actualitzar",
+    "fa": "بازآوری"
+  },
+  "Relationship": {
+    "es": "Relación",
+    "ca": "Relació",
+    "fa": "رابطه"
+  },
+  "Remove": {
+    "es": "Quitar",
+    "ca": "Eliminar",
+    "fa": "حذف کنید"
+  },
+  "Remove option": {
+    "es": "Eliminar opción",
+    "ca": "Elimina l'opció",
+    "fa": "گزینه حذف"
+  },
+  "Remove question": {
+    "es": "Eliminar pregunta",
+    "ca": "Elimina la pregunta",
+    "fa": "حذف سوال"
+  },
+  "repeat({{0}}, minmax(0, 1fr))": {
+    "es": "repetir({{0}}, minmax(0, 1fr))",
+    "ca": "repetir({{0}}, mínmax(0, 1fr))",
+    "fa": "تکرار ({{0}}، حداقل حداکثر (0، 1fr))"
+  },
+  "Replace": {
+    "es": "Reemplazar",
+    "ca": "Substitueix",
+    "fa": "جایگزین کنید"
+  },
+  "Report Card": {
+    "es": "Boleta de calificaciones",
+    "ca": "Butlletí d'informes",
+    "fa": "کارت گزارش"
+  },
+  "Report Language": {
+    "es": "Idioma del informe",
+    "ca": "Idioma de l'informe",
+    "fa": "زبان گزارش"
+  },
+  "Respondent": {
+    "es": "Demandado",
+    "ca": "Enquestat",
+    "fa": "پاسخگو"
+  },
+  "Respondent Group": {
+    "es": "Grupo encuestado",
+    "ca": "Grup enquestat",
+    "fa": "گروه پاسخگو"
+  },
+  "respondents": {
+    "es": "encuestados",
+    "ca": "enquestats",
+    "fa": "پاسخ دهندگان"
+  },
+  "Respondents": {
+    "es": "Encuestados",
+    "ca": "Enquestats",
+    "fa": "پاسخ دهندگان"
+  },
+  "Response activity": {
+    "es": "Actividad de respuesta",
+    "ca": "Activitat de resposta",
+    "fa": "فعالیت پاسخگویی"
+  },
+  "Response Options": {
+    "es": "Opciones de respuesta",
+    "ca": "Opcions de resposta",
+    "fa": "گزینه های پاسخ"
+  },
+  "Response Scale": {
+    "es": "Escala de respuesta",
+    "ca": "Escala de resposta",
+    "fa": "مقیاس پاسخ"
+  },
+  "responses": {
+    "es": "respuestas",
+    "ca": "respostes",
+    "fa": "پاسخ ها"
+  },
+  "Responses by Branch": {
+    "es": "Respuestas por sucursal",
+    "ca": "Respostes per branca",
+    "fa": "پاسخ ها توسط شعبه"
+  },
+  "Responses were saved, but could not be reloaded: {{0}}": {
+    "es": "Las respuestas se guardaron, pero no se pudieron volver a cargar: {{0}}",
+    "ca": "Les respostes s'han desat, però no s'han pogut tornar a carregar: {{0}}",
+    "fa": "پاسخ‌ها ذخیره شدند، اما بارگیری مجدد نشدند: {{0}}"
+  },
+  "Result tags": {
+    "es": "Etiquetas de resultados",
+    "ca": "Etiquetes de resultats",
+    "fa": "برچسب های نتیجه"
+  },
+  "Results": {
+    "es": "Resultados",
+    "ca": "Resultats",
+    "fa": "نتایج"
+  },
+  "Returned": {
+    "es": "Devuelto",
+    "ca": "Tornat",
+    "fa": "بازگشت"
+  },
+  "right": {
+    "es": "correcto",
+    "ca": "dret",
+    "fa": "درست است"
+  },
+  "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]": {
+    "es": "derecha-0 datos de grupo-[collapsible=offcanvas]:derecha-[calc(var(--sidebar-width)*-1)]",
+    "ca": "right-0 group-data-[plegable=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+    "fa": "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]"
+  },
+  "ring-2 ring-offset-1 ring-current": {
+    "es": "anillo-2 anillo-desplazamiento-1 anillo-actual",
+    "ca": "anell-2 anell-offset-1 anell de corrent",
+    "fa": "ring-2 ring-offset-1 ring-current"
+  },
+  "Role": {
+    "es": "Rol",
+    "ca": "Rol",
+    "fa": "نقش"
+  },
+  "roles.{{0}}": {
+    "es": "roles.{{0}}",
+    "ca": "rols.{{0}}",
+    "fa": "نقش ها.{{0}}"
+  },
+  "rotate-180": {
+    "es": "rotar-180",
+    "ca": "gira-180",
+    "fa": "چرخش-180"
+  },
+  "rtl:**:[.rdp-button_next>svg]:rotate-180": {
+    "es": "rtl:**:[.rdp-button_next>svg]:rotar-180",
+    "ca": "rtl:**:[.rdp-button_next>svg]:rotate-180",
+    "fa": "rtl:**:[.rdp-button_next>svg]:rotate-180"
+  },
+  "rtl:**:[.rdp-button_previous>svg]:rotate-180": {
+    "es": "rtl:**:[.rdp-button_previous>svg]:rotar-180",
+    "ca": "rtl:**:[.rdp-button_previous>svg]:rotate-180",
+    "fa": "rtl:**:[.rdp-button_previous>svg]:rotate-180"
+  },
+  "Sat": {
+    "es": "sábado",
+    "ca": "ds",
+    "fa": "نشست"
+  },
+  "Satisfaction": {
+    "es": "Satisfacción",
+    "ca": "Satisfacció",
+    "fa": "رضایت"
+  },
+  "Satisfaction by Branch": {
+    "es": "Satisfacción por Sucursal",
+    "ca": "Satisfacció per branca",
+    "fa": "رضایت توسط شعبه"
+  },
+  "Satisfied": {
+    "es": "Satisfecho",
+    "ca": "Satisfet",
+    "fa": "راضی است"
+  },
+  "Saturday": {
+    "es": "Sábado",
+    "ca": "Dissabte",
+    "fa": "شنبه"
+  },
+  "Save Attendance": {
+    "es": "Guardar asistencia",
+    "ca": "Estalviar assistència",
+    "fa": "ذخیره حضور و غیاب"
+  },
+  "Save Changes": {
+    "es": "Guardar cambios",
+    "ca": "Desa els canvis",
+    "fa": "ذخیره تغییرات"
+  },
+  "Save Data": {
+    "es": "Guardar datos",
+    "ca": "Guarda les dades",
+    "fa": "ذخیره داده ها"
+  },
+  "Saving...": {
+    "es": "Guardando...",
+    "ca": "Desant...",
+    "fa": "در حال ذخیره..."
+  },
+  "Saving…": {
+    "es": "Guardando…",
+    "ca": "S'està desant…",
+    "fa": "در حال ذخیره…"
+  },
+  "schedule": {
+    "es": "horario",
+    "ca": "horari",
+    "fa": "برنامه"
+  },
+  "Schedule Days": {
+    "es": "Programar días",
+    "ca": "Horari Dies",
+    "fa": "روزها را برنامه ریزی کنید"
+  },
+  "Score": {
+    "es": "Puntuación",
+    "ca": "Puntuació",
+    "fa": "امتیاز"
+  },
+  "search": {
+    "es": "buscar",
+    "ca": "cerca",
+    "fa": "جستجو کنید"
+  },
+  "Search classes, teachers, branches...": {
+    "es": "Buscar clases, profesores, sucursales...",
+    "ca": "Cerca classes, professors, oficines...",
+    "fa": "جستجوی کلاس ها، معلمان، شعب..."
+  },
+  "Search description…": {
+    "es": "Buscar descripción…",
+    "ca": "Cerca descripció...",
+    "fa": "توضیحات جستجو…"
+  },
+  "Search respondents...": {
+    "es": "Buscar encuestados...",
+    "ca": "Cerca als enquestats...",
+    "fa": "جستجوی پاسخ دهندگان..."
+  },
+  "Search students by name or ID...": {
+    "es": "Buscar estudiantes por nombre o ID...",
+    "ca": "Cerca estudiants per nom o DNI...",
+    "fa": "جستجوی دانش آموزان با نام یا شناسه..."
+  },
+  "Search surveys or branches...": {
+    "es": "Buscar encuestas o sucursales...",
+    "ca": "Cerca enquestes o sucursals...",
+    "fa": "جستجو در نظرسنجی ها یا شعب..."
+  },
+  "secondary": {
+    "es": "secundaria",
+    "ca": "secundària",
+    "fa": "ثانویه"
+  },
+  "Section": {
+    "es": "Sección",
+    "ca": "Secció",
+    "fa": "بخش"
+  },
+  "Section title...": {
+    "es": "Título de la sección...",
+    "ca": "Títol de la secció...",
+    "fa": "عنوان بخش ..."
+  },
+  "Sections": {
+    "es": "Secciones",
+    "ca": "Seccions",
+    "fa": "بخش ها"
+  },
+  "sections ·": {
+    "es": "secciones ·",
+    "ca": "seccions ·",
+    "fa": "بخش ها ·"
+  },
+  "security": {
+    "es": "seguridad",
+    "ca": "seguretat",
+    "fa": "امنیت"
+  },
+  "Select a branch": {
+    "es": "Seleccione una sucursal",
+    "ca": "Seleccioneu una branca",
+    "fa": "یک شاخه را انتخاب کنید"
+  },
+  "Select a branch first": {
+    "es": "Seleccione una sucursal primero",
+    "ca": "Seleccioneu primer una branca",
+    "fa": "ابتدا یک شاخه را انتخاب کنید"
+  },
+  "Select a branch for this survey": {
+    "es": "Seleccione una sucursal para esta encuesta",
+    "ca": "Seleccioneu una sucursal per a aquesta enquesta",
+    "fa": "شعبه ای را برای این نظرسنجی انتخاب کنید"
+  },
+  "Select a branch...": {
+    "es": "Seleccione una sucursal...",
+    "ca": "Seleccioneu una branca...",
+    "fa": "انتخاب شعبه..."
+  },
+  "Select a class to manage grades": {
+    "es": "Seleccione una clase para gestionar las calificaciones",
+    "ca": "Seleccioneu una classe per gestionar les notes",
+    "fa": "کلاسی را برای مدیریت نمرات انتخاب کنید"
+  },
+  "Select a class to take attendance": {
+    "es": "Seleccione una clase para tomar asistencia",
+    "ca": "Seleccioneu una classe per rebre assistència",
+    "fa": "کلاسی را برای حضور انتخاب کنید"
+  },
+  "Select a respondent": {
+    "es": "Seleccione un encuestado",
+    "ca": "Seleccioneu un enquestat",
+    "fa": "پاسخگو را انتخاب کنید"
+  },
+  "Select a student or staff member first": {
+    "es": "Seleccione primero un estudiante o miembro del personal",
+    "ca": "Seleccioneu primer un estudiant o un membre del personal",
+    "fa": "ابتدا یک دانش آموز یا کارمند را انتخاب کنید"
+  },
+  "Select a teacher...": {
+    "es": "Seleccione un profesor...",
+    "ca": "Seleccioneu un professor...",
+    "fa": "انتخاب معلم ..."
+  },
+  "Select All": {
+    "es": "Seleccionar todo",
+    "ca": "Seleccioneu Tot",
+    "fa": "همه را انتخاب کنید"
+  },
+  "Select at least one respondent": {
+    "es": "Seleccione al menos un encuestado",
+    "ca": "Seleccioneu almenys un enquestat",
+    "fa": "حداقل یک پاسخ دهنده را انتخاب کنید"
+  },
+  "Select branch": {
+    "es": "Seleccionar sucursal",
+    "ca": "Seleccionar sucursal",
+    "fa": "انتخاب شاخه"
+  },
+  "Select class": {
+    "es": "Seleccionar clase",
+    "ca": "Seleccioneu la classe",
+    "fa": "کلاس را انتخاب کنید"
+  },
+  "Select gender": {
+    "es": "Seleccione género",
+    "ca": "Seleccioneu el gènere",
+    "fa": "جنسیت را انتخاب کنید"
+  },
+  "Select one option": {
+    "es": "Seleccione una opción",
+    "ca": "Seleccioneu una opció",
+    "fa": "یک گزینه را انتخاب کنید"
+  },
+  "Select one or more options": {
+    "es": "Seleccione una o más opciones",
+    "ca": "Seleccioneu una o més opcions",
+    "fa": "یک یا چند گزینه را انتخاب کنید"
+  },
+  "Select role": {
+    "es": "Seleccionar rol",
+    "ca": "Seleccioneu el rol",
+    "fa": "نقش را انتخاب کنید"
+  },
+  "Select session date": {
+    "es": "Seleccionar fecha de sesión",
+    "ca": "Seleccioneu la data de la sessió",
+    "fa": "تاریخ جلسه را انتخاب کنید"
+  },
+  "Select status": {
+    "es": "Seleccionar estado",
+    "ca": "Seleccioneu l'estat",
+    "fa": "وضعیت را انتخاب کنید"
+  },
+  "Select student or staff": {
+    "es": "Seleccionar estudiante o personal",
+    "ca": "Seleccioneu estudiant o personal",
+    "fa": "دانشجو یا کارمند را انتخاب کنید"
+  },
+  "select-none font-medium": {
+    "es": "seleccionar ninguna fuente medio",
+    "ca": "seleccioneu cap tipus de lletra mitjà",
+    "fa": "انتخاب-هیچ قلم-متوسط"
+  },
+  "select-none w-(--cell-size)": {
+    "es": "seleccionar ninguno w-(--tamaño de celda)",
+    "ca": "seleccionar-cap w-(--mida de la cel·la)",
+    "fa": "select-none w-(--cell-size)"
+  },
+  "Select...": {
+    "es": "Seleccione...",
+    "ca": "Selecciona...",
+    "fa": "انتخاب کنید..."
+  },
+  "selected ·": {
+    "es": "seleccionado ·",
+    "ca": "seleccionat ·",
+    "fa": "انتخاب شده ·"
+  },
+  "Semester": {
+    "es": "Semestre",
+    "ca": "Semestre",
+    "fa": "ترم"
+  },
+  "sent": {
+    "es": "enviado",
+    "ca": "enviat",
+    "fa": "فرستاده شد"
+  },
+  "sessions)": {
+    "es": "sesiones)",
+    "ca": "sessions)",
+    "fa": "جلسات)"
+  },
+  "Set Active": {
+    "es": "Establecer activo",
+    "ca": "Estableix actiu",
+    "fa": "فعال را تنظیم کنید"
+  },
+  "Set Final": {
+    "es": "Establecer final",
+    "ca": "Set Final",
+    "fa": "تنظیم نهایی"
+  },
+  "Set how many copies of this book are currently borrowed": {
+    "es": "Establecer cuántas copias de este libro están prestadas actualmente",
+    "ca": "Estableix quantes còpies d'aquest llibre es prenen en préstec actualment",
+    "fa": "تعیین کنید که در حال حاضر چند نسخه از این کتاب به امانت گرفته شده است"
+  },
+  "Set Inactive": {
+    "es": "Establecer inactivo",
+    "ca": "Estableix inactiu",
+    "fa": "غیر فعال را تنظیم کنید"
+  },
+  "Short answer": {
+    "es": "respuesta corta",
+    "ca": "Resposta curta",
+    "fa": "پاسخ کوتاه"
+  },
+  "Short text response": {
+    "es": "Respuesta de texto breve",
+    "ca": "Resposta de text breu",
+    "fa": "پاسخ متن کوتاه"
+  },
+  "Showing": {
+    "es": "Mostrando",
+    "ca": "Mostrant",
+    "fa": "در حال نمایش"
+  },
+  "shrink-0": {
+    "es": "encoger-0",
+    "ca": "encongir-0",
+    "fa": "کوچک شدن-0"
+  },
+  "Sidebar": {
+    "es": "Barra lateral",
+    "ca": "Barra lateral",
+    "fa": "نوار کناری"
+  },
+  "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none": {
+    "es": "tamaño-(--tamaño-celda) aria-disabled:opacidad-50 p-0 seleccionar-ninguno",
+    "ca": "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none",
+    "fa": "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none"
+  },
+  "size-2.5": {
+    "es": "tamaño-2.5",
+    "ca": "mida-2,5",
+    "fa": "اندازه-2.5"
+  },
+  "size-4": {
+    "es": "tamaño-4",
+    "ca": "mida-4",
+    "fa": "سایز-4"
+  },
+  "size-4 animate-spin": {
+    "es": "giro-animado tamaño 4",
+    "ca": "mida-4 animació-gir",
+    "fa": "سایز 4 متحرک - چرخش"
+  },
+  "size-7": {
+    "es": "tamaño-7",
+    "ca": "mida-7",
+    "fa": "سایز 7"
+  },
+  "sm": {
+    "es": "sm",
+    "ca": "sm",
+    "fa": "اس ام"
+  },
+  "Sometimes": {
+    "es": "A veces",
+    "ca": "De vegades",
+    "fa": "گاهی اوقات"
+  },
+  "space-y-1": {
+    "es": "espacio-y-1",
+    "ca": "espai-y-1",
+    "fa": "space-y-1"
+  },
+  "space-y-1 max-h-80 overflow-y-auto": {
+    "es": "espacio-y-1 max-h-80 desbordamiento-y-auto",
+    "ca": "space-y-1 max-h-80 overflow-y-auto",
+    "fa": "space-y-1 max-h-80 overflow-y-auto"
+  },
+  "space-y-1.5": {
+    "es": "espacio-y-1.5",
+    "ca": "espai-y-1,5",
+    "fa": "space-y-1.5"
+  },
+  "space-y-1.5 max-h-52 overflow-y-auto pr-1": {
+    "es": "espacio-y-1.5 max-h-52 desbordamiento-y-auto pr-1",
+    "ca": "espai-y-1,5 màx-h-52 desbordament-y-auto pr-1",
+    "fa": "space-y-1.5 max-h-52 overflow-y-auto pr-1"
+  },
+  "space-y-2": {
+    "es": "espacio-y-2",
+    "ca": "espai-y-2",
+    "fa": "فضا-y-2"
+  },
+  "space-y-3": {
+    "es": "espacio-y-3",
+    "ca": "espai-y-3",
+    "fa": "فضا-y-3"
+  },
+  "space-y-4": {
+    "es": "espacio-y-4",
+    "ca": "espai-y-4",
+    "fa": "فضا-y-4"
+  },
+  "space-y-4 mt-4": {
+    "es": "espacio-y-4 mt-4",
+    "ca": "espai-y-4 mt-4",
+    "fa": "space-y-4 mt-4"
+  },
+  "space-y-4 py-2": {
+    "es": "espacio-y-4 py-2",
+    "ca": "espai-y-4 py-2",
+    "fa": "space-y-4 py-2"
+  },
+  "space-y-4 py-4": {
+    "es": "espacio-y-4 py-4",
+    "ca": "espai-y-4 py-4",
+    "fa": "space-y-4 py-4"
+  },
+  "space-y-5": {
+    "es": "espacio-y-5",
+    "ca": "espai-y-5",
+    "fa": "space-y-5"
+  },
+  "space-y-6": {
+    "es": "espacio-y-6",
+    "ca": "espai-y-6",
+    "fa": "فضا-y-6"
+  },
+  "Spring": {
+    "es": "primavera",
+    "ca": "Primavera",
+    "fa": "بهار"
+  },
+  "sr-only": {
+    "es": "solo sr",
+    "ca": "només sr",
+    "fa": "فقط sr"
+  },
+  "staff": {
+    "es": "personal",
+    "ca": "personal",
+    "fa": "کارکنان"
+  },
+  "Staff": {
+    "es": "Personal",
+    "ca": "Personal",
+    "fa": "کارکنان"
+  },
+  "Staff created but {{0}} document(s) failed to upload": {
+    "es": "Personal creado pero {{0}} documento(s) no se pudieron cargar",
+    "ca": "S'ha creat el personal, però no s'han pogut penjar {{0}} documents",
+    "fa": "کارکنان ایجاد شدند اما {{0}} سند (ها) بارگذاری نشدند"
+  },
+  "Staff member": {
+    "es": "Miembro del personal",
+    "ca": "Membre del personal",
+    "fa": "عضو ستاد"
+  },
+  "Staff member created successfully": {
+    "es": "Miembro del personal creado exitosamente",
+    "ca": "Membre del personal creat correctament",
+    "fa": "عضو کارکنان با موفقیت ایجاد شد"
+  },
+  "Staff member deleted successfully": {
+    "es": "Miembro del personal eliminado exitosamente",
+    "ca": "El membre del personal s'ha suprimit correctament",
+    "fa": "عضو کارکنان با موفقیت حذف شد"
+  },
+  "Staff member since": {
+    "es": "Miembro del personal desde",
+    "ca": "Membre del personal des de llavors",
+    "fa": "عضو هیات از"
+  },
+  "Staff member updated successfully": {
+    "es": "Miembro del personal actualizado exitosamente",
+    "ca": "Membre del personal actualitzat correctament",
+    "fa": "عضو کارکنان با موفقیت به روز شد"
+  },
+  "Staff Profile": {
+    "es": "Perfil del Personal",
+    "ca": "Perfil del Personal",
+    "fa": "پروفایل کارمند"
+  },
+  "Star or numeric rating": {
+    "es": "Clasificación numérica o de estrellas",
+    "ca": "Valoració amb estrella o numèrica",
+    "fa": "رتبه بندی ستاره یا عددی"
+  },
+  "start": {
+    "es": "empezar",
+    "ca": "començar",
+    "fa": "شروع کنید"
+  },
+  "Start Time": {
+    "es": "Hora de inicio",
+    "ca": "Hora d'inici",
+    "fa": "زمان شروع"
+  },
+  "Status": {
+    "es": "Estado",
+    "ca": "Estat",
+    "fa": "وضعیت"
+  },
+  "string": {
+    "es": "cuerda",
+    "ca": "corda",
+    "fa": "رشته"
+  },
+  "Strongly Agree": {
+    "es": "Totalmente de acuerdo",
+    "ca": "Molt d'acord",
+    "fa": "کاملا موافقم"
+  },
+  "Strongly Disagree": {
+    "es": "Totalmente en desacuerdo",
+    "ca": "Totalment en desacord",
+    "fa": "به شدت مخالفم"
+  },
+  "student": {
+    "es": "estudiante",
+    "ca": "estudiant",
+    "fa": "دانشجو"
+  },
+  "Student created but {{0}} document(s) failed to upload": {
+    "es": "El estudiante creó pero no se pudieron cargar {{0}} documentos",
+    "ca": "L'estudiant ha creat però no s'han pogut penjar {{0}} documents",
+    "fa": "دانش آموز ایجاد کرد اما {{0}} سند بارگذاری نشد"
+  },
+  "Student created successfully": {
+    "es": "Estudiante creado exitosamente",
+    "ca": "Estudiant creat amb èxit",
+    "fa": "دانش آموز با موفقیت ایجاد شد"
+  },
+  "Student deleted successfully": {
+    "es": "Estudiante eliminado exitosamente",
+    "ca": "L'alumne s'ha suprimit correctament",
+    "fa": "دانش آموز با موفقیت حذف شد"
+  },
+  "Student enrolled successfully": {
+    "es": "Estudiante matriculado exitosamente",
+    "ca": "L'estudiant s'ha matriculat correctament",
+    "fa": "دانش آموز با موفقیت ثبت نام کرد"
+  },
+  "Student ID": {
+    "es": "Identificación de estudiante",
+    "ca": "DNI d'estudiant",
+    "fa": "شناسه دانشجویی"
+  },
+  "Student not found": {
+    "es": "Estudiante no encontrado",
+    "ca": "No s'ha trobat l'estudiant",
+    "fa": "دانش آموز پیدا نشد"
+  },
+  "Student Profile": {
+    "es": "Perfil del Estudiante",
+    "ca": "Perfil de l'Estudiant",
+    "fa": "پروفایل دانش‌آموز"
+  },
+  "Student removed from class": {
+    "es": "Estudiante retirado de clase",
+    "ca": "Alumnat retirat de la classe",
+    "fa": "دانش آموز از کلاس حذف شد"
+  },
+  "Student updated successfully": {
+    "es": "Estudiante actualizado exitosamente",
+    "ca": "L'estudiant s'ha actualitzat correctament",
+    "fa": "دانش آموز با موفقیت به روز شد"
+  },
+  "students": {
+    "es": "estudiantes",
+    "ca": "estudiants",
+    "fa": "دانش آموزان"
+  },
+  "Students": {
+    "es": "Estudiantes",
+    "ca": "Estudiants",
+    "fa": "دانش‌آموزان"
+  },
+  "Students and Staff": {
+    "es": "Estudiantes y personal",
+    "ca": "Estudiants i Personal",
+    "fa": "دانشجویان و کارکنان"
+  },
+  "students,": {
+    "es": "estudiantes,",
+    "ca": "estudiants,",
+    "fa": "دانش آموزان،"
+  },
+  "submit": {
+    "es": "enviar",
+    "ca": "presentar",
+    "fa": "ارسال کنید"
+  },
+  "submitted": {
+    "es": "presentado",
+    "ca": "presentat",
+    "fa": "ارائه شده است"
+  },
+  "Summer": {
+    "es": "verano",
+    "ca": "Estiu",
+    "fa": "تابستان"
+  },
+  "Sun": {
+    "es": "sol",
+    "ca": "Sol",
+    "fa": "خورشید"
+  },
+  "Sunday": {
+    "es": "Domingo",
+    "ca": "Diumenge",
+    "fa": "یکشنبه"
+  },
+  "superadmin": {
+    "es": "superadministrador",
+    "ca": "superadministrador",
+    "fa": "سوپرادمین"
+  },
+  "Survey created successfully": {
+    "es": "Encuesta creada exitosamente",
+    "ca": "Enquesta creada correctament",
+    "fa": "نظرسنجی با موفقیت ایجاد شد"
+  },
+  "Survey Date": {
+    "es": "Fecha de la encuesta",
+    "ca": "Data de l'enquesta",
+    "fa": "تاریخ نظرسنجی"
+  },
+  "Survey deleted": {
+    "es": "Encuesta eliminada",
+    "ca": "S'ha suprimit l'enquesta",
+    "fa": "نظرسنجی حذف شد"
+  },
+  "Survey duplicated": {
+    "es": "Encuesta duplicada",
+    "ca": "Enquesta duplicada",
+    "fa": "نظرسنجی تکراری"
+  },
+  "Survey Period": {
+    "es": "Período de encuesta",
+    "ca": "Període de l'enquesta",
+    "fa": "دوره نظرسنجی"
+  },
+  "Survey Results": {
+    "es": "Resultados de la encuesta",
+    "ca": "Resultats de l'enquesta",
+    "fa": "نتایج نظرسنجی"
+  },
+  "Survey Title": {
+    "es": "Título de la encuesta",
+    "ca": "Títol de l'enquesta",
+    "fa": "عنوان نظرسنجی"
+  },
+  "Survey title is required": {
+    "es": "El título de la encuesta es obligatorio.",
+    "ca": "El títol de l'enquesta és obligatori",
+    "fa": "عنوان نظرسنجی الزامی است"
+  },
+  "Survey updated": {
+    "es": "Encuesta actualizada",
+    "ca": "Enquesta actualitzada",
+    "fa": "نظرسنجی به روز شد"
+  },
+  "Surveys": {
+    "es": "Encuestas",
+    "ca": "Enquestes",
+    "fa": "نظرسنجی‌ها"
+  },
+  "system": {
+    "es": "sistema",
+    "ca": "sistema",
+    "fa": "سیستم"
+  },
+  "Table": {
+    "es": "mesa",
+    "ca": "Taula",
+    "fa": "جدول"
+  },
+  "teacher": {
+    "es": "maestro",
+    "ca": "professor",
+    "fa": "معلم"
+  },
+  "Teacher": {
+    "es": "Profesor",
+    "ca": "Professor",
+    "fa": "معلم"
+  },
+  "Teacher is from": {
+    "es": "el maestro es de",
+    "ca": "El professor és de",
+    "fa": "معلم از"
+  },
+  "text": {
+    "es": "texto",
+    "ca": "text",
+    "fa": "متن"
+  },
+  "Text, date, or time answers appear in the Individual tab.": {
+    "es": "Las respuestas de texto, fecha u hora aparecen en la pestaña Individual.",
+    "ca": "Les respostes de text, data o hora apareixen a la pestanya Individual.",
+    "fa": "پاسخ های متن، تاریخ یا زمان در برگه فردی ظاهر می شوند."
+  },
+  "theme": {
+    "es": "tema",
+    "ca": "tema",
+    "fa": "موضوع"
+  },
+  "This question type is collected in Individual Responses mode.": {
+    "es": "Este tipo de pregunta se recoge en el modo de Respuestas Individuales.",
+    "ca": "Aquest tipus de pregunta es recull en el mode de respostes individuals.",
+    "fa": "این نوع سوال در حالت پاسخ های فردی جمع آوری شده است."
+  },
+  "this staff member": {
+    "es": "este miembro del personal",
+    "ca": "aquest membre del personal",
+    "fa": "این کارمند"
+  },
+  "this student": {
+    "es": "este estudiante",
+    "ca": "aquest estudiant",
+    "fa": "این دانش آموز"
+  },
+  "This survey has no questions configured.": {
+    "es": "Esta encuesta no tiene preguntas configuradas.",
+    "ca": "Aquesta enquesta no té cap pregunta configurada.",
+    "fa": "این نظرسنجی هیچ سوالی پیکربندی نشده است."
+  },
+  "Thu": {
+    "es": "jueves",
+    "ca": "Dj",
+    "fa": "پنج شنبه"
+  },
+  "Thursday": {
+    "es": "Jueves",
+    "ca": "Dijous",
+    "fa": "پنج‌شنبه"
+  },
+  "time": {
+    "es": "tiempo",
+    "ca": "temps",
+    "fa": "زمان"
+  },
+  "Time": {
+    "es": "Hora",
+    "ca": "Hora",
+    "fa": "زمان"
+  },
+  "Time response": {
+    "es": "Respuesta de tiempo",
+    "ca": "Temps de resposta",
+    "fa": "پاسخ زمان"
+  },
+  "Timestamp": {
+    "es": "Marca de tiempo",
+    "ca": "Marca de temps",
+    "fa": "مهر زمان"
+  },
+  "Timetable": {
+    "es": "Horario",
+    "ca": "Horari",
+    "fa": "برنامه هفتگی"
+  },
+  "title": {
+    "es": "título",
+    "ca": "títol",
+    "fa": "عنوان"
+  },
+  "To": {
+    "es": "Para",
+    "ca": "Per a",
+    "fa": "به"
+  },
+  "Toggle Sidebar": {
+    "es": "Alternar barra lateral",
+    "ca": "Commuta la barra lateral",
+    "fa": "نوار کناری را تغییر دهید"
+  },
+  "top": {
+    "es": "arriba",
+    "ca": "superior",
+    "fa": "بالا"
+  },
+  "top-1/2 -left-12 -translate-y-1/2": {
+    "es": "arriba-1/2 -izquierda-12 -traducir-y-1/2",
+    "ca": "superior-1/2 -esquerra-12 -tradueix-y-1/2",
+    "fa": "top-1/2 -left-12 -translate-y-1/2"
+  },
+  "top-1/2 -right-12 -translate-y-1/2": {
+    "es": "arriba-1/2 -derecha-12 -traducir-y-1/2",
+    "ca": "superior-1/2 -dreta-12 -tradueix-y-1/2",
+    "fa": "top-1/2 -right-12 -translate-y-1/2"
+  },
+  "Total": {
+    "es": "totales",
+    "ca": "Total",
+    "fa": "مجموع"
+  },
+  "Total Respondents": {
+    "es": "Total de encuestados",
+    "ca": "Total d'enquestats",
+    "fa": "کل پاسخ دهندگان"
+  },
+  "Total:": {
+    "es": "Totales:",
+    "ca": "Total:",
+    "fa": "مجموع:"
+  },
+  "translateX(-{{0}}%)": {
+    "es": "traducirX(-{{0}}%)",
+    "ca": "translateX(-{{0}}%)",
+    "fa": "translateX(-{{0}}%)"
+  },
+  "truncate": {
+    "es": "truncar",
+    "ca": "truncar",
+    "fa": "کوتاه کردن"
+  },
+  "TRY": {
+    "es": "INTENTAR",
+    "ca": "PROVA",
+    "fa": "امتحان کنید"
+  },
+  "Try another search, branch, or status filter.": {
+    "es": "Pruebe con otro filtro de búsqueda, sucursal o estado.",
+    "ca": "Prova un altre filtre de cerca, branca o estat.",
+    "fa": "فیلتر جستجو، شعبه یا وضعیت دیگری را امتحان کنید."
+  },
+  "Tue": {
+    "es": "mar",
+    "ca": "Dt",
+    "fa": "سه شنبه"
+  },
+  "Tuesday": {
+    "es": "Martes",
+    "ca": "Dimarts",
+    "fa": "سه‌شنبه"
+  },
+  "Type": {
+    "es": "Tipo",
+    "ca": "Tipus",
+    "fa": "نوع"
+  },
+  "Unassigned teacher": {
+    "es": "Profesor no asignado",
+    "ca": "Professor no assignat",
+    "fa": "معلم بی تکلیف"
+  },
+  "unpaid fee": {
+    "es": "tarifa impaga",
+    "ca": "quota no pagada",
+    "fa": "هزینه پرداخت نشده"
+  },
+  "unread message": {
+    "es": "mensaje no leído",
+    "ca": "missatge no llegit",
+    "fa": "پیام خوانده نشده"
+  },
+  "Unsatisfied": {
+    "es": "Insatisfecho",
+    "ca": "Insatisfet",
+    "fa": "ناراضی"
+  },
+  "UPDATE": {
+    "es": "ACTUALIZAR",
+    "ca": "ACTUALITZACIÓ",
+    "fa": "به روز رسانی"
+  },
+  "Update Borrowed Copies": {
+    "es": "Actualizar copias prestadas",
+    "ca": "Actualitza les còpies prestades",
+    "fa": "نسخه های قرض گرفته شده را به روز کنید"
+  },
+  "Update class details below.": {
+    "es": "Actualice los detalles de la clase a continuación.",
+    "ca": "Actualitza els detalls de la classe a continuació.",
+    "fa": "جزئیات کلاس را در زیر به روز کنید."
+  },
+  "Update the details for this staff member": {
+    "es": "Actualizar los detalles de este miembro del personal.",
+    "ca": "Actualitzeu els detalls d'aquest membre del personal",
+    "fa": "جزئیات این کارمند را به روز کنید"
+  },
+  "Update the details for this student": {
+    "es": "Actualizar los detalles de este estudiante.",
+    "ca": "Actualitza els detalls d'aquest estudiant",
+    "fa": "جزئیات این دانش آموز را به روز کنید"
+  },
+  "Update the survey details.": {
+    "es": "Actualice los detalles de la encuesta.",
+    "ca": "Actualitzeu els detalls de l'enquesta.",
+    "fa": "جزئیات نظرسنجی را به روز کنید."
+  },
+  "Update this assessment record.": {
+    "es": "Actualizar este registro de evaluación.",
+    "ca": "Actualitzeu aquest registre d'avaluació.",
+    "fa": "این رکورد ارزیابی را به روز کنید."
+  },
+  "Updated": {
+    "es": "Actualizado",
+    "ca": "Actualitzat",
+    "fa": "به روز شد"
+  },
+  "Upload image": {
+    "es": "Subir imagen",
+    "ca": "Carrega la imatge",
+    "fa": "آپلود تصویر"
+  },
+  "USD": {
+    "es": "USD",
+    "ca": "USD",
+    "fa": "USD"
+  },
+  "Use Answer Bank": {
+    "es": "Usar el banco de respuestas",
+    "ca": "Utilitzeu el Banc de Respostes",
+    "fa": "از بانک پاسخ استفاده کنید"
+  },
+  "Use this when you only know totals by answer option, not the named respondent choices.": {
+    "es": "Utilice esto cuando sólo conozca los totales por opción de respuesta, no las opciones de los encuestados nombrados.",
+    "ca": "Utilitzeu-ho quan només conegueu els totals per opció de resposta, no les opcions de l'enquestat amb nom.",
+    "fa": "از این زمانی استفاده کنید که فقط مجموع را با گزینه پاسخ می‌دانید، نه انتخاب‌های نام‌گذاری شده پاسخ‌دهنده."
+  },
+  "users": {
+    "es": "usuarios",
+    "ca": "usuaris",
+    "fa": "کاربران"
+  },
+  "value": {
+    "es": "valor",
+    "ca": "valor",
+    "fa": "ارزش"
+  },
+  "var(--radius)": {
+    "es": "var(--radio)",
+    "ca": "var(--radi)",
+    "fa": "var (--شعاع)"
+  },
+  "vertical": {
+    "es": "verticales",
+    "ca": "vertical",
+    "fa": "عمودی"
+  },
+  "Very Much": {
+    "es": "mucho",
+    "ca": "Moltíssim",
+    "fa": "خیلی زیاد"
+  },
+  "Very Satisfied": {
+    "es": "muy satisfecho",
+    "ca": "Molt Satisfet",
+    "fa": "بسیار راضی"
+  },
+  "Very Unsatisfied": {
+    "es": "Muy insatisfecho",
+    "ca": "Molt insatisfet",
+    "fa": "خیلی ناراضی"
+  },
+  "View assessments & report card": {
+    "es": "Ver evaluaciones y boleta de calificaciones",
+    "ca": "Veure avaluacions i butlleta d'informes",
+    "fa": "مشاهده ارزیابی ها و کارنامه"
+  },
+  "vs": {
+    "es": "vs",
+    "ca": "vs",
+    "fa": "در مقابل"
+  },
+  "w-1": {
+    "es": "w-1",
+    "ca": "w-1",
+    "fa": "w-1"
+  },
+  "w-10 h-10 opacity-30": {
+    "es": "w-10 h-10 opacidad-30",
+    "ca": "w-10 h-10 opacitat-30",
+    "fa": "w-10 h-10 opacity-30"
+  },
+  "w-12 h-12 opacity-30": {
+    "es": "w-12 h-12 opacidad-30",
+    "ca": "w-12 h-12 opacitat-30",
+    "fa": "w-12 h-12 opacity-30"
+  },
+  "w-16": {
+    "es": "w-16",
+    "ca": "w-16",
+    "fa": "w-16"
+  },
+  "w-3 h-3": {
+    "es": "w-3h-3",
+    "ca": "w-3 h-3",
+    "fa": "w-3 h-3"
+  },
+  "w-3.5 h-3.5": {
+    "es": "w-3.5 h-3.5",
+    "ca": "w-3,5 h-3,5",
+    "fa": "w-3.5 h-3.5"
+  },
+  "w-4 h-4": {
+    "es": "w-4 h-4",
+    "ca": "w-4 h-4",
+    "fa": "w-4 h-4"
+  },
+  "w-4 h-4 {{0}}": {
+    "es": "w-4 h-4 {{0}}",
+    "ca": "w-4 h-4 {{0}}",
+    "fa": "w-4 h-4 {{0}}"
+  },
+  "w-4 h-4 animate-spin mr-2": {
+    "es": "w-4 h-4 girar-animar mr-2",
+    "ca": "w-4 h-4 animat-spin mr-2",
+    "fa": "w-4 h-4 animate-spin mr-2"
+  },
+  "w-4 h-4 mr-2": {
+    "es": "w-4 h-4 señor-2",
+    "ca": "w-4 h-4 mr-2",
+    "fa": "w-4 h-4 mr-2"
+  },
+  "w-4 h-4 shrink-0": {
+    "es": "w-4 h-4 encoger-0",
+    "ca": "w-4 h-4 encongiment-0",
+    "fa": "w-4 h-4 shrink-0"
+  },
+  "w-44": {
+    "es": "w-44",
+    "ca": "w-44",
+    "fa": "w-44"
+  },
+  "w-48": {
+    "es": "w-48",
+    "ca": "w-48",
+    "fa": "w-48"
+  },
+  "w-5 h-5 animate-spin": {
+    "es": "w-5 h-5 animar-girar",
+    "ca": "w-5 h-5 animar-gir",
+    "fa": "w-5 h-5 animate-spin"
+  },
+  "w-5 h-5 animate-spin mr-2": {
+    "es": "w-5 h-5 animar-girar mr-2",
+    "ca": "w-5 h-5 animat-spin mr-2",
+    "fa": "w-5 h-5 animate-spin mr-2"
+  },
+  "w-64": {
+    "es": "w-64",
+    "ca": "w-64",
+    "fa": "w-64"
+  },
+  "w-8 h-8 opacity-30": {
+    "es": "w-8 h-8 opacidad-30",
+    "ca": "w-8 h-8 opacitat-30",
+    "fa": "w-8 h-8 opacity-30"
+  },
+  "w-fit": {
+    "es": "ajuste w",
+    "ca": "w-fit",
+    "fa": "w-fit"
+  },
+  "w-full h-full object-cover": {
+    "es": "w-completa h-cubierta-objeto completa",
+    "ca": "w-completa h-plena objecte-coberta",
+    "fa": "w-full h-full object-cover"
+  },
+  "waived": {
+    "es": "renunciado",
+    "ca": "renunciat",
+    "fa": "چشم پوشی کرد"
+  },
+  "Wed": {
+    "es": "mié",
+    "ca": "Dc",
+    "fa": "چهارشنبه"
+  },
+  "Wednesday": {
+    "es": "Miércoles",
+    "ca": "Dimecres",
+    "fa": "چهارشنبه"
+  },
+  "Weekly class schedule": {
+    "es": "Horario de clases semanal",
+    "ca": "Horari setmanal de classe",
+    "fa": "برنامه هفتگی کلاس"
+  },
+  "Weekly Schedule": {
+    "es": "Horario semanal",
+    "ca": "Horari setmanal",
+    "fa": "برنامه هفتگی"
+  },
+  "Weekly schedule for all active classes": {
+    "es": "Horario semanal para todas las clases activas.",
+    "ca": "Horari setmanal de totes les classes actives",
+    "fa": "برنامه هفتگی برای کلیه کلاس های فعال"
+  },
+  "will receive this fee": {
+    "es": "Recibirá esta tarifa",
+    "ca": "rebrà aquesta quota",
+    "fa": "این هزینه را دریافت خواهد کرد"
+  },
+  "with failing grade": {
+    "es": "con nota reprobatoria",
+    "ca": "amb nota de suspens",
+    "fa": "با نمره رد شدن"
+  },
+  "with low attendance": {
+    "es": "con baja asistencia",
+    "ca": "amb poca assistència",
+    "fa": "با حضور کم"
+  },
+  "Write the response...": {
+    "es": "Escribe la respuesta...",
+    "ca": "Escriu la resposta...",
+    "fa": "پاسخ را بنویسید..."
+  },
+  "XLS": {
+    "es": "XLS",
+    "ca": "XLS",
+    "fa": "XLS"
+  },
+  "Yes": {
+    "es": "si",
+    "ca": "Sí",
+    "fa": "بله"
+  },
+  "Yes / No": {
+    "es": "Sí/No",
+    "ca": "Sí / No",
+    "fa": "بله / خیر"
+  },
+  "You won't see any branch-scoped data (students, fees, classes, etc.) until a superadmin assigns you to a branch. Ask a superadmin to update your account in Staff &rarr; Edit.": {
+    "es": "No verá ningún dato específico de la sucursal (estudiantes, tarifas, clases, etc.) hasta que un superadministrador lo asigne a una sucursal. Pídale a un superadministrador que actualice su cuenta en Personal → Editar.",
+    "ca": "No veureu cap dada de l'àmbit de la branca (estudiants, taxes, classes, etc.) fins que un superadministrador us assigni a una sucursal. Demana a un superadministrador que actualitzi el teu compte a Personal → Edita.",
+    "fa": "تا زمانی که یک سوپرادمین شما را به یک شعبه منصوب نکند، هیچ داده ای با محدوده شاخه (دانش آموزان، شهریه ها، کلاس ها و غیره) نمی بینید. از یک سوپرادمین بخواهید تا حساب شما را در Staff → Edit به روز کند."
+  },
+  "you@example.com": {
+    "es": "tu@ejemplo.com",
+    "ca": "tu@exemple.com",
+    "fa": "you@example.com"
+  },
+  "Your branch": {
+    "es": "Tu sucursal",
+    "ca": "La teva branca",
+    "fa": "شعبه شما"
+  },
+  "YYYY-MM-DD (2024-12-31)": {
+    "es": "AAAA-MM-DD (2024-12-31)",
+    "ca": "AAAA-MM-DD (31/12/2024)",
+    "fa": "YYYY-MM-DD (31-12-2024)"
+  },
+  "دری (Dari)": {
+    "es": "دری (Dari)",
+    "ca": "دری (Dari)",
+    "fa": "دری (دری)"
+  }
+}

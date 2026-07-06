@@ -1,0 +1,34 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run i18n:check
+      - name: Check Edge Functions
+        run: deno check --no-config --no-lock --node-modules-dir=auto --minimum-dependency-age=0 $(find supabase/functions -name '*.ts' -type f)
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-public-placeholder
+      - run: npm audit --omit=dev --audit-level=high
