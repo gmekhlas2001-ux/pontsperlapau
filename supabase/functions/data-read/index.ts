@@ -69,8 +69,33 @@ function appendEq(params: URLSearchParams, column: string, value: string | null)
 }
 
 function appendIn(params: URLSearchParams, column: string, ids: string[]): void {
+  const value = params.get(column);
   params.delete(column);
-  params.append(column, `in.(${(ids.length ? ids : [NO_MATCH]).join(",")})`);
+
+  if (value) {
+    let requested: string[] = [];
+    if (value.startsWith("eq.")) {
+      requested = [value.slice(3)];
+    } else if (value.startsWith("in.(") && value.endsWith(")")) {
+      requested = value.slice(4, -1).split(",").map((id) => id.trim());
+    } else {
+      params.append(column, `eq.${NO_MATCH}`);
+      return;
+    }
+
+    const allowedSet = new Set(ids);
+    const intersected = requested.filter((id) => allowedSet.has(id));
+
+    if (intersected.length === 0) {
+      params.append(column, `eq.${NO_MATCH}`);
+    } else if (intersected.length === 1) {
+      params.append(column, `eq.${intersected[0]}`);
+    } else {
+      params.append(column, `in.(${intersected.join(",")})`);
+    }
+  } else {
+    params.append(column, `in.(${(ids.length ? ids : [NO_MATCH]).join(",")})`);
+  }
 }
 
 async function fetchIds(
@@ -141,6 +166,14 @@ async function branchGrantIds(client: Client, branchId: string | null): Promise<
 async function branchSurveyIds(client: Client, branchId: string | null): Promise<string[]> {
   return fetchIds(client, "surveys", "id", (query) =>
     query.eq("branch_id", branchId ?? NO_MATCH)
+  );
+}
+
+async function branchDocumentUserIds(client: Client, branchId: string | null): Promise<string[]> {
+  return fetchIds(client, "users", "id", (query) =>
+    query
+      .eq("branch_id", branchId ?? NO_MATCH)
+      .not("role", "in", "(superadmin,admin)")
   );
 }
 
@@ -341,7 +374,14 @@ async function applyScope(
     return true;
   }
 
-  if (["organization_settings", "roles", "user_documents"].includes(table)) {
+  if (table === "user_documents") {
+    if (isGlobal) return true;
+    if (caller.role !== "admin") return false;
+    appendIn(params, "user_id", await branchDocumentUserIds(client, caller.branch_id));
+    return true;
+  }
+
+  if (["organization_settings", "roles"].includes(table)) {
     return isGlobal;
   }
 
@@ -407,6 +447,9 @@ Deno.serve(async (req: Request) => {
     }
     if (caller.role === "librarian" && /\b(students|attendance|grade_entries|student_fees|transactions|grants|grant_transactions|donors|surveys|survey_)\b/i.test(select)) {
       return errorResponse(req, 403, "Academic or financial relations are outside your scope");
+    }
+    if (table === "user_documents" && caller.role !== "superadmin" && (!select || select.includes("*") || /\bstorage_path\b/i.test(select))) {
+      return errorResponse(req, 403, "Explicit safe document fields are required");
     }
 
     const allowed = await applyScope(client, caller, table, target.searchParams);

@@ -7,7 +7,6 @@ export interface UserDocument {
   file_name: string;
   mime_type: string | null;
   size_bytes: number | null;
-  storage_path: string;
   description: string | null;
   uploaded_by: string | null;
   uploaded_at: string;
@@ -18,7 +17,7 @@ export async function listUserDocuments(userId: string) {
   try {
     const { data, error } = await supabase
       .from('user_documents')
-      .select('*')
+      .select('id, user_id, file_name, mime_type, size_bytes, description, uploaded_by, uploaded_at')
       .eq('user_id', userId)
       .order('uploaded_at', { ascending: false });
     if (error) throw error;

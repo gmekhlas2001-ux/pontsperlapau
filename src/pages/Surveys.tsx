@@ -1637,6 +1637,25 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     setIndividualAnswers((current) => ({ ...current, [questionId]: value }));
   };
 
+  const clearIndividualAnswer = (questionId: string) => {
+    setIndividualAnswers((current) => {
+      const next = { ...current };
+      delete next[questionId];
+      return next;
+    });
+  };
+
+  const toggleSingleAnswer = (questionId: string, optionId: string) => {
+    setIndividualAnswers((current) => {
+      if (current[questionId] === optionId) {
+        const next = { ...current };
+        delete next[questionId];
+        return next;
+      }
+      return { ...current, [questionId]: optionId };
+    });
+  };
+
   const toggleMultiAnswer = (questionId: string, optionId: string) => {
     setIndividualAnswers((current) => {
       const selected = Array.isArray(current[questionId]) ? current[questionId] as string[] : [];
@@ -2045,19 +2064,32 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                           <div className="mt-4 space-y-2">
                             {questionUsesOptions(question.question_type) ? (
                               question.question_type === 'dropdown' ? (
-                                <Select
-                                  value={typeof value === 'string' ? value : ''}
-                                  onValueChange={(next) => setIndividualAnswer(question.id, next)}
-                                >
-                                  <SelectTrigger className="bg-background">
-                                    <SelectValue placeholder="Choose an answer" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {questionOptions.map((option) => (
-                                      <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <div className="flex gap-2">
+                                  <Select
+                                    value={typeof value === 'string' ? value : ''}
+                                    onValueChange={(next) => setIndividualAnswer(question.id, next)}
+                                  >
+                                    <SelectTrigger className="flex-1 bg-background">
+                                      <SelectValue placeholder="Choose an answer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {questionOptions.map((option) => (
+                                        <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {typeof value === 'string' && value && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-10 shrink-0 px-3"
+                                      onClick={() => clearIndividualAnswer(question.id)}
+                                    >
+                                      Clear
+                                    </Button>
+                                  )}
+                                </div>
                               ) : (
                                 questionOptions.map((option) => {
                                   const selected = multi
@@ -2067,7 +2099,8 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                                     <button
                                       key={option.id}
                                       type="button"
-                                      onClick={() => multi ? toggleMultiAnswer(question.id, option.id) : setIndividualAnswer(question.id, option.id)}
+                                      aria-pressed={selected}
+                                      onClick={() => multi ? toggleMultiAnswer(question.id, option.id) : toggleSingleAnswer(question.id, option.id)}
                                       className={cn(
                                         'flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm transition-colors',
                                         selected ? 'border-primary bg-primary/10 text-foreground' : 'bg-background hover:bg-muted/40',

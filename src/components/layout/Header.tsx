@@ -32,6 +32,7 @@ import {
 import { useEffect, useState, useCallback } from 'react';
 import { fetchNotifications, type Notification, type NotificationKind } from '@/services/notificationsService';
 import { formatDistanceToNow } from 'date-fns';
+import { findNavItemForPathname } from '@/modules/registry';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -72,35 +73,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   const currentLanguage = languages.find((l) => l.code === i18n.language) || languages[2];
   const unreadCount = notifications.filter((n) => n.createdAt > lastSeen).length;
-  const routeKey = location.pathname.split('/')[1] || 'dashboard';
-  const pageTitle = (() => {
-    const labels: Record<string, string> = {
-      dashboard: t('nav.dashboard'),
-      staff: t('nav.staff'),
-      branches: t('nav.branches'),
-      students: t('nav.students'),
-      classes: t('nav.classes'),
-      attendance: t('nav.attendance'),
-      grades: t('nav.grades'),
-      timetable: t('nav.timetable'),
-      calendar: t('nav.calendar'),
-      fees: t('nav.fees'),
-      'my-profile': t('nav.myGrades'),
-      'parent-portal': t('nav.parentPortal'),
-      'parent-links': t('nav.parentLinks'),
-      messages: t('nav.messages'),
-      donors: t('nav.donors'),
-      library: t('nav.library'),
-      surveys: t('nav.surveys'),
-      reports: t('nav.reports'),
-      'password-resets': t('nav.passwordResets'),
-      'audit-log': t('nav.auditLog'),
-      profile: t('nav.profile'),
-      settings: t('nav.settings'),
-    };
-
-    return labels[routeKey] ?? t('dashboard.title');
-  })();
+  const pageTitle = t(findNavItemForPathname(location.pathname)?.labelKey ?? 'dashboard.title');
 
   const refresh = useCallback(async () => {
     if (!user) return;

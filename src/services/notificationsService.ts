@@ -14,8 +14,7 @@
  *   teacher / librarian:
  *     - overdue books in their branch (best-effort)
  *
- *   everyone:
- *     - app-level info (none yet — placeholder)
+ * Other modules add their own table-derived signals below.
  */
 
 import { supabase } from '@/lib/supabase';

@@ -185,7 +185,8 @@ Deno.serve(async (req: Request) => {
       const { count: classCount, error: classError } = await supabase
         .from("classes")
         .select("id", { count: "exact", head: true })
-        .eq("teacher_id", staffProfile.id);
+        .eq("teacher_id", staffProfile.id)
+        .is("deleted_at", null);
       if (classError) {
         return errorResponse(req, 500, "Failed to check class assignments", classError);
       }

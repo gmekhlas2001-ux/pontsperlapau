@@ -138,12 +138,9 @@ export async function authenticateRequest(req: Request): Promise<TokenPayload> {
     .eq("user_id", payload.sub)
     .maybeSingle();
 
-  // If the database query itself failed (e.g. Supabase outage), fall back to
-  // the cryptographically verified HMAC token claims rather than logging the
-  // user out. The token signature and expiry were already validated above.
   if (error) {
-    console.error("[auth] session DB check failed (falling back to token claims):", error);
-    return payload;
+    console.error("[auth] session DB check failed:", error);
+    throw new Error("Session validation failed");
   }
 
   const user = Array.isArray(session?.user) ? session?.user[0] : session?.user;

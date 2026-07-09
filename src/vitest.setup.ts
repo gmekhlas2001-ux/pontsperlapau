@@ -2,16 +2,15 @@ import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
-// Provide dummy env variables for tests so supabase.ts doesn't throw
+// Provide test env variables so supabase.ts can initialize.
 process.env.VITE_SUPABASE_URL = 'https://mock.supabase.co';
 process.env.VITE_SUPABASE_ANON_KEY = 'mock-anon-key';
 
-// Cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {
   cleanup();
 });
 
-// Mock matchMedia if not present in jsdom
+// jsdom does not implement these browser APIs.
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation(query => ({

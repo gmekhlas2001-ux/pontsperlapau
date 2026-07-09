@@ -7,9 +7,6 @@
  *
  * Fee lifecycle:
  *   pending → paid | overdue | waived | partial
- *
- * `syncOverdue` is called after every fetch to automatically flip any
- * pending/partial fees whose due_date has passed to 'overdue'.
  */
 
 import { supabase } from '@/lib/supabase';
