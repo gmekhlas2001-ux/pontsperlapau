@@ -818,6 +818,7 @@
   },
   "validation": {
     "required": "This field is required",
+    "copiesMinimum": "Total copies must be at least 1",
     "email": "Please enter a valid email",
     "phone": "Please enter a valid phone number",
     "minLength": "Must be at least {{min}} characters",

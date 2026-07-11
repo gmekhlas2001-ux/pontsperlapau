@@ -115,6 +115,10 @@ export function Library() {
       toast.error(t('validation.required'));
       return;
     }
+    if (!Number.isInteger(addForm.total_copies) || addForm.total_copies < 1) {
+      toast.error(t('validation.copiesMinimum'));
+      return;
+    }
     // Auto-assign caller's branch when not a superadmin (form doesn't show branch picker for them)
     const rawBranch = scopedBranchId();
     const callerBranchId = rawBranch && rawBranch !== NO_BRANCH_SENTINEL ? rawBranch : null;
@@ -169,6 +173,10 @@ export function Library() {
     if (!selectedBook) return;
     if (!editForm.title?.trim() || !editForm.author?.trim()) {
       toast.error(t('validation.required'));
+      return;
+    }
+    if (!Number.isInteger(editForm.total_copies) || (editForm.total_copies ?? 0) < 1) {
+      toast.error(t('validation.copiesMinimum'));
       return;
     }
     // Preserve borrowed count when total_copies changes; clamp available
@@ -678,9 +686,16 @@ function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition
             id="total_copies"
             type="number"
             min={1}
-            value={form.total_copies || 1}
-            onChange={(e) => onChange('total_copies', parseInt(e.target.value) || 1)}
+            value={form.total_copies ?? ''}
+            aria-invalid={form.total_copies !== undefined && form.total_copies < 1}
+            onChange={(e) => onChange(
+              'total_copies',
+              e.target.value === '' ? undefined : Number(e.target.value),
+            )}
           />
+          {form.total_copies !== undefined && form.total_copies < 1 && (
+            <p className="text-sm text-destructive">{t('validation.copiesMinimum')}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="location_shelf">{t('library.location')}</Label>

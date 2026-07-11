@@ -818,6 +818,7 @@
   },
   "validation": {
     "required": "Aquest camp és obligatori",
+    "copiesMinimum": "El total de còpies ha de ser com a mínim 1",
     "email": "Si us plau, introduïu un correu vàlid",
     "phone": "Si us plau, introduïu un telèfon vàlid",
     "minLength": "Ha de tenir almenys {{min}} caràcters",
