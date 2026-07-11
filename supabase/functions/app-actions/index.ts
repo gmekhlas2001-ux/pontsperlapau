@@ -1644,11 +1644,27 @@ Deno.serve(async (req: Request) => {
         return errorResponse(req, 400, "Invalid branch survey payload");
       }
 
+      // Aggregate totals and named responses can be entered independently. Do
+      // not let a later aggregate save make the card under-report people who
+      // already have individual answers recorded for this branch.
+      const { data: individualRespondents, error: individualRespondentsErr } = await supabase
+        .from("survey_individual_responses")
+        .select("respondent_type, respondent_id")
+        .eq("survey_id", surveyId)
+        .eq("branch_id", branchId);
+      if (individualRespondentsErr) {
+        return errorResponse(req, 500, "Failed to count individual survey respondents", individualRespondentsErr);
+      }
+      const individualRespondentTotal = new Set(
+        (individualRespondents ?? []).map((row: any) => `${row.respondent_type}:${row.respondent_id}`),
+      ).size;
+      const effectiveTotalRespondents = Math.max(totalRespondents, individualRespondentTotal);
+
       const { error: subErr } = await supabase.from("survey_branch_submissions").upsert(
         {
           survey_id: surveyId,
           branch_id: branchId,
-          total_respondents: totalRespondents,
+          total_respondents: effectiveTotalRespondents,
           submitted_by: caller.id,
         },
         { onConflict: "survey_id,branch_id" },
