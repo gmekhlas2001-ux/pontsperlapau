@@ -445,8 +445,16 @@ export function Library() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="flex gap-4">
-                  <div className="w-24 h-32 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="h-12 w-12 text-muted-foreground" />
+                  <div className="w-24 h-32 bg-muted rounded overflow-hidden flex items-center justify-center flex-shrink-0">
+                    {selectedBook.cover_image_url ? (
+                      <img
+                        src={selectedBook.cover_image_url}
+                        alt={`${selectedBook.title} cover`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <BookOpen className="h-12 w-12 text-muted-foreground" />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <div>
