@@ -10,6 +10,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/pagination';
 import { callEdgeFunction } from '@/lib/edge';
 
 export interface OrgSettings {
@@ -200,44 +201,28 @@ export async function getActivityLogs(limit = 50): Promise<{ success: boolean; d
 
 export async function exportTableAsCSV(tableName: 'users' | 'staff' | 'students' | 'classes' | 'books'): Promise<{ success: boolean; csv?: string; error?: string }> {
   try {
-    let query;
+    let query: Record<string, unknown>[];
 
     if (tableName === 'users') {
-      const { data, error } = await supabase
-        .from('users')
+      query = await fetchAllPages<Record<string, unknown>>((from, to) => supabase.from('users')
         .select('id, email, first_name, last_name, role, status, created_at')
-        .is('status', null)
-        .or('status.eq.active,status.eq.inactive');
-      if (error) throw error;
-      query = data;
+        .in('status', ['active', 'inactive']).range(from, to) as any);
     } else if (tableName === 'staff') {
-      const { data, error } = await supabase
-        .from('staff')
+      query = await fetchAllPages<Record<string, unknown>>((from, to) => supabase.from('staff')
         .select('id, user_id, position, department, employee_id, date_joined, employment_type, created_at')
-        .is('deleted_at', null);
-      if (error) throw error;
-      query = data;
+        .is('deleted_at', null).range(from, to) as any);
     } else if (tableName === 'students') {
-      const { data, error } = await supabase
-        .from('students')
+      query = await fetchAllPages<Record<string, unknown>>((from, to) => supabase.from('students')
         .select('id, student_id, grade_level, enrollment_date, nationality, created_at')
-        .is('deleted_at', null);
-      if (error) throw error;
-      query = data;
+        .is('deleted_at', null).range(from, to) as any);
     } else if (tableName === 'classes') {
-      const { data, error } = await supabase
-        .from('classes')
+      query = await fetchAllPages<Record<string, unknown>>((from, to) => supabase.from('classes')
         .select('id, name, description, location, max_capacity, academic_year, semester, status, created_at')
-        .is('deleted_at', null);
-      if (error) throw error;
-      query = data;
+        .is('deleted_at', null).range(from, to) as any);
     } else {
-      const { data, error } = await supabase
-        .from('books')
+      query = await fetchAllPages<Record<string, unknown>>((from, to) => supabase.from('books')
         .select('id, title, author, isbn, publisher, category, total_copies, available_copies, created_at')
-        .is('deleted_at', null);
-      if (error) throw error;
-      query = data;
+        .is('deleted_at', null).range(from, to) as any);
     }
 
     if (!query || query.length === 0) {

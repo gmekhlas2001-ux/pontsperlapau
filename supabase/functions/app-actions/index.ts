@@ -168,8 +168,22 @@ function imageExtension(contentType: string, bytes: Uint8Array): string | null {
   return null;
 }
 
-function today(): string {
-  return new Date().toISOString().split("T")[0];
+async function today(supabase: SupabaseClient): Promise<string> {
+  const { data } = await supabase
+    .from("organization_settings")
+    .select("setting_value")
+    .eq("setting_key", "timezone")
+    .maybeSingle();
+  const timeZone = cleanString(data?.setting_value) ?? "UTC";
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(new Date());
+    const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${value.year}-${value.month}-${value.day}`;
+  } catch {
+    return new Date().toISOString().split("T")[0];
+  }
 }
 
 function assertRoles(req: Request, caller: Caller, roles: string[]): Response | null {
@@ -317,7 +331,14 @@ async function syncFinalGrade(supabase: SupabaseClient, classId: string, student
     .eq("student_id", studentId);
 
   const scored = (entries ?? []).filter((entry: any) => entry.score !== null);
-  if (scored.length === 0) return;
+  if (scored.length === 0) {
+    await supabase
+      .from("class_enrollments")
+      .update({ grade: null })
+      .eq("class_id", classId)
+      .eq("student_id", studentId);
+    return;
+  }
 
   const avg = scored.reduce(
     (sum: number, entry: any) => sum + (Number(entry.score) / Number(entry.max_score)) * 100,
@@ -565,7 +586,7 @@ Deno.serve(async (req: Request) => {
       const updates = op === "mark-fee-paid"
         ? {
             status: "paid",
-            paid_date: today(),
+            paid_date: await today(supabase),
             payment_method: body.paymentMethod,
             notes: cleanString(body.notes),
           }
@@ -699,7 +720,7 @@ Deno.serve(async (req: Request) => {
           description: String(body.description),
           amount,
           type: body.type,
-          tx_date: cleanString(body.txDate) ?? today(),
+          tx_date: cleanString(body.txDate) ?? await today(supabase),
           notes: cleanString(body.notes),
           recorded_by: caller.id,
         });
@@ -728,8 +749,8 @@ Deno.serve(async (req: Request) => {
       if (roleError) return roleError;
 
       if (op === "create-transaction") {
-        if (!touchedCallerBranch(caller, body.sender_branch_id, body.receiver_branch_id)) {
-          return errorResponse(req, 403, "Transaction is outside your branch");
+        if (caller.role !== "superadmin" && body.sender_branch_id !== caller.branch_id) {
+          return errorResponse(req, 403, "Only the sending branch can create this transaction");
         }
         if (
           !body.sender_branch_id ||
@@ -778,8 +799,9 @@ Deno.serve(async (req: Request) => {
         if (caller.role !== "superadmin" && (existing.created_by !== caller.id || existing.status !== "pending")) {
           return errorResponse(req, 403, "Only the creator can delete a pending transaction");
         }
-        const { error } = await supabase.from("transactions").delete().eq("id", id);
+        const { data: deleted, error } = await supabase.from("transactions").delete().eq("id", id).eq("status", "pending").select("id").maybeSingle();
         if (error) return errorResponse(req, 500, "Failed to delete transaction", error);
+        if (!deleted) return errorResponse(req, 409, "Transaction is no longer pending");
         return jsonResponse(req, { success: true });
       }
 
@@ -840,9 +862,11 @@ Deno.serve(async (req: Request) => {
         .from("transactions")
         .update(updates)
         .eq("id", id)
+        .eq("status", "pending")
         .select(TRANSACTION_SELECT)
-        .single();
+        .maybeSingle();
       if (error) return errorResponse(req, 500, "Failed to update transaction", error);
+      if (!data) return errorResponse(req, 409, "Transaction is no longer pending");
       return jsonResponse(req, { success: true, data });
     }
 
@@ -906,15 +930,29 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (!message) return errorResponse(req, 404, "Message not found");
       const isParticipant = message.sender_id === caller.id || message.recipient_id === caller.id;
+      const isBroadcastRecipient = message.recipient_id === null && (
+        caller.role === "superadmin" || message.branch_id === null || message.branch_id === caller.branch_id
+      );
       const isBranchAdmin = ADMIN_ROLES.includes(caller.role) && !assertBranch(req, caller, message.branch_id);
-      if (!isParticipant && !isBranchAdmin) return errorResponse(req, 403, "Message is outside your scope");
+      if (!isParticipant && !isBroadcastRecipient && !isBranchAdmin) return errorResponse(req, 403, "Message is outside your scope");
 
       if (op === "delete-message") {
+        if (message.sender_id !== caller.id && !isBranchAdmin) {
+          return errorResponse(req, 403, "Only the sender or a branch administrator can delete this message");
+        }
         const { error } = await supabase.from("messages").delete().eq("id", messageId);
         if (error) return errorResponse(req, 500, "Failed to delete message", error);
         return jsonResponse(req, { success: true });
       }
-      if (message.recipient_id !== null && message.recipient_id !== caller.id) {
+      if (message.recipient_id === null) {
+        const { error } = await supabase.from("message_read_receipts").upsert(
+          { message_id: messageId, user_id: caller.id, read_at: new Date().toISOString() },
+          { onConflict: "message_id,user_id" },
+        );
+        if (error) return errorResponse(req, 500, "Failed to mark broadcast as read", error);
+        return jsonResponse(req, { success: true });
+      }
+      if (message.recipient_id !== caller.id) {
         return jsonResponse(req, { success: true });
       }
       const { error } = await supabase
@@ -941,6 +979,15 @@ Deno.serve(async (req: Request) => {
         const studentBranch = await getStudentBranch(supabase, studentId);
         if (!classBranch || !studentBranch) return errorResponse(req, 404, "Class or student not found");
         if (classBranch !== studentBranch) return errorResponse(req, 400, "Student is in a different branch");
+        const { data: activeEnrollment, error: enrollmentError } = await supabase
+          .from("class_enrollments")
+          .select("id")
+          .eq("class_id", classId)
+          .eq("student_id", studentId)
+          .eq("status", "active")
+          .maybeSingle();
+        if (enrollmentError) return errorResponse(req, 500, "Failed to verify enrollment", enrollmentError);
+        if (!activeEnrollment) return errorResponse(req, 400, "Student is not actively enrolled in this class");
 
         if (op === "set-final-grade") {
           const { error } = await supabase
@@ -972,7 +1019,7 @@ Deno.serve(async (req: Request) => {
           max_score: maxScore,
           grade_letter: cleanString(body.gradeLetter),
           notes: cleanString(body.notes),
-          assessment_date: cleanString(body.assessmentDate) ?? today(),
+          assessment_date: cleanString(body.assessmentDate) ?? await today(supabase),
           recorded_by: caller.id,
         }).select().single();
         if (error) return errorResponse(req, 400, "Failed to add grade", error);
@@ -1248,38 +1295,6 @@ Deno.serve(async (req: Request) => {
         const options = Array.isArray(body.options) ? body.options : [];
         if (questions.length === 0) return errorResponse(req, 400, "Add at least one question");
 
-        const responseChecks = await Promise.all([
-          supabase.from("survey_branch_responses").select("id", { count: "exact", head: true }).eq("survey_id", surveyId),
-          supabase.from("survey_individual_responses").select("id", { count: "exact", head: true }).eq("survey_id", surveyId),
-          supabase.from("survey_branch_submissions").select("id", { count: "exact", head: true }).eq("survey_id", surveyId),
-        ]);
-        const responseError = responseChecks.find((check) => check.error)?.error;
-        if (responseError) return errorResponse(req, 500, "Failed to verify survey responses", responseError);
-        const recordedResponseCount = responseChecks.reduce((sum, check) => sum + (check.count ?? 0), 0);
-        if (recordedResponseCount > 0) {
-          return errorResponse(
-            req,
-            409,
-            "Survey questions cannot be changed after responses have been recorded. Duplicate the survey or delete the responses first.",
-          );
-        }
-
-        const { data: oldSections, error: oldSectionsErr } = await supabase
-          .from("survey_sections")
-          .select("id")
-          .eq("survey_id", surveyId);
-        if (oldSectionsErr) return errorResponse(req, 500, "Failed to read existing survey sections", oldSectionsErr);
-        const { data: oldQuestions, error: oldQuestionsErr } = await supabase
-          .from("survey_questions")
-          .select("id")
-          .eq("survey_id", surveyId);
-        if (oldQuestionsErr) return errorResponse(req, 500, "Failed to read existing survey questions", oldQuestionsErr);
-        const { data: oldOptions, error: oldOptionsErr } = await supabase
-          .from("survey_response_options")
-          .select("id")
-          .eq("survey_id", surveyId);
-        if (oldOptionsErr) return errorResponse(req, 500, "Failed to read existing survey options", oldOptionsErr);
-
         const sectionIdMap: Record<number, string> = {};
         const sectionRows: any[] = [];
         sections.forEach((section: any, sourceIndex: number) => {
@@ -1362,43 +1377,16 @@ Deno.serve(async (req: Request) => {
             })
             .filter(Boolean);
 
-        if (sectionRows.length > 0) {
-          const { error } = await supabase.from("survey_sections").insert(sectionRows);
-          if (error) return errorResponse(req, 400, "Failed to update survey sections", error);
-        }
-        const { error: questionInsertErr } = await supabase.from("survey_questions").insert(questionRows);
-        if (questionInsertErr) {
-          if (sectionRows.length > 0) await supabase.from("survey_sections").delete().in("id", sectionRows.map((row) => row.id));
-          return errorResponse(req, 400, "Failed to update survey questions", questionInsertErr);
-        }
-        if (optionRows.length > 0) {
-          const { error } = await supabase.from("survey_response_options").insert(optionRows);
-          if (error) {
-            await supabase.from("survey_questions").delete().in("id", questionRows.map((row) => row.id));
-            if (sectionRows.length > 0) await supabase.from("survey_sections").delete().in("id", sectionRows.map((row) => row.id));
-            return errorResponse(req, 400, "Failed to update survey options", error);
-          }
-        }
-
-        const oldOptionIds = (oldOptions ?? []).map((row: any) => row.id);
-        const oldQuestionIds = (oldQuestions ?? []).map((row: any) => row.id);
-        const oldSectionIds = (oldSections ?? []).map((row: any) => row.id);
-        if (oldOptionIds.length > 0) {
-          const { error } = await supabase.from("survey_response_options").delete().in("id", oldOptionIds);
-          if (error) return errorResponse(req, 500, "Failed to remove old survey options", error);
-        }
-        if (oldQuestionIds.length > 0) {
-          const { error } = await supabase.from("survey_questions").delete().in("id", oldQuestionIds);
-          if (error) return errorResponse(req, 500, "Failed to remove old survey questions", error);
-        }
-        if (oldSectionIds.length > 0) {
-          const { error } = await supabase.from("survey_sections").delete().in("id", oldSectionIds);
-          if (error) return errorResponse(req, 500, "Failed to remove old survey sections", error);
-        }
-
-        if (Object.keys(updates).length > 0) {
-          const { error } = await supabase.from("surveys").update(updates).eq("id", surveyId);
-          if (error) return errorResponse(req, 500, "Failed to update survey", error);
+        const { error: structureError } = await supabase.rpc("replace_survey_structure_atomic", {
+          p_survey_id: surveyId,
+          p_fields: updates,
+          p_sections: sectionRows,
+          p_questions: questionRows,
+          p_options: optionRows,
+        });
+        if (structureError) {
+          const status = String(structureError.message ?? "").includes("after responses") ? 409 : 400;
+          return errorResponse(req, status, "Failed to update survey structure", structureError);
         }
 
         return jsonResponse(req, { success: true });
@@ -1596,49 +1584,21 @@ Deno.serve(async (req: Request) => {
           return [];
         });
 
-        if (questionIds.length > 0) {
-          const { error } = await supabase
-            .from("survey_individual_responses")
-            .delete()
-            .eq("survey_id", surveyId)
-            .eq("branch_id", branchId)
-            .eq("respondent_type", respondentType)
-            .eq("respondent_id", respondentId)
-            .in("question_id", questionIds);
-          if (error) return errorResponse(req, 500, "Failed to clear survey responses", error);
-        }
-
-        if (rows.length > 0) {
-          const { error } = await supabase.from("survey_individual_responses").insert(rows);
-          if (error) return errorResponse(req, 500, "Failed to save individual survey responses", error);
-        }
-
-        const { data: individualStats, error: individualStatsErr } = await supabase
-          .from("survey_list_stats")
-          .select("unique_answered_respondents")
-          .eq("survey_id", surveyId)
-          .eq("branch_id", branchId)
-          .maybeSingle();
-        if (individualStatsErr) {
-          return errorResponse(req, 500, "Failed to count individual survey respondents", individualStatsErr);
-        }
-        const individualTotal = Number(individualStats?.unique_answered_respondents ?? 0);
-        const { data: existingSubmission } = await supabase
-          .from("survey_branch_submissions")
-          .select("total_respondents")
-          .eq("survey_id", surveyId)
-          .eq("branch_id", branchId)
-          .maybeSingle();
-        const { error: subErr } = await supabase.from("survey_branch_submissions").upsert(
-          {
-            survey_id: surveyId,
-            branch_id: branchId,
-            total_respondents: Math.max(Number(existingSubmission?.total_respondents ?? 0), individualTotal),
-            submitted_by: caller.id,
-          },
-          { onConflict: "survey_id,branch_id" },
-        );
-        if (subErr) return errorResponse(req, 500, "Failed to save survey submission", subErr);
+        const { error: saveError } = await supabase.rpc("save_survey_individual_atomic", {
+          p_survey_id: surveyId,
+          p_branch_id: branchId,
+          p_respondent_type: respondentType,
+          p_respondent_id: respondentId,
+          p_respondent_name: respondentName,
+          p_answered_by: caller.id,
+          p_question_ids: questionIds,
+          p_answers: rows.map((row: any) => ({
+            question_id: row.question_id,
+            option_id: row.option_id,
+            text_answer: row.text_answer,
+          })),
+        });
+        if (saveError) return errorResponse(req, 500, "Failed to save individual survey responses", saveError);
 
         return jsonResponse(req, { success: true });
       }
@@ -1648,36 +1608,11 @@ Deno.serve(async (req: Request) => {
         return errorResponse(req, 400, "Invalid branch survey payload");
       }
 
-      // Aggregate totals and named responses can be entered independently. Do
-      // not let a later aggregate save make the card under-report people who
-      // already have individual answers recorded for this branch.
-      const { data: individualStats, error: individualStatsErr } = await supabase
-        .from("survey_list_stats")
-        .select("unique_answered_respondents")
-        .eq("survey_id", surveyId)
-        .eq("branch_id", branchId)
-        .maybeSingle();
-      if (individualStatsErr) {
-        return errorResponse(req, 500, "Failed to count individual survey respondents", individualStatsErr);
-      }
-      const individualRespondentTotal = Number(individualStats?.unique_answered_respondents ?? 0);
-      const effectiveTotalRespondents = Math.max(totalRespondents, individualRespondentTotal);
-
-      const { error: subErr } = await supabase.from("survey_branch_submissions").upsert(
-        {
-          survey_id: surveyId,
-          branch_id: branchId,
-          total_respondents: effectiveTotalRespondents,
-          submitted_by: caller.id,
-        },
-        { onConflict: "survey_id,branch_id" },
-      );
-      if (subErr) return errorResponse(req, 500, "Failed to save survey submission", subErr);
-
       const counts = Array.isArray(body.counts) ? body.counts : [];
+      let cleanedCounts: Array<{ questionId: string | null; optionId: string | null; count: number }> = [];
       if (counts.length > 0) {
         if (counts.length > 5000) return errorResponse(req, 400, "Too many survey counts");
-        const cleanedCounts = counts.map((count: any) => ({
+        cleanedCounts = counts.map((count: any) => ({
           questionId: cleanString(count.questionId),
           optionId: cleanString(count.optionId),
           count: Number(count.count),
@@ -1708,19 +1643,20 @@ Deno.serve(async (req: Request) => {
           return questionId === undefined || (questionId !== null && questionId !== count.questionId);
         })) return errorResponse(req, 400, "Survey count options do not match their questions");
 
-        const { error } = await supabase.from("survey_branch_responses").upsert(
-          cleanedCounts.map((count) => ({
-            survey_id: surveyId,
-            branch_id: branchId,
-            question_id: count.questionId,
-            option_id: count.optionId,
-            count: count.count,
-            entered_by: caller.id,
-          })),
-          { onConflict: "survey_id,branch_id,question_id,option_id" },
-        );
-        if (error) return errorResponse(req, 500, "Failed to save survey responses", error);
       }
+
+      const { error: aggregateError } = await supabase.rpc("save_survey_aggregate_atomic", {
+        p_survey_id: surveyId,
+        p_branch_id: branchId,
+        p_total_respondents: totalRespondents,
+        p_entered_by: caller.id,
+        p_counts: cleanedCounts.map((count) => ({
+          question_id: count.questionId,
+          option_id: count.optionId,
+          count: count.count,
+        })),
+      });
+      if (aggregateError) return errorResponse(req, 500, "Failed to save survey responses", aggregateError);
 
       return jsonResponse(req, { success: true });
     }
@@ -1787,7 +1723,8 @@ Deno.serve(async (req: Request) => {
         const dependencies: Array<[string, string]> = [
           ["users", "branch_id"], ["staff", "branch_id"], ["students", "branch_id"],
           ["classes", "branch_id"], ["books", "branch_id"], ["student_fees", "branch_id"],
-          ["grants", "branch_id"], ["surveys", "branch_id"], ["messages", "branch_id"],
+          ["grants", "branch_id"], ["donors", "branch_id"], ["surveys", "branch_id"], ["messages", "branch_id"],
+          ["transactions", "sender_branch_id"], ["transactions", "receiver_branch_id"],
         ];
         const checks = await Promise.all(dependencies.map(([table, column]) =>
           supabase.from(table).select("id", { count: "exact", head: true }).eq(column, branchId)
@@ -1949,11 +1886,10 @@ Deno.serve(async (req: Request) => {
         const classBranch = classScope.branchId;
         const studentBranch = await getStudentBranch(supabase, studentId);
         if (!classBranch || classBranch !== studentBranch) return errorResponse(req, 400, "Student is in a different branch");
-        const { error } = await supabase.from("class_enrollments").insert({
-          class_id: classId,
-          student_id: studentId,
-          enrollment_date: today(),
-          status: "active",
+        const { error } = await supabase.rpc("enroll_student_safely", {
+          p_class_id: classId,
+          p_student_id: studentId,
+          p_enrollment_date: await today(supabase),
         });
         if (error) return errorResponse(req, 400, "Failed to enroll student", error);
         return jsonResponse(req, { success: true });
@@ -1970,7 +1906,7 @@ Deno.serve(async (req: Request) => {
         if (!enrollment) return errorResponse(req, 404, "Enrollment not found");
         const classScope = await assertClassScope(req, supabase, caller, enrollment.class_id);
         if (classScope.error) return classScope.error;
-        const { error } = await supabase.from("class_enrollments").update({ status: "inactive" }).eq("id", enrollmentId);
+        const { error } = await supabase.from("class_enrollments").update({ status: "dropped" }).eq("id", enrollmentId);
         if (error) return errorResponse(req, 500, "Failed to remove student", error);
         return jsonResponse(req, { success: true });
       }

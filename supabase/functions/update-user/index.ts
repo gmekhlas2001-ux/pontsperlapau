@@ -227,20 +227,21 @@ Deno.serve(async (req: Request) => {
     }
 
     const storagePaths = (documents ?? []).map((document) => document.storage_path);
-    if (storagePaths.length > 0) {
-      const { error: storageError } = await supabase.storage
-        .from("user-documents")
-        .remove(storagePaths);
-      if (storageError) {
-        return errorResponse(req, 500, "Failed to remove user documents", storageError);
-      }
-    }
-
-    const { error } = await supabase.rpc("delete_user_cascade", {
+    const { data: deletionMode, error } = await supabase.rpc("delete_or_archive_user", {
       target_user_id: targetUserId,
     });
     if (error) return errorResponse(req, 500, "Failed to delete user", error);
-    return jsonResponse(req, { success: true });
+
+    // Archived students retain their documents and institutional history.
+    // For a true delete, remove now-orphaned blobs only after the database
+    // transaction has completed successfully.
+    if (deletionMode === "deleted" && storagePaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from("user-documents")
+        .remove(storagePaths);
+      if (storageError) console.error("[update-user] orphaned document cleanup failed:", storageError);
+    }
+    return jsonResponse(req, { success: true, mode: deletionMode });
   }
 
   // ── UPDATE ───────────────────────────────────────────────────────
@@ -278,6 +279,7 @@ Deno.serve(async (req: Request) => {
   // Build user-level updates.
   const userUpdates: Record<string, any> = {};
   let passwordWasChanged = false;
+  let newPasswordHash: string | null = null;
   if (body.email)                userUpdates.email = body.email.toLowerCase();
   if (body.firstName !== undefined)      userUpdates.first_name = body.firstName;
   if (body.lastName !== undefined)       userUpdates.last_name = body.lastName;
@@ -290,7 +292,13 @@ Deno.serve(async (req: Request) => {
   if (body.role !== undefined)           userUpdates.role = body.role;
   if (body.status !== undefined)         userUpdates.status = body.status;
   const proposedBranch = proposedStaffBranch !== undefined ? proposedStaffBranch : proposedStudentBranch;
-  if (proposedBranch !== undefined)      userUpdates.branch_id = proposedBranch;
+  if (proposedBranch !== undefined) {
+    const { error: branchMoveError } = await supabase.rpc("move_managed_user_branch_atomic", {
+      p_user_id: targetUserId,
+      p_branch_id: proposedBranch,
+    });
+    if (branchMoveError) return errorResponse(req, 409, "Failed to change branch safely", branchMoveError);
+  }
 
   if (body.newPassword) {
     if (body.newPassword.length < 8 || body.newPassword.length > 128) {
@@ -316,8 +324,7 @@ Deno.serve(async (req: Request) => {
     if (hashError || !hashData) {
       return errorResponse(req, 500, "Failed to set password", hashError);
     }
-    userUpdates.password_hash = hashData as string;
-    userUpdates.session_invalid_before = new Date().toISOString();
+    newPasswordHash = hashData as string;
     passwordWasChanged = true;
   }
 
@@ -327,18 +334,14 @@ Deno.serve(async (req: Request) => {
   }
 
   if (passwordWasChanged) {
-    const { error } = await supabase
-      .from("password_reset_requests")
-      .update({
-        status: "resolved",
-        resolved_by: callerUser.id,
-        resolved_at: new Date().toISOString(),
-        resolved_note: "Password changed by an administrator.",
-      })
-      .eq("user_id", targetUserId)
-      .eq("status", "pending");
+    const { error } = await supabase.rpc("set_user_password_atomic", {
+      p_user_id: targetUserId,
+      p_password_hash: newPasswordHash,
+      p_changed_by: callerUser.id,
+      p_note: "Password changed by an administrator.",
+    });
     if (error) {
-      return errorResponse(req, 500, "Password updated, but failed to close reset request", error);
+      return errorResponse(req, 500, "Failed to update password", error);
     }
   }
 
@@ -349,7 +352,6 @@ Deno.serve(async (req: Request) => {
     if (sf.position !== undefined)   u.position    = sf.position;
     if (sf.department !== undefined) u.department  = sf.department;
     if (sf.dateJoined !== undefined) u.date_joined = sf.dateJoined;
-    if ("branchId" in sf)            u.branch_id   = sf.branchId ?? null;
     if (sf.bio !== undefined)        u.bio         = sf.bio || null;
 
     if (Object.keys(u).length > 0) {
@@ -364,7 +366,6 @@ Deno.serve(async (req: Request) => {
     const u: Record<string, any> = {};
     if (sf.gradeLevel !== undefined)                  u.grade_level          = sf.gradeLevel;
     if (sf.enrollmentDate !== undefined)              u.enrollment_date      = sf.enrollmentDate;
-    if ("branchId" in sf)                             u.branch_id            = sf.branchId ?? null;
     if (sf.nationality !== undefined)                 u.nationality          = sf.nationality || null;
     if (sf.address !== undefined)                     u.address              = sf.address || null;
     if (sf.parentGuardianName !== undefined)          u.parent_guardian_name = sf.parentGuardianName || null;

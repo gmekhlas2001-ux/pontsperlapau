@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { logActivity } from '@/services/activityService';
 import { scopedBranchId } from '@/lib/scope';
 import { callEdgeFunction } from '@/lib/edge';
+import { fetchAllPages } from '@/lib/pagination';
 
 export interface BookRow {
   id: string;
@@ -102,19 +103,13 @@ export async function getBooks() {
   try {
     const branchId = scopedBranchId();
 
-    let query = supabase
-      .from('books')
-      .select('*')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
-
-    if (branchId) {
-      query = query.eq('branch_id', branchId);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return { success: true, data: data as BookRow[] };
+    const data = await fetchAllPages<BookRow>((from, to) => {
+      let query = supabase.from('books').select('*').is('deleted_at', null)
+        .order('created_at', { ascending: false }).range(from, to);
+      if (branchId) query = query.eq('branch_id', branchId);
+      return query as any;
+    });
+    return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch books' };
   }

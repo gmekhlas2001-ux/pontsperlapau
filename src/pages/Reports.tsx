@@ -115,12 +115,13 @@ export function Reports() {
     );
   });
 
-  const totalAmountFormatted = stats
-    ? stats.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : '0.00';
-  const completedAmountFormatted = stats
-    ? stats.totalAmountCompleted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : '0.00';
+  const formatBreakdown = (field: 'total' | 'completed', fallback: number) => {
+    const entries = Object.entries(stats?.totalsByCurrency ?? {});
+    if (entries.length === 0) return fallback.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return entries.map(([currency, amounts]) => `${currency} ${amounts[field].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`).join(' · ');
+  };
+  const totalAmountFormatted = formatBreakdown('total', stats?.totalAmount ?? 0);
+  const completedAmountFormatted = formatBreakdown('completed', stats?.totalAmountCompleted ?? 0);
 
   return (
     <div className="flex flex-col h-full">

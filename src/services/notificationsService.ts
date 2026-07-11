@@ -119,7 +119,7 @@ export async function fetchNotifications(): Promise<Notification[]> {
       let q = supabase
         .from('book_borrowings')
         .select('id, borrowed_date, due_date, book:books!inner(title, branch_id)')
-        .eq('is_overdue', true)
+        .lt('due_date', new Date().toISOString().slice(0, 10))
         .is('returned_date', null)
         .order('due_date', { ascending: true })
         .limit(5);

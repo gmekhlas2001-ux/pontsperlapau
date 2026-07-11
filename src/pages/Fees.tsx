@@ -96,6 +96,10 @@ function fmt(amount: number, currency = 'EUR') {
 
 function SummaryCards({ summary }: { summary: FeeSummary }) {
   const { t } = useTranslation();
+  const amount = (kind: 'total' | 'paid' | 'pending' | 'overdue', fallback: number) => {
+    const entries = Object.entries(summary.amountsByCurrency ?? {});
+    return entries.length > 0 ? entries.map(([currency, values]) => fmt(values[kind], currency)).join(' · ') : fmt(fallback);
+  };
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       <Card>
@@ -105,7 +109,7 @@ function SummaryCards({ summary }: { summary: FeeSummary }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{t('fees.summary.total')}</p>
-            <p className="text-lg font-bold">{fmt(summary.totalAmount)}</p>
+            <p className="text-lg font-bold">{amount('total', summary.totalAmount)}</p>
             <p className="text-xs text-muted-foreground">{summary.totalFees} {t('fees.summary.records')}</p>
           </div>
         </CardContent>
@@ -117,7 +121,7 @@ function SummaryCards({ summary }: { summary: FeeSummary }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{t('fees.summary.paid')}</p>
-            <p className="text-lg font-bold text-green-700">{fmt(summary.paidAmount)}</p>
+            <p className="text-lg font-bold text-green-700">{amount('paid', summary.paidAmount)}</p>
             <p className="text-xs text-muted-foreground">{summary.paidCount} {t('fees.summary.records')}</p>
           </div>
         </CardContent>
@@ -129,7 +133,7 @@ function SummaryCards({ summary }: { summary: FeeSummary }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{t('fees.summary.pending')}</p>
-            <p className="text-lg font-bold text-amber-700">{fmt(summary.pendingAmount)}</p>
+            <p className="text-lg font-bold text-amber-700">{amount('pending', summary.pendingAmount)}</p>
             <p className="text-xs text-muted-foreground">{summary.pendingCount} {t('fees.summary.records')}</p>
           </div>
         </CardContent>
@@ -141,7 +145,7 @@ function SummaryCards({ summary }: { summary: FeeSummary }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{t('fees.summary.overdue')}</p>
-            <p className="text-lg font-bold text-red-700">{fmt(summary.overdueAmount)}</p>
+            <p className="text-lg font-bold text-red-700">{amount('overdue', summary.overdueAmount)}</p>
             <p className="text-xs text-muted-foreground">{summary.overdueCount} {t('fees.summary.records')}</p>
           </div>
         </CardContent>

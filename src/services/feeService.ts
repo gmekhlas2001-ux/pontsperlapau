@@ -12,6 +12,7 @@
 import { supabase } from '@/lib/supabase';
 import { scopedBranchId } from '@/lib/scope';
 import { callEdgeFunction } from '@/lib/edge';
+import { fetchAllPages } from '@/lib/pagination';
 
 export type FeeStatus = 'pending' | 'paid' | 'overdue' | 'waived' | 'partial';
 export type FeePaymentMethod = 'cash' | 'bank_transfer' | 'card' | 'other';
@@ -45,6 +46,7 @@ export interface FeeSummary {
   overdueCount: number;
   pendingCount: number;
   paidCount: number;
+  amountsByCurrency?: Record<string, { total: number; paid: number; pending: number; overdue: number }>;
 }
 
 export interface CreateFeeData {
@@ -67,9 +69,8 @@ export async function getFees(filters?: {
   try {
     const branchId = scopedBranchId();
 
-    let q = supabase
-      .from('student_fees')
-      .select(`
+    const data = await fetchAllPages<any>((from, to) => {
+      let q = supabase.from('student_fees').select(`
         id, student_id, branch_id, class_id, description, amount, currency,
         due_date, paid_date, status, payment_method, notes, created_at,
         student:students!student_id(
@@ -77,17 +78,15 @@ export async function getFees(filters?: {
           user:users!user_id(first_name, last_name)
         ),
         class:classes!class_id(name)
-      `)
-      .order('due_date', { ascending: false });
+      `).order('due_date', { ascending: false }).range(from, to);
 
-    if (branchId) q = q.eq('branch_id', branchId);
-    if (filters?.status) q = q.eq('status', filters.status);
-    if (filters?.studentId) q = q.eq('student_id', filters.studentId);
+      if (branchId) q = q.eq('branch_id', branchId);
+      if (filters?.status) q = q.eq('status', filters.status);
+      if (filters?.studentId) q = q.eq('student_id', filters.studentId);
+      return q as any;
+    });
 
-    const { data, error } = await q;
-    if (error) throw error;
-
-    const rows: FeeRecord[] = ((data ?? []) as any[]).map((r) => ({
+    const rows: FeeRecord[] = data.map((r) => ({
       id: r.id,
       studentId: r.student_id,
       studentFirstName: r.student?.user?.first_name ?? '',
@@ -116,6 +115,14 @@ export async function getFees(filters?: {
       overdueCount: rows.filter((r) => r.status === 'overdue').length,
       pendingCount: rows.filter((r) => r.status === 'pending' || r.status === 'partial').length,
       paidCount: rows.filter((r) => r.status === 'paid').length,
+      amountsByCurrency: rows.reduce<Record<string, { total: number; paid: number; pending: number; overdue: number }>>((totals, fee) => {
+        totals[fee.currency] ??= { total: 0, paid: 0, pending: 0, overdue: 0 };
+        totals[fee.currency].total += fee.amount;
+        if (fee.status === 'paid') totals[fee.currency].paid += fee.amount;
+        if (fee.status === 'pending' || fee.status === 'partial') totals[fee.currency].pending += fee.amount;
+        if (fee.status === 'overdue') totals[fee.currency].overdue += fee.amount;
+        return totals;
+      }, {}),
     };
 
     return { success: true, data: rows, summary };

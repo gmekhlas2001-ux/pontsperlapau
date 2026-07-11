@@ -140,31 +140,14 @@ Deno.serve(async (req: Request) => {
     if (hashError || !hashData) {
       return errorResponse(req, 500, "Failed to hash password", hashError);
     }
-    const { error: pwErr } = await supabase
-      .from("users")
-      .update({
-        password_hash: hashData as string,
-        session_invalid_before: new Date().toISOString(),
-      })
-      .eq("id", reqRow.user_id);
-    if (pwErr) return errorResponse(req, 500, "Failed to update password", pwErr);
-
-    // Mark request resolved.
-    const { error: stErr } = await supabase
-      .from("password_reset_requests")
-      .update({
-        status: "resolved",
-        resolved_by: caller.id,
-        resolved_at: new Date().toISOString(),
-        resolved_note: note,
-      })
-      .eq("id", reqRow.id);
-    if (stErr) {
-      // The password was already changed at this point; we just couldn't
-      // mark the request as resolved. Surface the failure clearly.
-      console.error("[resolve-password-reset] status update failed:", stErr);
-      return errorResponse(req, 500, "Password updated, but failed to close request", stErr);
-    }
+    const { error: resolveError } = await supabase.rpc("resolve_password_reset_atomic", {
+      p_request_id: reqRow.id,
+      p_user_id: reqRow.user_id,
+      p_password_hash: hashData as string,
+      p_resolved_by: caller.id,
+      p_note: note,
+    });
+    if (resolveError) return errorResponse(req, 409, "Password reset request is no longer pending", resolveError);
 
     return jsonResponse(req, { success: true });
   } catch (err) {

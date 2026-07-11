@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { scopedBranchId } from '@/lib/scope';
 import { callEdgeFunction } from '@/lib/edge';
 import type { Transaction, CreateTransactionData, TransactionStats } from '@/types';
+import { fetchAllPages } from '@/lib/pagination';
 
 type ServiceResult<T> = { success: boolean; data?: T; error?: string };
 
@@ -25,26 +26,19 @@ export async function getTransactions(filters?: {
   try {
     const branchId = scopedBranchId();
 
-    let query = supabase
-      .from('transactions')
-      .select(TRANSACTION_SELECT)
-      .order('created_at', { ascending: false });
-
-    if (filters?.status) query = query.eq('status', filters.status);
-    if (filters?.transfer_method) query = query.eq('transfer_method', filters.transfer_method);
-    if (filters?.sender_branch_id) query = query.eq('sender_branch_id', filters.sender_branch_id);
-    if (filters?.receiver_branch_id) query = query.eq('receiver_branch_id', filters.receiver_branch_id);
-    if (filters?.from_date) query = query.gte('created_at', filters.from_date);
-    if (filters?.to_date) query = query.lte('created_at', filters.to_date);
-
-    // Branch-scoped users only see transactions touching their branch.
-    if (branchId) {
-      query = query.or(`sender_branch_id.eq.${branchId},receiver_branch_id.eq.${branchId}`);
-    }
-
-    const { data, error } = await query;
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: data as unknown as Transaction[] };
+    const data = await fetchAllPages<Transaction>((from, to) => {
+      let query = supabase.from('transactions').select(TRANSACTION_SELECT)
+        .order('created_at', { ascending: false }).range(from, to);
+      if (filters?.status) query = query.eq('status', filters.status);
+      if (filters?.transfer_method) query = query.eq('transfer_method', filters.transfer_method);
+      if (filters?.sender_branch_id) query = query.eq('sender_branch_id', filters.sender_branch_id);
+      if (filters?.receiver_branch_id) query = query.eq('receiver_branch_id', filters.receiver_branch_id);
+      if (filters?.from_date) query = query.gte('created_at', filters.from_date);
+      if (filters?.to_date) query = query.lte('created_at', filters.to_date);
+      if (branchId) query = query.or(`sender_branch_id.eq.${branchId},receiver_branch_id.eq.${branchId}`);
+      return query as any;
+    });
+    return { success: true, data };
   } catch {
     return { success: false, error: 'Failed to fetch transactions' };
   }
@@ -54,17 +48,11 @@ export async function getTransactionStats(): Promise<ServiceResult<TransactionSt
   try {
     const branchId = scopedBranchId();
 
-    let query = supabase
-      .from('transactions')
-      .select('status, amount');
-
-    if (branchId) {
-      query = query.or(`sender_branch_id.eq.${branchId},receiver_branch_id.eq.${branchId}`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) return { success: false, error: error.message };
+    const data = await fetchAllPages<{ status: string; amount: number; currency: string }>((from, to) => {
+      let query = supabase.from('transactions').select('status, amount, currency').range(from, to);
+      if (branchId) query = query.or(`sender_branch_id.eq.${branchId},receiver_branch_id.eq.${branchId}`);
+      return query as any;
+    });
 
     const stats: TransactionStats = {
       total: data.length,
@@ -76,6 +64,13 @@ export async function getTransactionStats(): Promise<ServiceResult<TransactionSt
       totalAmountCompleted: data
         .filter((t) => t.status === 'completed')
         .reduce((s, t) => s + Number(t.amount), 0),
+      totalsByCurrency: data.reduce<Record<string, { total: number; completed: number }>>((totals, transaction: any) => {
+        const currency = transaction.currency ?? 'UNKNOWN';
+        totals[currency] ??= { total: 0, completed: 0 };
+        totals[currency].total += Number(transaction.amount);
+        if (transaction.status === 'completed') totals[currency].completed += Number(transaction.amount);
+        return totals;
+      }, {}),
     };
 
     return { success: true, data: stats };

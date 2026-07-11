@@ -177,6 +177,7 @@ export interface TransactionStats {
   failed: number;
   totalAmount: number;
   totalAmountCompleted: number;
+  totalsByCurrency?: Record<string, { total: number; completed: number }>;
 }
 
 export interface Notification {

@@ -12,6 +12,7 @@ import "jsr:@supabase/functions-js@2.110.0/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.110.0";
 import { authenticateRequest } from "../_shared/auth.ts";
 import { corsHeadersFor, errorResponse } from "../_shared/cors.ts";
+import { validateDataReadSelect } from "../_shared/data-read-policy.ts";
 
 const NO_MATCH = "00000000-0000-0000-0000-000000000000";
 const STAFF_ROLES = ["superadmin", "admin", "teacher", "librarian"];
@@ -31,6 +32,7 @@ const ALLOWED_TABLES = new Set([
   "grant_transactions",
   "grants",
   "messages",
+  "message_read_receipts",
   "organization_settings",
   "password_reset_requests",
   "roles",
@@ -297,6 +299,12 @@ async function applyScope(
     return true;
   }
 
+  if (table === "message_read_receipts") {
+    if (!hasRole(caller, STAFF_ROLES)) return false;
+    appendEq(params, "user_id", caller.id);
+    return true;
+  }
+
   if (table === "transactions") {
     if (!hasRole(caller, ADMIN_ROLES)) return false;
     if (!isGlobal) {
@@ -431,16 +439,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const select = target.searchParams.get("select") ?? "";
-    const lowerSelect = select.toLowerCase();
-    if (lowerSelect.includes("password_hash") || lowerSelect.includes("session_token") || lowerSelect.includes("two_factor_secret")) {
-      return errorResponse(req, 403, "Sensitive fields are strictly prohibited from being read");
-    }
-    if (table === "users" && (!select || select.includes("*"))) {
-      return errorResponse(req, 403, "Explicit safe user fields are required");
-    }
-    if (/users[^,(]*\([^)]*\*/i.test(select)) {
-      return errorResponse(req, 403, "Wildcard user relations are not readable");
-    }
+    const projectionError = validateDataReadSelect(table, select, caller);
+    if (projectionError) return errorResponse(req, 403, projectionError);
     if (caller.role !== "superadmin" && /\buser_documents\b/i.test(select)) {
       return errorResponse(req, 403, "Document metadata is outside your scope");
     }

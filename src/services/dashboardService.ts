@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { getCurrentScope, scopedBranchId } from '@/lib/scope';
+import { fetchAllPages } from '@/lib/pagination';
 
 export interface DashboardStats {
   totalStaff: number;
@@ -21,8 +22,10 @@ export interface DashboardStats {
   // Finance
   outstandingFeesCount: number;
   outstandingFeesAmount: number;
+  outstandingFeesByCurrency?: Record<string, number>;
   activeGrantsCount: number;
   activeGrantsAmount: number;
+  activeGrantsByCurrency?: Record<string, number>;
   // Comms
   unreadMessagesCount: number;
 }
@@ -42,12 +45,16 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const staffQ = supabase.from('staff').select('id, branch_id, user:users!inner(status)').is('deleted_at', null);
   const studentQ = supabase.from('students').select('id, branch_id, user:users!inner(status)').is('deleted_at', null);
   const classQ = supabase.from('classes').select('id', { count: 'exact', head: true });
-  const bookQ = supabase.from('books').select('id, branch_id, total_copies, available_copies');
+  const booksPromise = fetchAllPages<{ id: string; branch_id: string; total_copies: number; available_copies: number }>((from, to) => {
+    let query = supabase.from('books').select('id, branch_id, total_copies, available_copies').range(from, to);
+    if (branchId) query = query.eq('branch_id', branchId);
+    return query as any;
+  });
   const branchQ = supabase.from('branches').select('id', { count: 'exact', head: true });
   const overdueQ = supabase
     .from('book_borrowings')
     .select('id, book:books!inner(branch_id)', { count: 'exact', head: true })
-    .eq('is_overdue', true)
+    .lt('due_date', new Date().toISOString().slice(0, 10))
     .is('returned_date', null);
   // Academic health: pull attendance_percentage + grade from active enrollments
   const enrollQ = supabase
@@ -57,28 +64,28 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
 
   const feesQ = supabase
     .from('student_fees')
-    .select('amount, branch_id')
+    .select('amount, currency, branch_id')
     .in('status', ['pending', 'overdue', 'partial']);
 
   const grantsQ = supabase
     .from('grants')
-    .select('amount, branch_id')
+    .select('amount, currency, branch_id')
     .eq('status', 'active');
 
   const currentUserId = getCurrentScope().userId;
   const msgQ = currentUserId
     ? (() => {
-        let q = supabase.from('messages').select('id', { count: 'exact', head: true }).is('read_at', null).is('parent_id', null).or(`recipient_id.eq.${currentUserId},recipient_id.is.null`);
+        let q = supabase.from('messages').select('id, recipient_id, read_at').is('parent_id', null).or(`recipient_id.eq.${currentUserId},recipient_id.is.null`);
         if (branchId) q = q.or(`branch_id.eq.${branchId},branch_id.is.null`);
         return q;
       })()
-    : Promise.resolve({ count: 0 });
+    : Promise.resolve({ data: [] });
 
   const [staffResult, studentsResult, classesResult, booksResult, branchesResult, overdueResult, enrollResult, feesResult, grantsResult, msgResult] = await Promise.all([
     branchId ? staffQ.eq('branch_id', branchId) : staffQ,
     branchId ? studentQ.eq('branch_id', branchId) : studentQ,
     branchId ? classQ.eq('branch_id', branchId) : classQ,
-    branchId ? bookQ.eq('branch_id', branchId) : bookQ,
+    booksPromise,
     branchId ? branchQ.eq('id', branchId) : branchQ,
     branchId ? overdueQ.eq('book.branch_id', branchId) : overdueQ,
     enrollQ,
@@ -93,7 +100,7 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const studentRows = (studentsResult.data ?? []) as unknown as Array<{ user: { status: string } | null }>;
   const activeStudents = studentRows.filter((s) => s.user?.status === 'active').length;
 
-  const books = (booksResult.data ?? []) as Array<{ total_copies: number; available_copies: number }>;
+  const books = booksResult as Array<{ total_copies: number; available_copies: number }>;
   const totalBooks = books.reduce((sum, b) => sum + (b.total_copies ?? 0), 0);
   const availableBooks = books.reduce((sum, b) => sum + (b.available_copies ?? 0), 0);
   const borrowedBooks = totalBooks - availableBooks;
@@ -107,11 +114,34 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const failingStudentsCount = enrollRows.filter((e) => e.grade === 'F').length;
   const gradedEnrollments = enrollRows.filter((e) => e.grade !== null && e.grade !== '').length;
 
-  const feeRows = (feesResult.data ?? []) as Array<{ amount: string; branch_id: string }>;
+  const feeRows = (feesResult.data ?? []) as Array<{ amount: string; currency: string; branch_id: string }>;
   const outstandingFeesAmount = feeRows.reduce((s, f) => s + parseFloat(f.amount), 0);
+  const outstandingFeesByCurrency = feeRows.reduce<Record<string, number>>((totals, fee) => {
+    totals[fee.currency] = (totals[fee.currency] ?? 0) + parseFloat(fee.amount);
+    return totals;
+  }, {});
 
-  const grantRows = (grantsResult.data ?? []) as Array<{ amount: string; branch_id: string }>;
+  const grantRows = (grantsResult.data ?? []) as Array<{ amount: string; currency: string; branch_id: string }>;
   const activeGrantsAmount = grantRows.reduce((s, g) => s + parseFloat(g.amount), 0);
+  const activeGrantsByCurrency = grantRows.reduce<Record<string, number>>((totals, grant) => {
+    totals[grant.currency] = (totals[grant.currency] ?? 0) + parseFloat(grant.amount);
+    return totals;
+  }, {});
+
+  const messageRows = ((msgResult as any).data ?? []) as Array<{ id: string; recipient_id: string | null; read_at: string | null }>;
+  const broadcastIds = messageRows.filter((message) => message.recipient_id === null).map((message) => message.id);
+  let readBroadcastIds = new Set<string>();
+  if (currentUserId && broadcastIds.length > 0) {
+    const { data: receipts } = await supabase
+      .from('message_read_receipts')
+      .select('message_id')
+      .eq('user_id', currentUserId)
+      .in('message_id', broadcastIds);
+    readBroadcastIds = new Set((receipts ?? []).map((receipt: any) => receipt.message_id));
+  }
+  const unreadMessagesCount = messageRows.filter((message) => message.recipient_id !== null
+    ? message.read_at === null
+    : !readBroadcastIds.has(message.id)).length;
 
   return {
     totalStaff: staffRows.length,
@@ -131,9 +161,11 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     gradedEnrollments,
     outstandingFeesCount: feeRows.length,
     outstandingFeesAmount,
+    outstandingFeesByCurrency,
     activeGrantsCount: grantRows.length,
     activeGrantsAmount,
-    unreadMessagesCount: (msgResult as any).count ?? 0,
+    activeGrantsByCurrency,
+    unreadMessagesCount,
   };
 }
 

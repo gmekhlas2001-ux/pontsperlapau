@@ -85,6 +85,12 @@ export function Dashboard() {
   };
   const formatNumber = (value: number) => new Intl.NumberFormat(i18n.language).format(value);
   const formatCurrency = (value: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(value);
+  const formatCurrencyTotals = (totals: Record<string, number> | undefined, fallback: number) => {
+    const entries = Object.entries(totals ?? {});
+    return entries.length > 0
+      ? entries.map(([currency, value]) => new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value)).join(' · ')
+      : formatCurrency(fallback);
+  };
   const actionButtonClass = 'h-11 justify-start border-border/70 bg-card/70 hover:border-primary/30 hover:bg-primary/5';
   const compactActionButtonClass = 'justify-start border-border/70 bg-card/70 hover:border-primary/30 hover:bg-primary/5';
   const todayLabel = new Intl.DateTimeFormat(i18n.language, {
@@ -223,7 +229,7 @@ export function Dashboard() {
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-orange-800 dark:text-orange-300 text-sm">
-                  {formatCurrency(stats.outstandingFeesAmount)} outstanding
+                  {formatCurrencyTotals(stats.outstandingFeesByCurrency, stats.outstandingFeesAmount)} outstanding
                 </p>
                 <p className="text-xs text-orange-600 dark:text-orange-500 mt-0.5">{formatNumber(stats.outstandingFeesCount)} unpaid fee{stats.outstandingFeesCount !== 1 ? 's' : ''}</p>
               </div>
@@ -239,7 +245,7 @@ export function Dashboard() {
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-teal-800 dark:text-teal-300 text-sm">
-                  {formatCurrency(stats.activeGrantsAmount)} in grants
+                  {formatCurrencyTotals(stats.activeGrantsByCurrency, stats.activeGrantsAmount)} in grants
                 </p>
                 <p className="text-xs text-teal-600 dark:text-teal-500 mt-0.5">{formatNumber(stats.activeGrantsCount)} active grant{stats.activeGrantsCount !== 1 ? 's' : ''}</p>
               </div>

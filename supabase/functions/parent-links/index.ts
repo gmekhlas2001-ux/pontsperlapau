@@ -289,8 +289,9 @@ Deno.serve(async (req: Request) => {
         const student = link.student as StudentRow | null;
         const myEnrollments = enrollments.filter((e: any) => e.student_id === sid);
         const myFees = pendingFees.filter((f: any) => f.student_id === sid);
+        const gradePoints: Record<string, number> = { A: 95, B: 85, C: 75, D: 65, F: 50 };
         const grades = myEnrollments
-          .map((e: any) => Number.parseFloat(e.grade))
+          .map((e: any) => gradePoints[String(e.grade ?? '').trim().toUpperCase()] ?? Number.parseFloat(e.grade))
           .filter((g: number) => !Number.isNaN(g));
         const attendance = myEnrollments
           .map((e: any) => Number.parseFloat(e.attendance_percentage))

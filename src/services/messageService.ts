@@ -59,7 +59,24 @@ export async function getInbox(
     const { data, error } = await q;
     if (error) throw error;
 
-    return { success: true, data: mapMessages(data ?? []) };
+    const rows = data ?? [];
+    const broadcastIds = rows.filter((row: any) => row.recipient_id === null).map((row: any) => row.id);
+    let readBroadcastIds = new Set<string>();
+    if (broadcastIds.length > 0) {
+      const { data: receipts, error: receiptError } = await supabase
+        .from('message_read_receipts')
+        .select('message_id')
+        .eq('user_id', userId)
+        .in('message_id', broadcastIds);
+      if (receiptError) throw receiptError;
+      readBroadcastIds = new Set((receipts ?? []).map((receipt: any) => receipt.message_id));
+    }
+    return {
+      success: true,
+      data: mapMessages(rows).map((message) => message.recipientId === null && readBroadcastIds.has(message.id)
+        ? { ...message, readAt: message.readAt ?? new Date(0).toISOString() }
+        : message),
+    };
   } catch (err: any) {
     return { success: false, error: err.message ?? 'Failed to load inbox' };
   }
@@ -162,13 +179,26 @@ export async function getUnreadCount(
     const branchId = scopedBranchId();
     let q = supabase
       .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .is('read_at', null)
+      .select('id, recipient_id, read_at')
       .or(`recipient_id.eq.${userId},recipient_id.is.null`);
 
     if (branchId) q = q.or(`branch_id.eq.${branchId},branch_id.is.null`);
-    const { count } = await q;
-    return count ?? 0;
+    const { data, error } = await q;
+    if (error) throw error;
+    const rows = data ?? [];
+    const broadcastIds = rows.filter((row: any) => row.recipient_id === null).map((row: any) => row.id);
+    let readBroadcastIds = new Set<string>();
+    if (broadcastIds.length > 0) {
+      const { data: receipts } = await supabase
+        .from('message_read_receipts')
+        .select('message_id')
+        .eq('user_id', userId)
+        .in('message_id', broadcastIds);
+      readBroadcastIds = new Set((receipts ?? []).map((receipt: any) => receipt.message_id));
+    }
+    return rows.filter((row: any) => row.recipient_id !== null
+      ? row.read_at === null
+      : !readBroadcastIds.has(row.id)).length;
   } catch {
     return 0;
   }

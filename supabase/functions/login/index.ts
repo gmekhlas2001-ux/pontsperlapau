@@ -83,23 +83,16 @@ Deno.serve(async (req: Request) => {
   // RATE_WINDOW_MIN minutes and only count failed attempts.
   const since = new Date(Date.now() - RATE_WINDOW_MIN * 60_000).toISOString();
 
-  const [emailFails, ipFails] = await Promise.all([
-    supabase.from("login_attempts").select("id", { count: "exact", head: true })
-      .eq("email", email).eq("success", false).gte("created_at", since),
-    supabase.from("login_attempts").select("id", { count: "exact", head: true })
-      .eq("ip", ip).eq("success", false).gte("created_at", since),
-  ]);
+  const { data: attemptId, error: reserveError } = await supabase.rpc("reserve_login_attempt", {
+    p_email: email,
+    p_ip: ip,
+    p_since: since,
+    p_email_limit: MAX_FAILS_PER_EMAIL,
+    p_ip_limit: MAX_FAILS_PER_IP,
+  });
+  if (reserveError) return errorResponse(req, 503, "Login is temporarily unavailable", reserveError);
 
-  // Fail-open: if the rate-limit query itself fails (e.g. Supabase outage),
-  // log the error but allow the login attempt to proceed. Blocking all users
-  // from logging in during infrastructure issues is worse than temporarily
-  // losing rate-limit protection.
-  if (emailFails.error || ipFails.error) {
-    console.error("[login] rate-limit check failed (proceeding without rate limit):", emailFails.error ?? ipFails.error);
-  }
-
-  if ((emailFails.count ?? 0) >= MAX_FAILS_PER_EMAIL ||
-      (ipFails.count   ?? 0) >= MAX_FAILS_PER_IP) {
+  if (!attemptId) {
     // Constant-time-ish: still wait a bit before responding.
     await new Promise((r) => setTimeout(r, 750));
     const retryAfterSeconds = RATE_WINDOW_MIN * 60;
@@ -147,18 +140,14 @@ Deno.serve(async (req: Request) => {
     } catch { /* expected — no such user */ }
   }
 
-  // ── Audit + record attempt ───────────────────────────────────────
-  try {
-    const { error: insErr } = await supabase.from("login_attempts").insert({
-      email,
-      ip,
-      // A correct password is not a failed attempt even when this particular
-      // portal does not authorize the user's role.
-      success: passwordValid,
-    });
-    if (insErr) console.error("login_attempts insert failed:", insErr);
-  } catch (err) {
-    console.error("login_attempts insert threw:", err);
+  // The reservation is pessimistically a failure; a correct password clears
+  // it from the failure window even if this portal later rejects the role.
+  if (passwordValid) {
+    const { error: attemptError } = await supabase
+      .from("login_attempts")
+      .update({ success: true })
+      .eq("id", attemptId);
+    if (attemptError) console.error("login_attempts update failed:", attemptError);
   }
 
   if (!passwordValid || !user) {

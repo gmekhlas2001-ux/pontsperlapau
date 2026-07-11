@@ -294,6 +294,8 @@ export async function getSurveyFull(surveyId: string): Promise<{ success: boolea
     getAllSurveyRows<SurveyRespondent>('survey_respondents', surveyId),
   ]);
   if (surveyRes.error) return { success: false, error: surveyRes.error.message };
+  const structureError = sectionsRes.error ?? questionsRes.error ?? optionsRes.error;
+  if (structureError) return { success: false, error: structureError.message };
   const respondentTableUnavailable =
     respondentsRes.error &&
     ['42P01', 'PGRST106', 'PGRST202', 'PGRST205'].includes(respondentsRes.error.code ?? '');
@@ -362,7 +364,9 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
         const counts = questionOptions.map((opt) => {
           const r = qResponses.find((r) => r.option_id === opt.id);
           const individualCount = qIndividualResponses.filter((answer) => answer.option_id === opt.id).length;
-          return { optionId: opt.id, label: opt.label, sentiment: opt.sentiment, count: (r?.count ?? 0) + individualCount };
+          // Aggregate entry already represents the branch total. Individual
+          // rows add detail for the same people, not a second population.
+          return { optionId: opt.id, label: opt.label, sentiment: opt.sentiment, count: r ? r.count : individualCount };
         });
         const total = counts.reduce((s, c) => s + c.count, 0);
         const positiveCount = counts.filter((c) => c.sentiment === 'positive').reduce((s, c) => s + c.count, 0);

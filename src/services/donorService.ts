@@ -92,12 +92,13 @@ export interface CreateTxData {
 
 export async function getDonors(): Promise<{ success: boolean; data?: Donor[]; error?: string }> {
   try {
-    const { data, error } = await supabase
-      .from('donors')
-      .select(`*, grants(id, amount)`)
-      .order('name');
+    const [{ data, error }, { data: grants, error: grantsError }] = await Promise.all([
+      supabase.from('donors').select('*').order('name'),
+      supabase.from('grants').select('donor_id, amount'),
+    ]);
 
     if (error) throw error;
+    if (grantsError) throw grantsError;
 
     const donors: Donor[] = ((data ?? []) as any[]).map((d) => ({
       id: d.id,
@@ -108,8 +109,9 @@ export async function getDonors(): Promise<{ success: boolean; data?: Donor[]; e
       country: d.country ?? null,
       notes: d.notes ?? null,
       createdAt: d.created_at,
-      grantCount: d.grants?.length ?? 0,
-      totalGranted: (d.grants ?? []).reduce((s: number, g: any) => s + parseFloat(g.amount), 0),
+      grantCount: (grants ?? []).filter((grant) => grant.donor_id === d.id).length,
+      totalGranted: (grants ?? []).filter((grant) => grant.donor_id === d.id)
+        .reduce((sum, grant) => sum + parseFloat(grant.amount), 0),
     }));
 
     return { success: true, data: donors };

@@ -58,42 +58,16 @@ Deno.serve(async (req: Request) => {
 
     const since = new Date(Date.now() - RATE_WINDOW_MIN * 60_000).toISOString();
 
-    const [emailCt, ipCt] = await Promise.all([
-      supabase.from("password_reset_requests").select("id", { count: "exact", head: true })
-        .eq("email_tried", email).gte("created_at", since),
-      supabase.from("password_reset_requests").select("id", { count: "exact", head: true })
-        .eq("ip", ip).gte("created_at", since),
-    ]);
-
-    if (emailCt.error || ipCt.error) {
-      return errorResponse(req, 503, "Password reset is temporarily unavailable", emailCt.error ?? ipCt.error);
-    }
-
-    if ((emailCt.count ?? 0) >= MAX_REQUESTS_PER_EMAIL ||
-        (ipCt.count   ?? 0) >= MAX_REQUESTS_PER_IP) {
-      // Same success shape — don't leak rate limit either.
-      return jsonResponse(req, { success: true });
-    }
-
-    // Look up user — but never reveal whether it exists.
-    const { data: user } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .eq("status", "active")
-      .maybeSingle();
-
-    try {
-      const { error: insErr } = await supabase.from("password_reset_requests").insert({
-        user_id: user?.id ?? null,
-        email_tried: email,
-        reason,
-        ip,
-        status: "pending",
-      });
-      if (insErr) console.error("[reset-request] insert failed:", insErr);
-    } catch (err) {
-      console.error("[reset-request] insert threw:", err);
+    const { error: requestError } = await supabase.rpc("create_password_reset_if_allowed", {
+      p_email: email,
+      p_ip: ip,
+      p_reason: reason,
+      p_since: since,
+      p_email_limit: MAX_REQUESTS_PER_EMAIL,
+      p_ip_limit: MAX_REQUESTS_PER_IP,
+    });
+    if (requestError) {
+      return errorResponse(req, 503, "Password reset is temporarily unavailable", requestError);
     }
 
     // Always success-shaped to prevent account enumeration.
