@@ -252,26 +252,29 @@ export async function getSurveyListStats(
 
   if (surveyIds.length === 0) return { success: true, data: stats };
 
-  // Keep `in` filters small enough for predictable URL lengths, and paginate
-  // each chunk in case a future survey is shared across many branches.
+  // The view counts unique named respondents inside Postgres, avoiding both
+  // the Data API's 1,000-row page limit and transferring every answer row to
+  // the browser. Its effective total matches the Results view without
+  // rewriting a submission's stored aggregate total.
   const surveyIdChunkSize = 100;
   for (let chunkStart = 0; chunkStart < surveyIds.length; chunkStart += surveyIdChunkSize) {
     const surveyIdChunk = surveyIds.slice(chunkStart, chunkStart + surveyIdChunkSize);
 
     for (let from = 0; ; from += SURVEY_DATA_PAGE_SIZE) {
       const { data, error } = await supabase
-        .from('survey_branch_submissions')
-        .select('id, survey_id, total_respondents')
+        .from('survey_list_stats')
+        .select('survey_id, effective_total_respondents')
         .in('survey_id', surveyIdChunk)
-        .order('id', { ascending: true })
+        .order('survey_id', { ascending: true })
+        .order('branch_id', { ascending: true })
         .range(from, from + SURVEY_DATA_PAGE_SIZE - 1);
       if (error) return { success: false, error: error.message };
 
-      const page = (data ?? []) as Pick<SurveyBranchSubmission, 'id' | 'survey_id' | 'total_respondents'>[];
-      page.forEach((submission) => {
-        const current = stats[submission.survey_id];
+      const page = (data ?? []) as { survey_id: string; effective_total_respondents: number }[];
+      page.forEach((row) => {
+        const current = stats[row.survey_id];
         if (!current) return;
-        current.totalRespondents += submission.total_respondents;
+        current.totalRespondents += row.effective_total_respondents;
         current.submittedBranches += 1;
       });
 
@@ -433,8 +436,16 @@ export async function getBranchSubmission(surveyId: string, branchId: string) {
     getAllSurveyRows<SurveyBranchResponse>('survey_branch_responses', surveyId, branchId),
     getAllSurveyRows<SurveyIndividualResponse>('survey_individual_responses', surveyId, branchId),
   ]);
+  const submission = submissionRes.data as SurveyBranchSubmission | null;
+  const individualRespondentCount = new Set(
+    individualResponsesRes.data.map((row) => `${row.respondent_type}:${row.respondent_id}`),
+  ).size;
   return {
-    submission: submissionRes.data as SurveyBranchSubmission | null,
+    // Present the same effective total as Results without altering the stored
+    // aggregate submission row.
+    submission: submission
+      ? { ...submission, total_respondents: Math.max(submission.total_respondents, individualRespondentCount) }
+      : null,
     responses: responsesRes.data,
     individualResponses: individualResponsesRes.data,
     error: submissionRes.error?.message ?? responsesRes.error?.message ?? individualResponsesRes.error?.message,

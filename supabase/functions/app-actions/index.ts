@@ -1613,12 +1613,16 @@ Deno.serve(async (req: Request) => {
           if (error) return errorResponse(req, 500, "Failed to save individual survey responses", error);
         }
 
-        const { data: allIndividual } = await supabase
-          .from("survey_individual_responses")
-          .select("respondent_type, respondent_id")
+        const { data: individualStats, error: individualStatsErr } = await supabase
+          .from("survey_list_stats")
+          .select("unique_answered_respondents")
           .eq("survey_id", surveyId)
-          .eq("branch_id", branchId);
-        const individualTotal = new Set((allIndividual ?? []).map((row: any) => `${row.respondent_type}:${row.respondent_id}`)).size;
+          .eq("branch_id", branchId)
+          .maybeSingle();
+        if (individualStatsErr) {
+          return errorResponse(req, 500, "Failed to count individual survey respondents", individualStatsErr);
+        }
+        const individualTotal = Number(individualStats?.unique_answered_respondents ?? 0);
         const { data: existingSubmission } = await supabase
           .from("survey_branch_submissions")
           .select("total_respondents")
@@ -1647,17 +1651,16 @@ Deno.serve(async (req: Request) => {
       // Aggregate totals and named responses can be entered independently. Do
       // not let a later aggregate save make the card under-report people who
       // already have individual answers recorded for this branch.
-      const { data: individualRespondents, error: individualRespondentsErr } = await supabase
-        .from("survey_individual_responses")
-        .select("respondent_type, respondent_id")
+      const { data: individualStats, error: individualStatsErr } = await supabase
+        .from("survey_list_stats")
+        .select("unique_answered_respondents")
         .eq("survey_id", surveyId)
-        .eq("branch_id", branchId);
-      if (individualRespondentsErr) {
-        return errorResponse(req, 500, "Failed to count individual survey respondents", individualRespondentsErr);
+        .eq("branch_id", branchId)
+        .maybeSingle();
+      if (individualStatsErr) {
+        return errorResponse(req, 500, "Failed to count individual survey respondents", individualStatsErr);
       }
-      const individualRespondentTotal = new Set(
-        (individualRespondents ?? []).map((row: any) => `${row.respondent_type}:${row.respondent_id}`),
-      ).size;
+      const individualRespondentTotal = Number(individualStats?.unique_answered_respondents ?? 0);
       const effectiveTotalRespondents = Math.max(totalRespondents, individualRespondentTotal);
 
       const { error: subErr } = await supabase.from("survey_branch_submissions").upsert(

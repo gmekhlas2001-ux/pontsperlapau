@@ -40,6 +40,7 @@ const ALLOWED_TABLES = new Set([
   "survey_branch_responses",
   "survey_branch_submissions",
   "survey_individual_responses",
+  "survey_list_stats",
   "survey_questions",
   "survey_respondents",
   "survey_response_options",
@@ -345,6 +346,7 @@ async function applyScope(
     "survey_branch_responses",
     "survey_branch_submissions",
     "survey_individual_responses",
+    "survey_list_stats",
     "survey_respondents",
   ].includes(table)) {
     if (!hasRole(caller, ADMIN_ROLES)) return false;
