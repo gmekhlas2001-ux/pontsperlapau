@@ -557,6 +557,28 @@ export async function addSurveyRespondent(
   return { success: true, respondent: res.data?.respondent };
 }
 
+/** Updates the name/details of a manually-entered survey respondent. */
+export async function updateSurveyRespondent(
+  surveyId: string,
+  branchId: string,
+  respondentRowId: string,
+  name: string,
+  detail?: string,
+): Promise<{ success: boolean; respondent?: SurveyRespondent; error?: string }> {
+  const res = await callEdgeFunction<{ success: boolean; respondent: SurveyRespondent }>('app-actions', {
+    operation: 'update-survey-respondent',
+    surveyId,
+    branchId,
+    respondentRowId,
+    name,
+    detail,
+  });
+  if (!res.ok) return { success: false, error: res.error || 'Failed to update respondent' };
+
+  logActivity({ action_type: 'UPDATE', table_name: 'survey_respondents', description: `Updated survey respondent: ${name}` });
+  return { success: true, respondent: res.data?.respondent };
+}
+
 /** Deletes a manually-entered respondent and their individual survey answers. */
 export async function deleteSurveyRespondent(
   surveyId: string,

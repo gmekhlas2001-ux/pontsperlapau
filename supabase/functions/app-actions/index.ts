@@ -1096,6 +1096,7 @@ Deno.serve(async (req: Request) => {
       op === "save-branch-survey-data" ||
       op === "save-individual-survey-responses" ||
       op === "add-survey-respondent" ||
+      op === "update-survey-respondent" ||
       op === "delete-survey-respondent"
     ) {
       const roleError = assertRoles(req, caller, ADMIN_ROLES);
@@ -1481,6 +1482,38 @@ Deno.serve(async (req: Request) => {
         if (error) return errorResponse(req, 500, "Failed to delete respondent", error);
 
         return jsonResponse(req, { success: true });
+      }
+
+      if (op === "update-survey-respondent") {
+        const respondentRowId = cleanString(body.respondentRowId);
+        const name = cleanString(body.name);
+        const detail = cleanString(body.detail);
+        if (!respondentRowId || !name) {
+          return errorResponse(req, 400, "A respondent name is required");
+        }
+
+        const { data: respondent, error: respondentError } = await supabase
+          .from("survey_respondents")
+          .select("id, respondent_type")
+          .eq("id", respondentRowId)
+          .eq("survey_id", surveyId)
+          .eq("branch_id", branchId)
+          .maybeSingle();
+        if (respondentError) return errorResponse(req, 500, "Failed to verify respondent", respondentError);
+        if (!respondent) return errorResponse(req, 404, "Respondent not found");
+        if (respondent.respondent_type !== "manual") {
+          return errorResponse(req, 403, "Only manually added respondents can be edited here");
+        }
+
+        const { data: updated, error } = await supabase
+          .from("survey_respondents")
+          .update({ respondent_name: name, respondent_detail: detail })
+          .eq("id", respondent.id)
+          .select()
+          .single();
+        if (error || !updated) return errorResponse(req, 400, "Failed to update respondent", error);
+
+        return jsonResponse(req, { success: true, respondent: updated });
       }
 
       if (op === "save-individual-survey-responses") {

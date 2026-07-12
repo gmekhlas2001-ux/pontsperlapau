@@ -25,7 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -50,7 +50,7 @@ import {
 import {
   getSurveys, getSurveyListStats, getSurveyFull, getSurveyResults, getBranchSubmission,
   createSurvey, updateSurveyMeta, updateSurveyStructure, deleteSurvey, saveBranchData, saveIndividualResponses, getSurveyRespondentOptions,
-  addSurveyRespondent, deleteSurveyRespondent, optionsForQuestion,
+  addSurveyRespondent, updateSurveyRespondent, deleteSurveyRespondent, optionsForQuestion,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
   type SurveyRespondentType, type SurveyRespondentKind, type SurveyQuestionType,
   type SurveyRespondent, type SurveyIndividualResponse, type SurveyLanguage,
@@ -1548,6 +1548,10 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   const [respondentSearch, setRespondentSearch] = useState('');
   const [respondentToDelete, setRespondentToDelete] = useState<SurveyRespondent | null>(null);
   const [deletingRespondent, setDeletingRespondent] = useState(false);
+  const [respondentToEdit, setRespondentToEdit] = useState<SurveyRespondent | null>(null);
+  const [editedRespondentName, setEditedRespondentName] = useState('');
+  const [editedRespondentDetail, setEditedRespondentDetail] = useState('');
+  const [updatingRespondent, setUpdatingRespondent] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -1565,6 +1569,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     setManualDetails('');
     setRespondentSearch('');
     setRespondentToDelete(null);
+    setRespondentToEdit(null);
     setEntryMode('individual');
   }, [open, defaultBranchId, branches, survey.respondents]);
 
@@ -1715,6 +1720,40 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
       toast.success('Person deleted');
     } finally {
       setDeletingRespondent(false);
+    }
+  };
+
+  const openRespondentEdit = (respondent: SurveyRespondent) => {
+    setRespondentToEdit(respondent);
+    setEditedRespondentName(respondent.respondent_name);
+    setEditedRespondentDetail(respondent.respondent_detail ?? '');
+  };
+
+  const handleUpdateRespondent = async () => {
+    if (!respondentToEdit || respondentToEdit.respondent_type !== 'manual') return;
+    const name = editedRespondentName.trim();
+    if (!name) { toast.error('Enter a name'); return; }
+    setUpdatingRespondent(true);
+    try {
+      const res = await updateSurveyRespondent(
+        survey.id,
+        respondentToEdit.branch_id,
+        respondentToEdit.id,
+        name,
+        editedRespondentDetail.trim() || undefined,
+      );
+      if (!res.success || !res.respondent) { toast.error(res.error ?? 'Failed to update person'); return; }
+      const updated = res.respondent;
+      setRespondents((current) => current.map((respondent) => respondent.id === updated.id ? updated : respondent));
+      setIndividualResponses((current) => current.map((response) => (
+        response.respondent_type === updated.respondent_type && response.respondent_id === updated.respondent_id
+          ? { ...response, respondent_name: updated.respondent_name }
+          : response
+      )));
+      setRespondentToEdit(null);
+      toast.success('Person updated');
+    } finally {
+      setUpdatingRespondent(false);
     }
   };
 
@@ -1991,22 +2030,34 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                           </span>
                         </button>
                         {respondent.respondent_type === 'manual' && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="mr-1 h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => setRespondentToDelete(respondent)}
-                            aria-label={`Delete ${respondent.respondent_name}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="mr-1 flex shrink-0">
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => openRespondentEdit(respondent)} aria-label={`Edit ${respondent.respondent_name}`}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setRespondentToDelete(respondent)} aria-label={`Delete ${respondent.respondent_name}`}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     );
                   })}
                 </div>
               </aside>
+
+              <Dialog open={!!respondentToEdit} onOpenChange={(value) => { if (!value && !updatingRespondent) setRespondentToEdit(null); }}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader><DialogTitle>Edit person</DialogTitle></DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2"><Label>Name</Label><Input value={editedRespondentName} onChange={(event) => setEditedRespondentName(event.target.value)} autoFocus /></div>
+                    <div className="space-y-2"><Label>Province / details</Label><Input value={editedRespondentDetail} onChange={(event) => setEditedRespondentDetail(event.target.value)} /></div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setRespondentToEdit(null)} disabled={updatingRespondent}>Cancel</Button>
+                    <Button type="button" onClick={handleUpdateRespondent} disabled={updatingRespondent}>{updatingRespondent ? 'Saving...' : 'Save changes'}</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               <AlertDialog open={!!respondentToDelete} onOpenChange={(value) => { if (!value && !deletingRespondent) setRespondentToDelete(null); }}>
                 <AlertDialogContent>
