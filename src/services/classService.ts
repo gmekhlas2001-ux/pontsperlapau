@@ -188,24 +188,25 @@ export async function getTeachers() {
     const branchId = scopedBranchId();
 
     let query = supabase
-      .from('users')
+      .from('staff')
       .select(`
         id,
-        first_name,
-        last_name,
-        role,
-        status,
+        position,
         branch_id,
-        staff!user_id(
+        deleted_at,
+        user:users!user_id!inner(
           id,
-          position,
+          first_name,
+          last_name,
+          role,
+          status,
           branch_id,
-          deleted_at,
-          branch:branches!branch_id(id, name)
-        )
+        ),
+        branch:branches!branch_id(id, name)
       `)
-      .eq('role', 'teacher')
-      .eq('status', 'active');
+      .eq('user.role', 'teacher')
+      .eq('user.status', 'active')
+      .is('deleted_at', null);
 
     if (branchId) {
       query = query.eq('branch_id', branchId);
@@ -215,18 +216,17 @@ export async function getTeachers() {
     if (error) throw error;
 
     const teachers: ClassTeacher[] = (data || [])
-      .map((u: any) => {
-        const staffRecord = Array.isArray(u.staff)
-          ? u.staff.find((s: any) => !s.deleted_at)
-          : u.staff;
+      .filter((staffRecord: any) => staffRecord.user)
+      .map((staffRecord: any) => {
+        const userRecord = Array.isArray(staffRecord.user) ? staffRecord.user[0] : staffRecord.user;
         return {
-          id: staffRecord?.id ?? u.id,
-          userId: u.id,
-          firstName: u.first_name ?? '',
-          lastName: u.last_name ?? '',
-          position: staffRecord?.position ?? '',
-          branchId: staffRecord?.branch_id ?? null,
-          branchName: staffRecord?.branch?.name ?? null,
+          id: staffRecord.id,
+          userId: userRecord.id,
+          firstName: userRecord.first_name ?? '',
+          lastName: userRecord.last_name ?? '',
+          position: staffRecord.position ?? '',
+          branchId: staffRecord.branch_id ?? null,
+          branchName: staffRecord.branch?.name ?? null,
         };
       });
 
