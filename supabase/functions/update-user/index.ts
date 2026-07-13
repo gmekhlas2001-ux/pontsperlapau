@@ -292,7 +292,11 @@ Deno.serve(async (req: Request) => {
   if (body.role !== undefined)           userUpdates.role = body.role;
   if (body.status !== undefined)         userUpdates.status = body.status;
   const proposedBranch = proposedStaffBranch !== undefined ? proposedStaffBranch : proposedStudentBranch;
-  if (proposedBranch !== undefined) {
+  // Most profile edits submit the student's current branch along with the
+  // other form fields. Only invoke the atomic branch-transfer routine when
+  // the assignment actually changes; otherwise a normal name/status edit is
+  // unnecessarily coupled to branch-move validation and migration state.
+  if (proposedBranch !== undefined && proposedBranch !== targetUser.branch_id) {
     const { error: branchMoveError } = await supabase.rpc("move_managed_user_branch_atomic", {
       p_user_id: targetUserId,
       p_branch_id: proposedBranch,
