@@ -58,6 +58,7 @@ import {
 import { getBranches, type Branch } from '@/services/branchService';
 import {
   exportSurveyIndividualExcel,
+  exportSurveyIndividualsExcel,
   exportSurveyIndividualPDF,
   exportSurveyResultsExcel,
   exportSurveyResultsPDF,
@@ -2361,6 +2362,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
   const [exportingGeneralExcel, setExportingGeneralExcel] = useState(false);
   const [exportingIndividualPdf, setExportingIndividualPdf] = useState(false);
   const [exportingIndividualExcel, setExportingIndividualExcel] = useState(false);
+  const [selectedExportTargetKeys, setSelectedExportTargetKeys] = useState<string[]>([]);
   const [selectedExportTargetKey, setSelectedExportTargetKey] = useState('');
   const [tab, setTab] = useState('overview');
 
@@ -2470,6 +2472,8 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
   }, [individualRows]);
   const selectedIndividualExportTarget =
     individualExportTargets.find((target) => target.key === selectedExportTargetKey) ?? individualExportTargets[0];
+  const selectedIndividualExportTargets = individualExportTargets.filter((target) => selectedExportTargetKeys.includes(target.key));
+  const allIndividualExportTargetsSelected = individualExportTargets.length > 0 && selectedIndividualExportTargets.length === individualExportTargets.length;
   const hasResultData = results.length > 0 && (totalRespondents > 0 || questionAggregates.some((q) => q.grandTotal > 0));
 
   return (
@@ -2690,10 +2694,47 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
 
               {/* Individual Responses */}
               <TabsContent value="individual" className="m-0 mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+                <div className="mb-3 flex flex-col gap-3 rounded-lg border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">Choose people to export</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedIndividualExportTargets.length} of {individualExportTargets.length} selected
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedExportTargetKeys(individualExportTargets.map((target) => target.key))}
+                      disabled={individualExportTargets.length === 0 || allIndividualExportTargetsSelected}
+                    >
+                      Select all
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedExportTargetKeys([])}
+                      disabled={selectedIndividualExportTargets.length === 0}
+                    >
+                      Clear selection
+                    </Button>
+                  </div>
+                </div>
                 <div className="overflow-x-auto rounded-lg border bg-background">
                   <table className="w-full min-w-[900px] border-collapse text-sm">
                     <thead>
                       <tr className="bg-muted/50">
+                        <th className="w-12 border-b p-3 text-center">
+                          <Checkbox
+                            checked={allIndividualExportTargetsSelected ? true : selectedIndividualExportTargets.length > 0 ? 'indeterminate' : false}
+                            onCheckedChange={(checked) => setSelectedExportTargetKeys(
+                              checked ? individualExportTargets.map((target) => target.key) : []
+                            )}
+                            aria-label="Select all respondents for Excel export"
+                          />
+                        </th>
                         <th className="border-b p-3 text-left text-xs font-semibold uppercase tracking-wide">Branch</th>
                         <th className="border-b p-3 text-left text-xs font-semibold uppercase tracking-wide">Respondent</th>
                         <th className="border-b p-3 text-left text-xs font-semibold uppercase tracking-wide">Type</th>
@@ -2703,8 +2744,22 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       </tr>
                     </thead>
                     <tbody>
-                      {individualRows.map((row) => (
-                        <tr key={row.id} className="border-b hover:bg-muted/20">
+                      {individualRows.map((row) => {
+                        const exportTargetKey = `${row.branch_id}:${row.respondent_type}:${row.respondent_id}`;
+                        const exportSelected = selectedExportTargetKeys.includes(exportTargetKey);
+                        return (
+                        <tr key={row.id} className={cn('border-b hover:bg-muted/20', exportSelected && 'bg-primary/5')}>
+                          <td className="p-3 text-center">
+                            <Checkbox
+                              checked={exportSelected}
+                              onCheckedChange={(checked) => setSelectedExportTargetKeys((current) => (
+                                checked
+                                  ? Array.from(new Set([...current, exportTargetKey]))
+                                  : current.filter((key) => key !== exportTargetKey)
+                              ))}
+                              aria-label={`Select ${row.respondent_name} for Excel export`}
+                            />
+                          </td>
                           <td className="p-3 font-medium">{row.branchName}</td>
                           <td className="p-3">{row.respondent_name}</td>
                           <td className="p-3">{displayRespondentType(row.respondent_type)}</td>
@@ -2718,7 +2773,8 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                             {new Date(row.updated_at).toLocaleString(i18n.language)}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                   {individualRows.length === 0 && (
@@ -2832,6 +2888,27 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                 >
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   {exportingIndividualExcel ? 'Exporting...' : 'Person Excel'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (selectedIndividualExportTargets.length === 0) {
+                      toast.error('Select at least one person first');
+                      return;
+                    }
+                    setExportingIndividualExcel(true);
+                    try {
+                      await exportSurveyIndividualsExcel(survey, results, selectedIndividualExportTargets);
+                    } catch {
+                      toast.error('Selected Excel export failed');
+                    } finally {
+                      setExportingIndividualExcel(false);
+                    }
+                  }}
+                  disabled={loading || exportingIndividualExcel || selectedIndividualExportTargets.length === 0}
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  {exportingIndividualExcel ? 'Exporting...' : `Selected Excel (${selectedIndividualExportTargets.length})`}
                 </Button>
               </div>
             </div>

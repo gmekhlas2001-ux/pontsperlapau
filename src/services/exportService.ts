@@ -1806,6 +1806,141 @@ export async function exportSurveyIndividualExcel(
   );
 }
 
+export async function exportSurveyIndividualsExcel(
+  survey: SurveyFull,
+  results: BranchResult[],
+  targets: SurveyIndividualExportTarget[],
+): Promise<void> {
+  if (targets.length === 0) return;
+
+  const ExcelJS = (await import('exceljs')).default;
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Ponts per la Pau';
+  workbook.created = new Date();
+  const lang = surveyLang(survey);
+  const rtl = isRtlLang(lang);
+  const t = SURVEY_T[lang];
+
+  const usedSheetNames = new Set<string>();
+  const uniqueSheetName = (rawName: string, index: number) => {
+    const cleaned = rawName.replace(/[\\/*?:[\]]/g, ' ').replace(/\s+/g, ' ').trim() || `${t.respondent} ${index + 1}`;
+    const base = cleaned.slice(0, 31);
+    let candidate = base;
+    let suffix = 2;
+    while (usedSheetNames.has(candidate.toLocaleLowerCase())) {
+      const ending = ` (${suffix})`;
+      candidate = `${base.slice(0, 31 - ending.length)}${ending}`;
+      suffix += 1;
+    }
+    usedSheetNames.add(candidate.toLocaleLowerCase());
+    return candidate;
+  };
+
+  const styleHeader = (row: any) => {
+    row.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
+    row.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  };
+
+  const indexSheet = workbook.addWorksheet(uniqueSheetName(t.sheetSummary, 0), {
+    views: [{ state: 'frozen', ySplit: 4, rightToLeft: rtl }],
+  } as any);
+  indexSheet.mergeCells('A1:E1');
+  indexSheet.getCell('A1').value = survey.title;
+  indexSheet.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
+  indexSheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+  indexSheet.getCell('A1').alignment = { horizontal: rtl ? 'right' : 'left', vertical: 'middle' };
+  indexSheet.getRow(1).height = 30;
+  indexSheet.getRow(3).values = [t.colNum, t.respondent, t.respondentType, t.branch, t.answeredQuestions];
+  styleHeader(indexSheet.getRow(3));
+  indexSheet.columns = [
+    { width: 8 }, { width: 34 }, { width: 20 }, { width: 30 }, { width: 22 },
+  ];
+
+  targets.forEach((target, targetIndex) => {
+    const answerRows = individualAnswerRowsForExport(survey, results, target, lang);
+    const answeredCount = answerRows.filter((row) => row.answered).length;
+    indexSheet.addRow([
+      targetIndex + 1,
+      target.respondentName,
+      respondentKindLabel(target.respondentType, lang),
+      target.branchName,
+      `${answeredCount} / ${survey.questions.length}`,
+    ]);
+
+    const sheet = workbook.addWorksheet(uniqueSheetName(target.respondentName, targetIndex + 1), {
+      views: [{ state: 'frozen', ySplit: 8, rightToLeft: rtl }],
+    } as any);
+    sheet.mergeCells('A1:G1');
+    sheet.getCell('A1').value = target.respondentName;
+    sheet.getCell('A1').font = { bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
+    sheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+    sheet.getCell('A1').alignment = { horizontal: rtl ? 'right' : 'left', vertical: 'middle' };
+    sheet.getRow(1).height = 28;
+    const metadataRows = [
+      [t.surveyTitle, survey.title],
+      [t.branch, target.branchName],
+      [t.respondentType, respondentKindLabel(target.respondentType, lang)],
+      [t.answeredQuestions, `${answeredCount} / ${survey.questions.length}`],
+    ];
+    metadataRows.forEach(([label, value], metadataIndex) => {
+      const rowNumber = metadataIndex + 3;
+      sheet.mergeCells(`A${rowNumber}:B${rowNumber}`);
+      sheet.mergeCells(`C${rowNumber}:G${rowNumber}`);
+      sheet.getCell(`A${rowNumber}`).value = label;
+      sheet.getCell(`A${rowNumber}`).font = { bold: true, color: { argb: 'FF0F766E' } };
+      sheet.getCell(`C${rowNumber}`).value = value;
+    });
+    sheet.getRow(8).values = [t.colNum, t.colSection, t.colType, t.colQuestion, t.colAnswer, t.colOptions, t.colUpdated];
+    styleHeader(sheet.getRow(8));
+    sheet.columns = [
+      { width: 8 }, { width: 24 }, { width: 18 }, { width: 54 },
+      { width: 42 }, { width: 38 }, { width: 24 },
+    ];
+    answerRows.forEach((row) => {
+      sheet.addRow([
+        row.index,
+        row.section,
+        questionTypeLabelL(lang, row.question.question_type),
+        row.question.question_text,
+        row.answerText,
+        optionsForQuestion(survey, row.question.id).map((option) => option.label).join('\n'),
+        reportTimestamp(lang, row.updatedAt),
+      ]);
+    });
+    sheet.autoFilter = { from: { row: 8, column: 1 }, to: { row: 8 + answerRows.length, column: 7 } };
+    sheet.eachRow((row, rowNumber) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.alignment = {
+          horizontal: rtl ? 'right' : 'left',
+          vertical: 'top',
+          wrapText: true,
+          readingOrder: rtl ? 'rtl' : 'ltr',
+        } as any;
+        if (rowNumber >= 8) {
+          cell.border = { bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
+        }
+      });
+    });
+    styleHeader(sheet.getRow(8));
+  });
+
+  indexSheet.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3 + targets.length, column: 5 } };
+  indexSheet.eachRow((row, rowNumber) => {
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.alignment = { horizontal: rtl ? 'right' : 'left', vertical: 'top', wrapText: true };
+      if (rowNumber >= 3) cell.border = { bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
+    });
+  });
+  styleHeader(indexSheet.getRow(3));
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBlob(
+    new Blob([buffer as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    `survey_individual_responses_${safeFilePart(survey.title)}_${today()}.xlsx`,
+  );
+}
+
 // ─── PDF: Class Roster ───────────────────────────────────────────────────────
 
 export interface ClassInfo {
