@@ -89,7 +89,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         proxyUrl.searchParams.set('path', dataPath);
 
         const response = await fetch(proxyUrl, { ...init, headers });
-        if (response.status === 401) {
+        // A stale request may finish after a newer login has already stored a
+        // different token. Only invalidate the exact session used here.
+        if (response.status === 401 && getSessionToken() === token) {
           clearSession();
           if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
             window.location.href = '/login';

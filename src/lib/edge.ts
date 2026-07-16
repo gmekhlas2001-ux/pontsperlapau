@@ -28,7 +28,10 @@ import { clearSession, getSessionToken } from '@/lib/session';
  * Called when the server signals that the session is no longer valid (401),
  * or when no token exists prior to making a request.
  */
-function forceLogout() {
+function forceLogout(rejectedToken?: string) {
+  // A request started under an older session can finish after the user has
+  // logged in again. Never let that stale 401 erase the newer session.
+  if (rejectedToken && getSessionToken() !== rejectedToken) return;
   clearSession();
   if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
     window.location.href = '/login';
@@ -76,7 +79,7 @@ export async function callEdgeFunction<T = any>(
     const result = await res.json().catch(() => ({}));
     if (res.status === 401) {
       // Token rejected server-side — force re-authentication.
-      forceLogout();
+      forceLogout(token);
       return { ok: false, status: 401, error: 'Session expired. Please log in again.' };
     }
     if (!res.ok) {
