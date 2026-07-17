@@ -1475,10 +1475,11 @@ Deno.serve(async (req: Request) => {
           return errorResponse(req, 403, "Only manually added respondents can be deleted here");
         }
 
-        const { error } = await supabase
-          .from("survey_respondents")
-          .delete()
-          .eq("id", respondent.id);
+        const { error } = await supabase.rpc("delete_survey_respondent_atomic", {
+          p_respondent_row_id: respondent.id,
+          p_survey_id: surveyId,
+          p_branch_id: branchId,
+        });
         if (error) return errorResponse(req, 500, "Failed to delete respondent", error);
 
         return jsonResponse(req, { success: true });

@@ -342,8 +342,7 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
 
   // Only include branches that have any submission data
   const activeBranchIds = new Set([
-    ...submissions.map((s) => s.branch_id),
-    ...responses.map((r) => r.branch_id),
+    ...responses.filter((r) => r.count > 0).map((r) => r.branch_id),
     ...individualResponses.map((r) => r.branch_id),
   ]);
 
@@ -356,6 +355,7 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
       const individualRespondentCount = new Set(
         branchIndividualResponses.map((r) => `${r.respondent_type}:${r.respondent_id}`),
       ).size;
+      const hasAggregateAnswers = branchResponses.some((response) => response.count > 0);
 
       const questionResults = questions.map((q) => {
         const questionOptions = optionsForQuestion(fullRes.data!, q.id);
@@ -384,8 +384,8 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
       return {
         branchId: branch.id,
         branchName: branch.name,
-        totalRespondents: Math.max(submission?.total_respondents ?? 0, individualRespondentCount),
-        submitted: !!submission || branchIndividualResponses.length > 0,
+        totalRespondents: Math.max(hasAggregateAnswers ? submission?.total_respondents ?? 0 : 0, individualRespondentCount),
+        submitted: hasAggregateAnswers || branchIndividualResponses.length > 0,
         questionResults,
         individualResponses: branchIndividualResponses,
       };
