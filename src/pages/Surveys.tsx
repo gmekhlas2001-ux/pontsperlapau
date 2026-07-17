@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -3183,6 +3183,7 @@ function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: Dup
 export function Surveys() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   useTranslation(); // ensure i18n is active; translations are inline strings
   const isAdmin = user?.role === 'superadmin' || user?.role === 'admin';
   const isSuperadmin = user?.role === 'superadmin';
@@ -3210,6 +3211,32 @@ export function Surveys() {
   const [duplicateSource, setDuplicateSource] = useState<SurveyFull | null>(null);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
 
+  const showSurveyOverlay = useCallback((view: 'edit' | 'results' | 'data' | 'duplicate', surveyId: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('surveyView', view);
+    next.set('surveyId', surveyId);
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+
+  const closeSurveyOverlay = useCallback(() => {
+    if (searchParams.has('surveyView')) {
+      navigate(-1);
+      return;
+    }
+    setEditBuilderOpen(false);
+    setDataEntryOpen(false);
+    setResultsOpen(false);
+    setDuplicateOpen(false);
+  }, [navigate, searchParams]);
+
+  useEffect(() => {
+    const view = searchParams.get('surveyView');
+    setEditBuilderOpen(view === 'edit' && !!editingSurvey);
+    setDataEntryOpen(view === 'data' && !!dataEntrySurvey);
+    setResultsOpen(view === 'results' && !!resultsSurvey);
+    setDuplicateOpen(view === 'duplicate' && !!duplicateSource);
+  }, [dataEntrySurvey, duplicateSource, editingSurvey, resultsSurvey, searchParams]);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [sRes, bRes] = await Promise.all([getSurveys(), getBranches()]);
@@ -3230,25 +3257,25 @@ export function Surveys() {
 
   const openDataEntry = async (survey: Survey) => {
     const full = await getSurveyFull(survey.id);
-    if (full.success && full.data) { setDataEntrySurvey(full.data); setDataEntryOpen(true); }
+    if (full.success && full.data) { setDataEntrySurvey(full.data); showSurveyOverlay('data', survey.id); }
     else toast.error('Failed to load survey');
   };
 
   const openResults = async (survey: Survey) => {
     const full = await getSurveyFull(survey.id);
-    if (full.success && full.data) { setResultsSurvey(full.data); setResultsOpen(true); }
+    if (full.success && full.data) { setResultsSurvey(full.data); showSurveyOverlay('results', survey.id); }
     else toast.error('Failed to load survey');
   };
 
   const openEdit = async (survey: Survey) => {
     const full = await getSurveyFull(survey.id);
-    if (full.success && full.data) { setEditingSurvey(full.data); setEditBuilderOpen(true); }
+    if (full.success && full.data) { setEditingSurvey(full.data); showSurveyOverlay('edit', survey.id); }
     else toast.error('Failed to load survey');
   };
 
   const openDuplicate = async (survey: Survey) => {
     const full = await getSurveyFull(survey.id);
-    if (full.success && full.data) { setDuplicateSource(full.data); setDuplicateOpen(true); }
+    if (full.success && full.data) { setDuplicateSource(full.data); showSurveyOverlay('duplicate', survey.id); }
     else toast.error('Failed to load survey');
   };
 
@@ -3484,7 +3511,7 @@ export function Surveys() {
 
       <SurveyBuilder
         open={editBuilderOpen}
-        onClose={() => { setEditBuilderOpen(false); setEditingSurvey(null); }}
+        onClose={closeSurveyOverlay}
         onSaved={fetchAll}
         existing={editingSurvey}
       />
@@ -3493,7 +3520,7 @@ export function Surveys() {
       {duplicateSource && (
         <DuplicateSurveyDialog
           open={duplicateOpen}
-          onClose={() => { setDuplicateOpen(false); setDuplicateSource(null); }}
+          onClose={closeSurveyOverlay}
           onSaved={fetchAll}
           source={duplicateSource}
           branches={branches}
@@ -3504,7 +3531,7 @@ export function Surveys() {
       {dataEntrySurvey && (
         <DataEntryDialog
           open={dataEntryOpen}
-          onClose={() => { setDataEntryOpen(false); setDataEntrySurvey(null); }}
+          onClose={closeSurveyOverlay}
           onSaved={fetchAll}
           survey={dataEntrySurvey}
           branches={dataEntrySurvey.branch_id ? branches.filter((branch) => branch.id === dataEntrySurvey.branch_id) : branches}
@@ -3516,7 +3543,7 @@ export function Surveys() {
       {resultsSurvey && (
         <ResultsDialog
           open={resultsOpen}
-          onClose={() => { setResultsOpen(false); setResultsSurvey(null); }}
+          onClose={closeSurveyOverlay}
           survey={resultsSurvey}
         />
       )}
