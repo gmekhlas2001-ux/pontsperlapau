@@ -1,7 +1,12 @@
 // Application entry point — mounts the React tree under <div id="root">.
 import { Component, StrictMode, type ErrorInfo, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { registerAppServiceWorker } from './pwa/registerServiceWorker'
 import './index.css'
+
+if (import.meta.env.PROD) {
+  registerAppServiceWorker();
+}
 
 interface ErrorBoundaryState {
   failed: boolean;

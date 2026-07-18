@@ -11,6 +11,9 @@ export default defineConfig(() => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registration is handled in src/pwa/registerServiceWorker.ts so the
+      // page can reload as soon as a newly activated worker takes control.
+      injectRegister: null,
       includeAssets: ['image.png', 'app-icon.svg'],
       manifest: {
         name: 'Ponts per la Pau',
@@ -33,8 +36,13 @@ export default defineConfig(() => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
+        // Existing installations currently have only a bare registration
+        // script. This bridge advances those already-open clients once so
+        // they can adopt the permanent page-side update flow.
+        importScripts: ['/pwa-update-bridge-v1.js'],
       },
     }),
   ],
