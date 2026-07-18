@@ -26,7 +26,9 @@
     "auditLog": "Registro de Auditoría",
     "settings": "Configuración",
     "logout": "Cerrar Sesión",
-    "profile": "Perfil"
+    "profile": "Perfil",
+    "more": "Más",
+    "mobileNavigation": "Navegación rápida"
   },
   "documents": {
     "title": "Documentos importantes",
@@ -175,6 +177,7 @@
     "notes": "Notas",
     "address": "Dirección",
     "notProvided": "No proporcionado",
+    "invalidDateOfBirth": "Introduce una fecha de nacimiento válida en formato DD/MM/AAAA.",
     "optional": "opcional"
   },
   "auth": {

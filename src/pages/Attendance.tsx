@@ -361,9 +361,9 @@ export function Attendance() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex min-h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 pb-4 border-b">
+      <div className="flex flex-col gap-3 border-b p-2 pb-4 sm:flex-row sm:items-center sm:justify-between sm:p-4 lg:p-6 lg:pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <ClipboardCheck className="h-6 w-6" />
@@ -373,7 +373,7 @@ export function Attendance() {
             Mark and track student attendance per class session
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedClass && students.length > 0 && (
             <>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleExport('pdf')}>
@@ -384,21 +384,21 @@ export function Attendance() {
               </Button>
             </>
           )}
-          <Button variant="outline" size="icon" onClick={fetchClasses} title="Refresh">
+          <Button variant="outline" size="icon" onClick={fetchClasses} title="Refresh" aria-label="Refresh classes">
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col lg:min-h-0 lg:flex-row lg:overflow-hidden">
         {/* ── Class list (left panel) ── */}
-        <div className="w-72 shrink-0 border-r flex flex-col overflow-hidden">
-          <div className="p-3 border-b">
+        <div className="flex w-full shrink-0 flex-col overflow-hidden border-b lg:w-72 lg:border-b-0 lg:border-e">
+          <div className="px-3 pt-3 lg:border-b lg:pb-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-2">Classes</p>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <div className="flex gap-2 overflow-x-auto p-2 pt-0 overscroll-x-contain lg:block lg:flex-1 lg:space-y-1 lg:overflow-x-hidden lg:overflow-y-auto lg:pt-2">
             {classesLoading ? (
-              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)
+              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-[15rem] flex-none rounded-lg lg:w-full" />)
             ) : classes.length === 0 ? (
               <div className="text-center py-8 text-sm text-muted-foreground">
                 <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -410,7 +410,7 @@ export function Attendance() {
                   key={c.id}
                   onClick={() => setSelectedClass(c)}
                   className={cn(
-                    'w-full text-left rounded-lg p-3 transition-all border',
+                    'w-[15rem] flex-none rounded-lg border p-3 text-start transition-colors lg:w-full',
                     selectedClass?.id === c.id
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'hover:bg-accent border-transparent',
@@ -435,7 +435,7 @@ export function Attendance() {
                       )}
                     </div>
                     <ChevronRight className={cn(
-                      'h-4 w-4 shrink-0 mt-0.5',
+                      'mt-0.5 h-4 w-4 shrink-0 rtl:rotate-180',
                       selectedClass?.id === c.id ? 'text-primary-foreground' : 'text-muted-foreground',
                     )} />
                   </div>
@@ -446,14 +446,14 @@ export function Attendance() {
         </div>
 
         {/* ── Right panel ── */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-w-0 flex-1 lg:overflow-y-auto">
           {!selectedClass ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <div className="flex min-h-56 flex-col items-center justify-center text-muted-foreground lg:h-full lg:min-h-0">
               <ClipboardCheck className="h-12 w-12 mb-3 opacity-20" />
               <p>Select a class to take attendance</p>
             </div>
           ) : (
-            <div className="p-6">
+            <div className="p-1 pt-4 sm:p-4 lg:p-6">
               {/* Class header */}
               <div className="mb-5">
                 <h2 className="text-xl font-bold">{selectedClass.name}</h2>
@@ -477,7 +477,7 @@ export function Attendance() {
                 <TabsContent value="mark" className="space-y-5">
                   {/* Date picker + summary */}
                   <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <Input
                         type="date"
@@ -520,7 +520,7 @@ export function Attendance() {
                               setDraft(next);
                             }}
                             className={cn(
-                              'px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-all',
+                              'min-h-8 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors',
                               c.bg, c.text, c.border, 'hover:opacity-90',
                             )}
                           >
@@ -559,8 +559,8 @@ export function Attendance() {
                         ))}
                       </div>
 
-                      <div className="flex justify-end pt-2">
-                        <Button onClick={handleSave} disabled={saving} className="min-w-[130px]">
+                      <div className="sticky bottom-2 z-20 flex justify-end rounded-xl border border-border/70 bg-background/90 p-2 shadow-lg backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:shadow-none">
+                        <Button onClick={handleSave} disabled={saving} className="w-full min-w-[130px] sm:w-auto">
                           {saving ? (
                             <span className="flex items-center gap-2">
                               <span className="h-3.5 w-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />

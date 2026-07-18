@@ -125,13 +125,13 @@ export function Reports() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-6 pb-4 border-b">
+      <div className="flex flex-col gap-3 border-b p-2 pb-4 sm:flex-row sm:items-center sm:justify-between sm:p-4 lg:p-6 lg:pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t('reports.title')}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">{t('reports.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={loadData} title={t('common.refresh')}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="icon" onClick={loadData} title={t('common.refresh')} aria-label={t('common.refresh')}>
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Button onClick={() => setNewDialogOpen(true)}>
@@ -141,8 +141,8 @@ export function Reports() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex-1 space-y-6 p-1 pt-4 sm:p-4 lg:overflow-auto lg:p-6">
+        <div className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 lg:grid-cols-4">
           {loading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="border shadow-sm">
@@ -278,6 +278,14 @@ export function Reports() {
                       key={tx.id}
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => setDetailTx(tx)}
+                      tabIndex={0}
+                      aria-label={`View transaction ${tx.reference_number}`}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setDetailTx(tx);
+                        }
+                      }}
                     >
                       <TableCell>
                         <div>

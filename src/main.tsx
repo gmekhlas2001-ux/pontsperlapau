@@ -28,7 +28,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryS
 
 function StartupMessage({ title, detail }: { title: string; detail: string }) {
   return (
-    <main className="min-h-screen bg-background p-6 flex items-center justify-center">
+    <main className="flex min-h-dvh items-center justify-center bg-background p-4 sm:p-6">
       <section role="alert" className="w-full max-w-lg rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
         <h1 className="text-xl font-semibold">{title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{detail}</p>

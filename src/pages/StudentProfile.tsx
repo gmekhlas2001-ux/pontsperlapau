@@ -535,7 +535,7 @@ export function StudentProfile() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-4">
+      <div className="space-y-4 p-1 sm:p-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-36 w-full rounded-xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
@@ -560,9 +560,9 @@ export function StudentProfile() {
   const canSeeDocuments = user?.role === 'superadmin' || user?.role === 'admin';
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex min-h-full flex-col">
       {/* Back bar */}
-      <div className="flex items-center gap-3 px-6 py-3 border-b bg-muted/20">
+      <div className="flex items-center gap-3 border-b bg-muted/20 px-2 py-2 sm:px-6 sm:py-3">
         <Button variant="ghost" size="sm" onClick={() => navigate(backTarget)} className="gap-1.5 -ml-2">
           <ArrowLeft className="h-4 w-4" />
           {backLabel}
@@ -572,14 +572,14 @@ export function StudentProfile() {
       </div>
 
       {/* Profile hero */}
-      <div className="shrink-0 border-b bg-gradient-to-br from-primary/10 via-card to-accent/50 px-6 pt-7 pb-6">
+      <div className="shrink-0 border-b bg-gradient-to-br from-primary/10 via-card to-accent/50 px-3 pb-4 pt-5 sm:px-6 sm:pb-6 sm:pt-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-5">
+          <div className="flex items-start gap-3 sm:gap-5">
           <AvatarWithFallback
             src={student.profilePictureUrl ?? undefined}
             firstName={student.firstName}
             lastName={student.lastName}
-            className="h-20 w-20 text-xl ring-4 ring-background shadow-md shrink-0"
+            className="h-16 w-16 shrink-0 text-lg shadow-md ring-4 ring-background sm:h-20 sm:w-20 sm:text-xl"
           />
           <div className="flex-1 min-w-0 pt-1">
             <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">{fullName}</h1>
@@ -630,7 +630,7 @@ export function StudentProfile() {
           </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 lg:min-w-[320px]">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 lg:min-w-[320px]">
             <div className="rounded-lg border border-border/70 bg-background/75 p-3 shadow-xs">
               <p className="text-[11px] font-semibold uppercase text-muted-foreground">Branch</p>
               <p className="mt-1 truncate text-sm font-semibold">{student.branchName || '—'}</p>

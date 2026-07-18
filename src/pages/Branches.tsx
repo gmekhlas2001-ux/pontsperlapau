@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -230,9 +230,9 @@ export function Branches() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('branches.title')}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('branches.title')}</h1>
           <p className="text-muted-foreground">{t('branches.subtitle')}</p>
         </div>
         {canManage && (
@@ -262,18 +262,22 @@ export function Branches() {
           {branches.map((branch) => (
             <Card
               key={branch.id}
-              className="cursor-pointer hover:shadow-md transition-shadow border-border"
-              onClick={() => openProfile(branch)}
+              className="border-border transition-shadow hover:shadow-md"
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base font-semibold truncate">{branch.name}</CardTitle>
-                    <div className="flex items-center gap-1 mt-1">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 rounded-md text-start outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`${t('branches.viewProfile')}: ${branch.name}`}
+                    onClick={() => openProfile(branch)}
+                  >
+                    <span className="block truncate text-base font-semibold">{branch.name}</span>
+                    <span className="mt-1 flex items-center gap-1">
                       <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
                       <span className="text-xs text-muted-foreground truncate">{branch.province}</span>
-                    </div>
-                  </div>
+                    </span>
+                  </button>
                   <div className="flex items-center gap-1 ml-2">
                     <Badge variant={branch.status === 'active' ? 'default' : 'secondary'} className="text-xs shrink-0">
                       {t(`common.${branch.status}`)}
@@ -281,7 +285,7 @@ export function Branches() {
                     {canManage && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={`Actions for ${branch.name}`}>
                             <MoreHorizontal className="h-3 w-3" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -344,7 +348,7 @@ export function Branches() {
 
       {/* Branch Profile Dialog */}
       <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
           {selectedBranch && (
             <>
               <DialogHeader>
@@ -521,13 +525,13 @@ export function Branches() {
 
       {/* Add Branch Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('branches.addDialogTitle')}</DialogTitle>
             <DialogDescription>{t('branches.addDialogDescription')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('branches.formName')} <span className="text-red-500">*</span></Label>
                 <Input
@@ -545,7 +549,7 @@ export function Branches() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('branches.formCity')}</Label>
                 <Input
@@ -580,7 +584,7 @@ export function Branches() {
                 onChange={(e) => setAddForm((p) => ({ ...p, address: e.target.value }))}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('branches.formEstablishedDate')}</Label>
                 <Input
@@ -614,13 +618,13 @@ export function Branches() {
 
       {/* Edit Branch Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('branches.editDialogTitle')}</DialogTitle>
             <DialogDescription>{t('branches.editDialogDescription')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('branches.formName')} <span className="text-red-500">*</span></Label>
                 <Input
@@ -637,7 +641,7 @@ export function Branches() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('branches.formCity')}</Label>
                 <Input
@@ -668,7 +672,7 @@ export function Branches() {
                 onChange={(e) => setEditForm((p) => ({ ...p, address: e.target.value }))}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('branches.formEstablishedDate')}</Label>
                 <Input

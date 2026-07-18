@@ -1909,7 +1909,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="rounded-lg border bg-background p-4">
                   <Skeleton className="h-4 w-3/4" />
-                  <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(maxOptionCount, 6)}, minmax(0, 1fr))` }}>
+                  <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 8rem), 1fr))' }}>
                     {Array.from({ length: maxOptionCount }).map((_, j) => <Skeleton key={j} className="h-16 rounded-lg" />)}
                   </div>
                 </div>
@@ -1998,7 +1998,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                     />
                   </div>
                 </div>
-                <div className="max-h-[62vh] space-y-1 overflow-y-auto p-2">
+                <div className="max-h-[38dvh] space-y-1 overflow-y-auto p-2 lg:max-h-[62dvh]">
                   {branchRespondents.length === 0 ? (
                     <div className="p-4 text-sm text-muted-foreground">
                       No students or staff were assigned to this survey branch. Use “Add person” to enter someone manually.
@@ -2282,7 +2282,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                     ) : (
                       <div
                         className="grid gap-2"
-                        style={{ gridTemplateColumns: `repeat(${Math.min(questionOptions.length || 1, 6)}, minmax(0, 1fr))` }}
+                        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 8rem), 1fr))' }}
                       >
                         {questionOptions.map((opt) => {
                           const val = counts[q.id]?.[opt.id] ?? '';
@@ -3035,7 +3035,7 @@ function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: Dup
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-2xl">
+      <DialogContent className="max-h-[90dvh] gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="border-b px-6 py-4 text-left">
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5 text-primary" /> Duplicate Survey
@@ -3045,7 +3045,7 @@ function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: Dup
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[calc(90vh-9rem)] space-y-5 overflow-y-auto px-6 py-5">
+        <div className="max-h-[calc(90dvh-9rem)] space-y-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
             Copying <span className="font-semibold text-foreground">{source.questions.length}</span> questions ·{' '}
             <span className="font-semibold text-foreground">{source.sections.length}</span> sections ·{' '}
@@ -3319,9 +3319,9 @@ export function Surveys() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
             <ClipboardList className="h-7 w-7 text-primary" />
             Surveys
           </h1>
@@ -3336,7 +3336,7 @@ export function Surveys() {
 
       {/* Survey filters */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex w-fit items-center gap-1 rounded-lg border p-1">
+        <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border p-1 overscroll-x-contain sm:w-fit">
           {(['all', 'active', 'draft', 'closed'] as const).map((f) => (
             <Button
               key={f}
@@ -3438,7 +3438,7 @@ export function Surveys() {
                       {isAdmin && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-9 w-9 opacity-100 transition-opacity sm:h-7 sm:w-7 sm:opacity-0 sm:group-hover:opacity-100" aria-label={`Actions for ${survey.title}`}>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

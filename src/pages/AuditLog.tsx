@@ -148,7 +148,7 @@ export default function AuditLog() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl space-y-5 p-0 sm:p-2 lg:p-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -163,7 +163,7 @@ export default function AuditLog() {
           <Button variant="outline" size="sm" onClick={exportExcel} className="gap-1.5">
             <Download className="w-4 h-4" /> Export Excel
           </Button>
-          <Button variant="outline" size="icon" onClick={load}>
+          <Button variant="outline" size="icon" onClick={load} aria-label="Refresh audit log">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
@@ -267,11 +267,11 @@ export default function AuditLog() {
             Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total.toLocaleString()} entries
           </span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+            <Button variant="outline" size="icon" disabled={page === 0} onClick={() => setPage((p) => p - 1)} aria-label="Previous page">
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <span className="px-2">Page {page + 1} / {totalPages}</span>
-            <Button variant="outline" size="icon" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
+            <Button variant="outline" size="icon" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)} aria-label="Next page">
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>

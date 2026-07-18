@@ -24,6 +24,7 @@ import {
   Calendar, Phone, ShieldCheck, Eye, EyeOff,
 } from 'lucide-react';
 import { ImageUpload } from '@/components/ui-custom/ImageUpload';
+import { BirthDateInput } from '@/components/ui-custom/BirthDateInput';
 import { cn } from '@/lib/utils';
 
 const ROLE_BADGE_COLORS: Record<string, string> = {
@@ -77,6 +78,7 @@ export function Profile() {
   const [data, setData] = useState<ProfileData>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [isBirthDateValid, setIsBirthDateValid] = useState(true);
 
   // Password tab state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -142,6 +144,10 @@ export function Profile() {
 
   const saveProfile = async () => {
     if (!user) return;
+    if (!isBirthDateValid) {
+      toast.error(t('common.invalidDateOfBirth'));
+      return;
+    }
     if (!data.firstName.trim() || !data.lastName.trim()) {
       toast.error(t('profile.nameRequired'));
       return;
@@ -207,7 +213,7 @@ export function Profile() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-6 pb-4 border-b">
+      <div className="flex items-center justify-between border-b p-2 pb-4 sm:p-4 lg:p-6 lg:pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <User className="h-6 w-6" />
@@ -217,7 +223,7 @@ export function Profile() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 space-y-6 max-w-4xl">
+      <div className="max-w-4xl flex-1 space-y-6 p-1 pt-4 sm:p-4 lg:overflow-auto lg:p-6">
         {/* Identity card */}
         {loading ? (
           <Card><CardContent className="p-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
@@ -318,7 +324,12 @@ export function Profile() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="dob">{t('profile.dateOfBirth')}</Label>
-                        <Input id="dob" type="date" value={data.dateOfBirth} onChange={(e) => update('dateOfBirth', e.target.value)} />
+                        <BirthDateInput
+                          id="dob"
+                          value={data.dateOfBirth}
+                          onValueChange={(value) => update('dateOfBirth', value)}
+                          onValidityChange={setIsBirthDateValid}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>{t('profile.gender')}</Label>

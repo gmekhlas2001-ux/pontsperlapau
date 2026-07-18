@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { DataTable } from '@/components/ui-custom/DataTable';
+import { BirthDateInput } from '@/components/ui-custom/BirthDateInput';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';
 import { AvatarWithFallback } from '@/components/ui-custom/AvatarWithFallback';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,8 @@ export function Staff() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAddBirthDateValid, setIsAddBirthDateValid] = useState(true);
+  const [isEditBirthDateValid, setIsEditBirthDateValid] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffList, setStaffList] = useState<StaffRecord[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<StaffRecord | null>(null);
@@ -191,6 +194,7 @@ export function Staff() {
   };
 
   const handleEditStaff = (staff: StaffRecord) => {
+    setIsEditBirthDateValid(true);
     setSelectedStaff(staff);
     setEditData({
       firstName: staff.firstName,
@@ -240,6 +244,10 @@ export function Staff() {
 
   const handleSaveEdit = async () => {
     if (!selectedStaff) return;
+    if (!isEditBirthDateValid) {
+      toast.error(t('common.invalidDateOfBirth'));
+      return;
+    }
     setIsSubmitting(true);
     try {
       const result = await updateStaff(selectedStaff.id, selectedStaff.userId, editData);
@@ -274,6 +282,10 @@ export function Staff() {
   };
 
   const handleSaveStaff = async () => {
+    if (!isAddBirthDateValid) {
+      toast.error(t('common.invalidDateOfBirth'));
+      return;
+    }
     if (
       !formData.firstName ||
       !formData.lastName ||
@@ -387,7 +399,7 @@ export function Staff() {
       cell: (staff: StaffRecord) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label={`Actions for ${getFullName(staff.firstName, staff.lastName)}`}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -481,17 +493,19 @@ export function Staff() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('staff.title')}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('staff.title')}</h1>
           <p className="text-muted-foreground">{t('staff.staffList')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           <div className="flex items-center border rounded-lg p-1">
             <Button
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="icon"
               onClick={() => setViewMode('list')}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
             >
               <List className="h-4 w-4" />
             </Button>
@@ -499,6 +513,8 @@ export function Staff() {
               variant={viewMode === 'card' ? 'secondary' : 'ghost'}
               size="icon"
               onClick={() => setViewMode('card')}
+              aria-label="Card view"
+              aria-pressed={viewMode === 'card'}
             >
               <Grid3X3 className="h-4 w-4" />
             </Button>
@@ -510,7 +526,7 @@ export function Staff() {
                 {t('staff.addStaff')}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{t('staff.addStaff')}</DialogTitle>
                 <DialogDescription>Fill in the details to add a new staff member to the system</DialogDescription>
@@ -518,7 +534,7 @@ export function Staff() {
               <div className="grid gap-4 py-4">
 
                 {/* Personal Information */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">{t('staff.firstName')} <span className="text-red-500">*</span></Label>
                     <Input id="firstName" required value={formData.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} />
@@ -532,10 +548,16 @@ export function Staff() {
                   <Label htmlFor="fatherName">Father's Name</Label>
                   <Input id="fatherName" value={formData.fatherName || ''} onChange={(e) => handleInputChange('fatherName', e.target.value)} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="dateOfBirth">Date of Birth <span className="text-red-500">*</span></Label>
-                    <Input id="dateOfBirth" type="date" required value={formData.dateOfBirth || ''} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} />
+                    <BirthDateInput
+                      id="dateOfBirth"
+                      required
+                      value={formData.dateOfBirth || ''}
+                      onValueChange={(value) => handleInputChange('dateOfBirth', value)}
+                      onValidityChange={setIsAddBirthDateValid}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="gender">Gender <span className="text-red-500">*</span></Label>
@@ -559,7 +581,7 @@ export function Staff() {
                 <div className="border-t pt-4">
                   <p className="text-sm font-semibold mb-3">Login & Contact</p>
                   <div className="grid gap-3">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="email">{t('staff.email')} <span className="text-red-500">*</span></Label>
                         <Input id="email" type="email" required value={formData.email || ''} onChange={(e) => handleInputChange('email', e.target.value)} />
@@ -580,7 +602,7 @@ export function Staff() {
                 <div className="border-t pt-4">
                   <p className="text-sm font-semibold mb-3">Employment</p>
                   <div className="grid gap-3">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="position">{t('staff.position')} <span className="text-red-500">*</span></Label>
                         <Input id="position" required value={formData.position || ''} onChange={(e) => handleInputChange('position', e.target.value)} />
@@ -590,7 +612,7 @@ export function Staff() {
                         <Input id="department" value={formData.department || ''} onChange={(e) => handleInputChange('department', e.target.value)} />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="role">{t('staff.role')} <span className="text-red-500">*</span></Label>
                         <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
@@ -646,7 +668,7 @@ export function Staff() {
       </div>
 
       {/* Status filter tabs */}
-      <div className="flex items-center gap-1 border rounded-lg p-1 w-fit">
+      <div className="flex max-w-full flex-wrap items-center gap-1 rounded-lg border p-1 sm:w-fit">
         <Button
           variant={statusFilter === 'all' ? 'secondary' : 'ghost'}
           size="sm"
@@ -680,6 +702,7 @@ export function Staff() {
           columns={columns}
           keyExtractor={(staff) => staff.id}
           searchKeys={['firstName', 'lastName', 'email', 'position']}
+          mobileColumns={['name', 'role', 'branch', 'status', 'actions']}
         />
       ) : (
         renderCardView()
@@ -691,7 +714,7 @@ export function Staff() {
           <DialogTitle className="sr-only">Staff Profile</DialogTitle>
           <DialogDescription className="sr-only">Full details for this staff member</DialogDescription>
           {selectedStaff && (
-            <div className="flex flex-col max-h-[88vh] overflow-hidden">
+            <div className="flex max-h-[88dvh] flex-col overflow-hidden">
               <div className="shrink-0 border-b bg-gradient-to-br from-primary/10 via-card to-accent/50 px-6 pt-7 pb-5">
                 <div className="flex flex-col gap-5">
                   <div className="flex items-start gap-4">
@@ -820,7 +843,7 @@ export function Staff() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Staff Member</DialogTitle>
             <DialogDescription>Update the details for this staff member</DialogDescription>
@@ -829,7 +852,7 @@ export function Staff() {
             <div className="grid gap-4 py-4">
 
               {/* Personal */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="edit-firstName">{t('staff.firstName')}</Label>
                   <Input id="edit-firstName" value={editData.firstName ?? ''} onChange={(e) => handleEditChange('firstName', e.target.value)} />
@@ -839,7 +862,7 @@ export function Staff() {
                   <Input id="edit-lastName" value={editData.lastName ?? ''} onChange={(e) => handleEditChange('lastName', e.target.value)} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="edit-fatherName">Father's Name</Label>
                   <Input id="edit-fatherName" value={editData.fatherName ?? ''} onChange={(e) => handleEditChange('fatherName', e.target.value)} />
@@ -849,10 +872,15 @@ export function Staff() {
                   <Input id="edit-phone" value={editData.phone ?? ''} onChange={(e) => handleEditChange('phone', e.target.value)} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="edit-dateOfBirth">Date of Birth</Label>
-                  <Input id="edit-dateOfBirth" type="date" value={editData.dateOfBirth ?? ''} onChange={(e) => handleEditChange('dateOfBirth', e.target.value)} />
+                  <BirthDateInput
+                    id="edit-dateOfBirth"
+                    value={editData.dateOfBirth ?? ''}
+                    onValueChange={(value) => handleEditChange('dateOfBirth', value)}
+                    onValidityChange={setIsEditBirthDateValid}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-gender">Gender</Label>
@@ -876,7 +904,7 @@ export function Staff() {
               <div className="border-t pt-4">
                 <p className="text-sm font-semibold mb-3">Employment</p>
                 <div className="grid gap-3">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="edit-position">{t('staff.position')}</Label>
                       <Input id="edit-position" value={editData.position ?? ''} onChange={(e) => handleEditChange('position', e.target.value)} />
@@ -886,7 +914,7 @@ export function Staff() {
                       <Input id="edit-department" value={editData.department ?? ''} onChange={(e) => handleEditChange('department', e.target.value)} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="edit-role">{t('staff.role')}</Label>
                       <Select value={editData.role ?? ''} onValueChange={(value) => handleEditChange('role', value)}>
@@ -911,7 +939,7 @@ export function Staff() {
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="edit-dateJoined">Date Joined</Label>
                       <Input id="edit-dateJoined" type="date" value={editData.dateJoined ?? ''} onChange={(e) => handleEditChange('dateJoined', e.target.value)} />

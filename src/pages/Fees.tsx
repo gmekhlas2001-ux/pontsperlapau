@@ -101,7 +101,7 @@ function SummaryCards({ summary }: { summary: FeeSummary }) {
     return entries.length > 0 ? entries.map(([currency, values]) => fmt(values[kind], currency)).join(' · ') : fmt(fallback);
   };
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 md:grid-cols-4">
       <Card>
         <CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-blue-50">
@@ -258,7 +258,7 @@ function AddFeeDialog({
           </div>
 
           {/* Amount + Currency */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>{t('fees.amount')}</Label>
               <Input
@@ -368,7 +368,7 @@ function MarkPaidDialog({
 
             <div className="space-y-2">
               <Label>{t('fees.paymentMethod')}</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {METHODS.map((m) => (
                   <button
                     key={m.value}
@@ -587,7 +587,7 @@ function BulkFeeDialog({
           </div>
 
           {/* Amount + Currency */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>{t('fees.amount')}</Label>
               <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
@@ -726,7 +726,7 @@ export default function Fees() {
   const hasOverdue = summary.overdueCount > 0;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl space-y-6 p-0 sm:p-2 lg:p-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -842,7 +842,7 @@ export default function Fees() {
                           <td className="p-3">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Actions for ${fee.studentFirstName} ${fee.studentLastName}`}>
                                   <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>

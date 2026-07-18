@@ -90,7 +90,7 @@ function DonorDialog({ open, onClose, onCreated }: { open: boolean; onClose: () 
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>{t('donors.email')} <span className="text-muted-foreground text-xs">({t('common.optional')})</span></Label>
               <Input type="email" value={form.email ?? ''} onChange={(e) => set('email', e.target.value)} />
@@ -153,7 +153,7 @@ function GrantDialog({ open, onClose, onCreated, donorId, branches }: {
             <Label>{t('donors.grantTitle')}</Label>
             <Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder={t('donors.grantTitlePlaceholder')} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>{t('donors.grantAmount')}</Label>
               <Input type="number" min={0} step={0.01} value={form.amount} onChange={(e) => set('amount', parseFloat(e.target.value) || 0)} />
@@ -168,7 +168,7 @@ function GrantDialog({ open, onClose, onCreated, donorId, branches }: {
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>{t('donors.startDate')} <span className="text-muted-foreground text-xs">({t('common.optional')})</span></Label>
               <Input type="date" value={form.startDate ?? ''} onChange={(e) => set('startDate', e.target.value)} />
@@ -221,7 +221,7 @@ function TxDialog({ open, onClose, onCreated, grantId }: { open: boolean; onClos
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <Label>{t('donors.txType')}</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {(['expense', 'income'] as TxType[]).map((tp) => (
                 <button key={tp} type="button"
                   onClick={() => set('type', tp)}
@@ -239,7 +239,7 @@ function TxDialog({ open, onClose, onCreated, grantId }: { open: boolean; onClos
             <Label>{t('donors.txDescription')}</Label>
             <Input value={form.description} onChange={(e) => set('description', e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>{t('donors.txAmount')}</Label>
               <Input type="number" min={0} step={0.01} value={form.amount} onChange={(e) => set('amount', parseFloat(e.target.value) || 0)} />
@@ -359,7 +359,7 @@ function GrantCard({ grant, onRefresh }: { grant: Grant; onRefresh: () => void }
               <span className={`font-mono font-medium ${tx.type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
                 {tx.type === 'expense' ? '-' : '+'}{fmt(tx.amount, grant.currency)}
               </span>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => handleDeleteTx(tx.id)}>
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => handleDeleteTx(tx.id)} aria-label="Delete transaction">
                 <Trash2 className="w-3 h-3" />
               </Button>
             </div>
@@ -431,7 +431,7 @@ export default function Donors() {
   const filtered = donors.filter((d) => !search || d.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="p-6 space-y-4 max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl space-y-4 p-0 sm:p-2 lg:p-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -464,24 +464,30 @@ export default function Donors() {
               ) : filtered.map((d) => (
                 <div
                   key={d.id}
-                  onClick={() => selectDonor(d)}
-                  className={`flex items-center gap-3 p-3 border-b last:border-0 cursor-pointer transition-colors ${
-                    selectedDonor?.id === d.id ? 'bg-teal-50 border-l-2 border-l-teal-600' : 'hover:bg-muted/30'
+                  className={`flex items-center border-b transition-colors last:border-0 ${
+                    selectedDonor?.id === d.id ? 'border-s-2 border-s-teal-600 bg-teal-50' : 'hover:bg-muted/30'
                   }`}
                 >
-                  <div className="w-9 h-9 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm shrink-0">
-                    {d.name[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{d.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{t(`donors.types.${d.type}`)} · {d.country ?? '—'}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs font-mono font-bold">{fmt(d.totalGranted ?? 0)}</p>
-                    <p className="text-xs text-muted-foreground">{d.grantCount} {t('donors.grants')}</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
-                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(d); }}>
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-3 p-3 text-start outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    aria-label={`View ${d.name}`}
+                    onClick={() => selectDonor(d)}
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">
+                      {d.name[0].toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{d.name}</span>
+                      <span className="block text-xs capitalize text-muted-foreground">{t(`donors.types.${d.type}`)} · {d.country ?? '—'}</span>
+                    </span>
+                    <span className="shrink-0 text-end">
+                      <span className="block font-mono text-xs font-bold">{fmt(d.totalGranted ?? 0)}</span>
+                      <span className="block text-xs text-muted-foreground">{d.grantCount} {t('donors.grants')}</span>
+                    </span>
+                  </button>
+                  <Button variant="ghost" size="icon" className="me-2 h-9 w-9 shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => setDeleteTarget(d)} aria-label={`Delete ${d.name}`}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>

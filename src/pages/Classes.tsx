@@ -353,7 +353,7 @@ export function Classes() {
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-1 border rounded-lg p-1">
+        <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border p-1 overscroll-x-contain">
           {(['all', 'active', 'inactive', 'archived'] as const).map((s) => (
             <Button
               key={s}
@@ -421,7 +421,8 @@ export function Classes() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-9 w-9 opacity-100 transition-opacity sm:h-7 sm:w-7 sm:opacity-0 sm:group-hover:opacity-100"
+                          aria-label={`Actions for ${cls.name}`}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -531,7 +532,7 @@ export function Classes() {
 
       {/* Add / Edit Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingClass ? t('common.edit') + ' Class' : t('classes.addClass')}
@@ -638,7 +639,7 @@ export function Classes() {
             </div>
 
             {/* Location & Capacity */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="location">{t('classes.room')}</Label>
                 <Input
@@ -682,7 +683,7 @@ export function Classes() {
             </div>
 
             {/* Time */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="startTime">Start Time</Label>
                 <Input
@@ -704,7 +705,7 @@ export function Classes() {
             </div>
 
             {/* Academic Year & Semester */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="academicYear">Academic Year</Label>
                 <Input
@@ -769,7 +770,7 @@ export function Classes() {
 
       {/* Class Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
           {selectedClass && (
             <>
               <DialogHeader>
@@ -797,7 +798,7 @@ export function Classes() {
                 </TabsList>
 
                 <TabsContent value="info" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Label className="text-xs text-muted-foreground uppercase tracking-wide">Teacher</Label>
                       <p className="font-medium mt-0.5">

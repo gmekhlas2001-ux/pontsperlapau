@@ -5,7 +5,7 @@ import type { UserRole } from '@/contexts/AuthContext';
 
 function RouteFallback() {
   return (
-    <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">
+    <div className="flex h-dvh items-center justify-center text-sm text-muted-foreground">
       Loading...
     </div>
   );

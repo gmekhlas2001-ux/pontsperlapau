@@ -187,6 +187,16 @@ function MessageRow({
       <div
         className="flex items-start gap-3 p-3 hover:bg-muted/30 cursor-pointer transition-colors"
         onClick={toggle}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-label={`${expanded ? 'Collapse' : 'Open'} message: ${msg.subject}`}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            void toggle();
+          }
+        }}
       >
         {isUnread
           ? <Mail className="w-4 h-4 text-teal-600 mt-1 shrink-0" />
@@ -290,7 +300,7 @@ export default function Messages() {
   const messages = tab === 'inbox' ? inbox : sent;
 
   return (
-    <div className="p-6 space-y-4 max-w-4xl mx-auto">
+    <div className="mx-auto max-w-4xl space-y-4 p-0 sm:p-2 lg:p-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

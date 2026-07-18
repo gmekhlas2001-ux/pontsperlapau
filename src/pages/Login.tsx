@@ -96,9 +96,9 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-background to-muted p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
       {/* Language Controls */}
-      <div className="fixed top-4 right-4 flex items-center gap-2">
+      <div className="fixed right-2 top-[max(0.5rem,env(safe-area-inset-top))] z-20 flex items-center gap-2 rounded-full border border-border/70 bg-background/90 shadow-sm backdrop-blur sm:right-4 sm:top-[max(1rem,env(safe-area-inset-top))]">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label={t('settings.language')}>

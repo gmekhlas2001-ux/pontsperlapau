@@ -23,7 +23,7 @@
     --border: 214 25% 88%;
     --input: 214 25% 88%;
     --ring: 174 64% 36%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
     --sidebar-background: 216 33% 97%;
     --sidebar-foreground: 219 28% 21%;
     --sidebar-primary: 174 64% 28%;
@@ -44,11 +44,31 @@
   html {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    min-width: 320px;
   }
 
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    min-width: 320px;
+    overflow-x: hidden;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.2);
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -63,39 +83,31 @@
   }
 
   .page-enter {
-    animation: page-enter 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: page-enter 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
   .interactive-card {
     @apply transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out;
   }
 
-  .interactive-card:hover {
-    @apply border-primary/30;
-    box-shadow:
-      0 14px 34px hsl(222 47% 11% / 0.08),
-      0 2px 8px hsl(222 47% 11% / 0.04);
-    transform: translateY(-2px);
-  }
-
   .motion-list > * {
-    animation: item-enter 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: item-enter 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
   .motion-list > *:nth-child(2) {
-    animation-delay: 45ms;
+    animation-delay: 30ms;
   }
 
   .motion-list > *:nth-child(3) {
-    animation-delay: 90ms;
+    animation-delay: 60ms;
   }
 
   .motion-list > *:nth-child(4) {
-    animation-delay: 135ms;
+    animation-delay: 90ms;
   }
 
   .motion-list > *:nth-child(5) {
-    animation-delay: 180ms;
+    animation-delay: 120ms;
   }
 
   .dashboard-command {
@@ -107,6 +119,57 @@
       0 18px 42px hsl(222 47% 11% / 0.07);
   }
 
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .interactive-card:hover {
+    @apply border-primary/30;
+    box-shadow:
+      0 14px 34px hsl(222 47% 11% / 0.08),
+      0 2px 8px hsl(222 47% 11% / 0.04);
+    transform: translateY(-2px);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  [data-slot="button"] {
+    min-height: 2.5rem;
+  }
+
+  .interactive-card:active {
+    background-color: hsl(var(--muted) / 0.45);
+  }
+}
+
+@media (max-width: 639px) {
+  [data-slot="dialog-content"] .grid.grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-slot="dialog-content"] .grid.grid-cols-3 {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+  }
+
+  .rbc-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .rbc-toolbar .rbc-btn-group {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .rbc-toolbar .rbc-btn-group button {
+    flex: 1 0 auto;
+    min-height: 2.5rem;
+  }
+
+  .rbc-toolbar-label {
+    padding-block: 0.25rem;
+    text-align: start;
+  }
 }
 
 @keyframes page-enter {

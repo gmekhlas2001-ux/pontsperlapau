@@ -19,6 +19,7 @@ import { ChevronLeft, ChevronRight, Inbox, Search, SearchX } from 'lucide-react'
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Column<T> {
   key: string;
@@ -35,6 +36,7 @@ interface DataTableProps<T> {
   searchKeys?: (keyof T)[];
   pageSizeOptions?: number[];
   defaultPageSize?: number;
+  mobileColumns?: string[];
   className?: string;
 }
 
@@ -46,9 +48,11 @@ export function DataTable<T>({
   searchKeys = [],
   pageSizeOptions = [10, 25, 50],
   defaultPageSize = 10,
+  mobileColumns,
   className,
 }: DataTableProps<T>) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -106,13 +110,22 @@ export function DataTable<T>({
   const startEntry = sortedData.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endEntry = Math.min(currentPage * pageSize, sortedData.length);
   const isFilteredEmpty = data.length > 0 && filteredData.length === 0;
+  const visibleMobileColumns = mobileColumns?.length
+    ? columns.filter((column) => mobileColumns.includes(column.key))
+    : columns.filter((_, index) => index < 3 || index === columns.length - 1);
+  const primaryMobileColumn = visibleMobileColumns[0];
+  const actionMobileColumn = visibleMobileColumns.find((column) => column.key === 'actions');
+  const detailMobileColumns = visibleMobileColumns.filter((column) => (
+    column !== primaryMobileColumn && column !== actionMobileColumn
+  ));
+  const sortableColumns = columns.filter((column) => column.sortable);
 
   return (
     <div className={cn('space-y-4', className)}>
       {searchable && (
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={t('common.search')}
               value={searchQuery}
@@ -120,33 +133,120 @@ export function DataTable<T>({
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-10"
+              className="ps-10"
             />
           </div>
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-border/70 bg-card/80 shadow-xs">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/45 hover:bg-muted/45">
-              {columns.map((column) => (
-                <TableHead
-                  key={column.key}
-                  className={cn('font-semibold text-foreground', column.sortable && 'cursor-pointer select-none')}
-                  onClick={() => column.sortable && handleSort(column.key)}
+      <div className="overflow-hidden rounded-xl border border-border/70 bg-card/85 shadow-xs">
+        {isMobile ? (
+          <div>
+            {sortableColumns.length > 0 && (
+              <div className="border-b border-border/70 p-3">
+                <Select
+                  value={sortConfig ? `${sortConfig.key}:${sortConfig.direction}` : 'none'}
+                  onValueChange={(value) => {
+                    if (value === 'none') {
+                      setSortConfig(null);
+                    } else {
+                      const [key, direction] = value.split(':');
+                      setSortConfig({ key, direction: direction as 'asc' | 'desc' });
+                    }
+                    setCurrentPage(1);
+                  }}
                 >
-                  {column.header}
-                  {column.sortable && sortConfig?.key === column.key && (
-                    <span className="ml-1">
-                      {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+                  <SelectTrigger className="w-full" aria-label={t('common.sort')}>
+                    <SelectValue placeholder={t('common.sort')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('common.sort')}</SelectItem>
+                    {sortableColumns.flatMap((column) => [
+                      <SelectItem key={`${column.key}:asc`} value={`${column.key}:asc`}>
+                        {column.header} ↑
+                      </SelectItem>,
+                      <SelectItem key={`${column.key}:desc`} value={`${column.key}:desc`}>
+                        {column.header} ↓
+                      </SelectItem>,
+                    ])}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="divide-y divide-border/70">
+              {paginatedData.length === 0 ? (
+                <div className="flex min-h-56 flex-col items-center justify-center px-6 text-center">
+                  <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    {isFilteredEmpty ? <SearchX className="h-5 w-5" /> : <Inbox className="h-5 w-5" />}
+                  </span>
+                  <p className="text-sm font-semibold text-foreground">
+                    {isFilteredEmpty ? t('common.noMatchingResults') : t('common.noData')}
+                  </p>
+                  <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
+                    {isFilteredEmpty
+                      ? t('common.noMatchingResultsDescription')
+                      : t('common.emptyTableDescription')}
+                  </p>
+                </div>
+              ) : (
+                paginatedData.map((item) => (
+                  <article key={keyExtractor(item)} className="p-4 transition-colors active:bg-muted/35">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        {primaryMobileColumn?.cell(item)}
+                      </div>
+                      {actionMobileColumn && (
+                        <div className="-me-1 -mt-1 shrink-0">{actionMobileColumn.cell(item)}</div>
+                      )}
+                    </div>
+                    {detailMobileColumns.length > 0 && (
+                      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+                        {detailMobileColumns.map((column) => (
+                          <div key={`${keyExtractor(item)}-${column.key}`} className="min-w-0">
+                            <dt className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {column.header}
+                            </dt>
+                            <dd className="min-w-0 break-words text-sm text-foreground">{column.cell(item)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/45 hover:bg-muted/45">
+                  {columns.map((column) => (
+                    <TableHead
+                      key={column.key}
+                      className="font-semibold text-foreground"
+                      aria-sort={column.sortable && sortConfig?.key === column.key
+                        ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending')
+                        : undefined}
+                    >
+                      {column.sortable ? (
+                        <button
+                          type="button"
+                          className="flex min-h-10 items-center gap-1 rounded-sm text-start outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={() => handleSort(column.key)}
+                        >
+                          {column.header}
+                          {sortConfig?.key === column.key && (
+                            <span aria-hidden="true">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                          )}
+                        </button>
+                      ) : column.header}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
             {paginatedData.length === 0 ? (
               <TableRow>
                 <TableCell
@@ -179,12 +279,14 @@ export function DataTable<T>({
                 </TableRow>
               ))
             )}
-          </TableBody>
-        </Table>
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>{t('common.show')}</span>
           <Select
             value={String(pageSize)}
@@ -205,16 +307,17 @@ export function DataTable<T>({
             </SelectContent>
           </Select>
           <span>{t('common.entries')}</span>
-          <span>
+          <span className="basis-full text-xs sm:basis-auto sm:text-sm">
             {t('common.from')} {startEntry} {t('common.to')} {endEntry} {t('common.of')}{' '}
             {sortedData.length}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
           <Button
             variant="outline"
             size="sm"
+            aria-label={t('common.previous')}
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
           >
@@ -226,6 +329,7 @@ export function DataTable<T>({
           <Button
             variant="outline"
             size="sm"
+            aria-label={t('common.next')}
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
           >

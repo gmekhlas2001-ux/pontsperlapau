@@ -293,7 +293,7 @@ export function Library() {
       cell: (book: BookRow) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label={`Actions for ${book.title}`}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -329,9 +329,9 @@ export function Library() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('library.management')}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('library.management')}</h1>
           <p className="text-muted-foreground">{t('library.bookList')}</p>
         </div>
         {canManage && (
@@ -374,6 +374,7 @@ export function Library() {
             columns={columns}
             keyExtractor={(book) => book.id}
             searchKeys={['title', 'author', 'isbn', 'category']}
+            mobileColumns={['title', 'category', 'copies', 'status', 'actions']}
           />
         </TabsContent>
 
@@ -389,7 +390,7 @@ export function Library() {
 
       {/* Add Book Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('library.addBook')}</DialogTitle>
             <VisuallyHidden>
@@ -410,7 +411,7 @@ export function Library() {
 
       {/* Edit Book Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('library.editBook')}</DialogTitle>
             <VisuallyHidden>
@@ -434,7 +435,7 @@ export function Library() {
 
       {/* Book Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
           {selectedBook && (
             <>
               <DialogHeader>
@@ -632,7 +633,7 @@ interface BookFormProps {
 function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition, condition, onConditionChange, branches = [] }: BookFormProps) {
   return (
     <div className="grid gap-4 py-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="title">{t('library.title')} *</Label>
           <Input
@@ -650,7 +651,7 @@ function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="isbn">{t('library.isbn')}</Label>
           <Input
@@ -668,7 +669,7 @@ function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="category">{t('library.category')}</Label>
           <Input
@@ -687,7 +688,7 @@ function BookForm({ form, onChange, onSubmit, onCancel, saving, t, showCondition
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="total_copies">{t('library.totalCopies')} *</Label>
           <Input

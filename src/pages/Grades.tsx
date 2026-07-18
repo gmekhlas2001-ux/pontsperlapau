@@ -175,7 +175,7 @@ function EntryDialog({ open, onClose, onSaved, classId, studentId, existing }: E
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Assessment Name <span className="text-red-500">*</span></Label>
               <Input placeholder="e.g. Midterm Exam" value={name} onChange={(e) => setName(e.target.value)} />
@@ -193,7 +193,7 @@ function EntryDialog({ open, onClose, onSaved, classId, studentId, existing }: E
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-3">
             <div className="space-y-1.5">
               <Label>Score</Label>
               <Input
@@ -230,7 +230,7 @@ function EntryDialog({ open, onClose, onSaved, classId, studentId, existing }: E
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Date</Label>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -292,7 +292,7 @@ function StudentGradeCard({
     <Card className="border overflow-hidden">
       {/* Card header — always visible */}
       <button
-        className="w-full text-left p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors"
+        className="flex w-full items-center gap-3 p-4 text-start transition-colors hover:bg-muted/30"
         onClick={() => setExpanded((p) => !p)}
       >
         <AvatarWithFallback firstName={student.firstName} lastName={student.lastName} className="h-9 w-9 shrink-0" />
@@ -394,10 +394,10 @@ function StudentGradeCard({
                     )}
                     {/* Actions */}
                     <div className="flex gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditEntry(entry)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditEntry(entry)} aria-label={`Edit ${entry.assessment_name}`}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => setDeleteEntry(entry)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => setDeleteEntry(entry)} aria-label={`Delete ${entry.assessment_name}`}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -513,9 +513,9 @@ export function Grades() {
     : null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex min-h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 pb-4 border-b">
+      <div className="flex flex-col gap-3 border-b p-2 pb-4 sm:flex-row sm:items-center sm:justify-between sm:p-4 lg:p-6 lg:pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <GraduationCap className="h-6 w-6" />
@@ -525,7 +525,7 @@ export function Grades() {
             Record and manage student assessment grades per class
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedClass && students.length > 0 && (
             <>
               <Button
@@ -554,21 +554,21 @@ export function Grades() {
               </Button>
             </>
           )}
-          <Button variant="outline" size="icon" onClick={fetchGrades} title="Refresh">
+          <Button variant="outline" size="icon" onClick={fetchGrades} title="Refresh" aria-label="Refresh grades">
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col lg:min-h-0 lg:flex-row lg:overflow-hidden">
         {/* ── Class list ── */}
-        <div className="w-72 shrink-0 border-r flex flex-col overflow-hidden">
-          <div className="p-3 border-b">
+        <div className="flex w-full shrink-0 flex-col overflow-hidden border-b lg:w-72 lg:border-b-0 lg:border-e">
+          <div className="px-3 pt-3 lg:border-b lg:pb-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-1">Classes</p>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <div className="flex gap-2 overflow-x-auto p-2 overscroll-x-contain lg:block lg:flex-1 lg:space-y-1 lg:overflow-x-hidden lg:overflow-y-auto">
             {classesLoading ? (
-              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)
+              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-[15rem] flex-none rounded-lg lg:w-full" />)
             ) : classes.length === 0 ? (
               <div className="text-center py-8 text-sm text-muted-foreground">
                 <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -580,7 +580,7 @@ export function Grades() {
                   key={c.id}
                   onClick={() => setSelectedClass(c)}
                   className={cn(
-                    'w-full text-left rounded-lg p-3 transition-all border',
+                    'w-[15rem] flex-none rounded-lg border p-3 text-start transition-colors lg:w-full',
                     selectedClass?.id === c.id
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'hover:bg-accent border-transparent',
@@ -593,7 +593,7 @@ export function Grades() {
                         {c.teacherFirstName} {c.teacherLastName}
                       </p>
                     </div>
-                    <ChevronRight className={cn('h-4 w-4 shrink-0 mt-0.5', selectedClass?.id === c.id ? 'text-primary-foreground' : 'text-muted-foreground')} />
+                    <ChevronRight className={cn('mt-0.5 h-4 w-4 shrink-0 rtl:rotate-180', selectedClass?.id === c.id ? 'text-primary-foreground' : 'text-muted-foreground')} />
                   </div>
                 </button>
               ))
@@ -602,16 +602,16 @@ export function Grades() {
         </div>
 
         {/* ── Right panel ── */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-w-0 flex-1 lg:overflow-y-auto">
           {!selectedClass ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <div className="flex min-h-56 flex-col items-center justify-center text-muted-foreground lg:h-full lg:min-h-0">
               <GraduationCap className="h-12 w-12 mb-3 opacity-20" />
               <p>Select a class to manage grades</p>
             </div>
           ) : (
-            <div className="p-6 space-y-5">
+            <div className="space-y-5 p-1 pt-4 sm:p-4 lg:p-6">
               {/* Class header */}
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div>
                   <h2 className="text-xl font-bold">{selectedClass.name}</h2>
                   <p className="text-sm text-muted-foreground">
@@ -636,13 +636,13 @@ export function Grades() {
 
               {/* Grade distribution */}
               {students.length > 0 && (
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                   {(['A', 'B', 'C', 'D', 'F'] as const).map((g) => {
                     const count = students.filter((s) => s.finalGrade?.startsWith(g)).length;
                     return (
-                      <div key={g} className={cn('text-center p-3 rounded-xl border', gradeColor(g))}>
+                      <div key={g} className={cn('min-w-0 rounded-xl border p-2 text-center sm:p-3', gradeColor(g))}>
                         <p className="text-xl font-bold">{g}</p>
-                        <p className="text-xs font-medium">{count} student{count !== 1 ? 's' : ''}</p>
+                        <p className="truncate text-[10px] font-medium sm:text-xs">{count} student{count !== 1 ? 's' : ''}</p>
                       </div>
                     );
                   })}

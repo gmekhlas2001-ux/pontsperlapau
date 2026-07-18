@@ -194,7 +194,7 @@ export default function ParentDashboard() {
   const totalPendingCount = children.reduce((s, c) => s + c.pendingFeesCount, 0);
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="mx-auto max-w-5xl space-y-6 p-0 sm:p-2 lg:p-4">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">{t('parent.title')}</h1>

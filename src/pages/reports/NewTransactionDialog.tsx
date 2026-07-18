@@ -123,7 +123,7 @@ export function NewTransactionDialog({ open, onClose, onCreated, currentUserId }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">{t('transactions.newTransaction')}</DialogTitle>
         </DialogHeader>

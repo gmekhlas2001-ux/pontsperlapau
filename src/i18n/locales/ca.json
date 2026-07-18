@@ -26,7 +26,9 @@
     "auditLog": "Registre d'Auditoria",
     "settings": "Configuració",
     "logout": "Tancar Sessió",
-    "profile": "Perfil"
+    "profile": "Perfil",
+    "more": "Més",
+    "mobileNavigation": "Navegació ràpida"
   },
   "documents": {
     "title": "Documents importants",
@@ -175,6 +177,7 @@
     "notes": "Notes",
     "address": "Adreça",
     "notProvided": "No proporcionat",
+    "invalidDateOfBirth": "Introdueix una data de naixement vàlida en format DD/MM/AAAA.",
     "optional": "opcional"
   },
   "auth": {

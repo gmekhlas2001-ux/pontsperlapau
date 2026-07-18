@@ -110,10 +110,10 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/65">
-      <div className="flex h-16 items-center gap-3 px-3 sm:px-4 lg:px-6">
+      <div className="flex min-h-16 items-center gap-2 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 lg:px-6">
         <MobileMenuButton onClick={onMenuClick} />
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="hidden text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:block">
             {t('app.name')}
           </p>
@@ -121,8 +121,6 @@ export function Header({ onMenuClick }: HeaderProps) {
             {pageTitle}
           </h2>
         </div>
-
-        <div className="flex-1" />
 
         {user && (
           <div className="hidden items-center gap-2 rounded-md border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm lg:flex">
@@ -135,7 +133,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           {/* Language Switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={t('settings.language')} className="border border-transparent hover:border-border/70">
+              <Button variant="ghost" size="icon" aria-label={t('settings.language')} className="hidden size-10 border border-transparent hover:border-border/70 min-[360px]:inline-flex">
                 <Globe className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -147,10 +145,10 @@ export function Header({ onMenuClick }: HeaderProps) {
                   key={lang.code}
                   onClick={() => handleLanguageChange(lang.code as LanguageCode)}
                 >
-                  <span className="mr-2">{lang.flag}</span>
+                  <span className="me-2">{lang.flag}</span>
                   <span>{lang.name}</span>
                   {currentLanguage.code === lang.code && (
-                    <Check className="ml-auto h-4 w-4" />
+                    <Check className="ms-auto h-4 w-4" />
                   )}
                 </DropdownMenuItem>
               ))}
@@ -160,7 +158,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           {/* Notifications */}
           <DropdownMenu onOpenChange={(o) => { if (o) markAllAsSeen(); }}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative border border-transparent hover:border-border/70" aria-label={t('notifications.title')}>
+              <Button variant="ghost" size="icon" className="relative size-10 border border-transparent hover:border-border/70" aria-label={t('notifications.title')}>
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white shadow-sm">
@@ -217,7 +215,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-9 gap-2 rounded-md border border-transparent px-1.5 hover:border-border/70 sm:w-auto sm:px-2">
+                <Button variant="ghost" className="relative h-10 gap-2 rounded-md border border-transparent px-1 hover:border-border/70 sm:w-auto sm:px-2">
                   <AvatarWithFallback
                     src={user.avatar}
                     firstName={user.firstName}

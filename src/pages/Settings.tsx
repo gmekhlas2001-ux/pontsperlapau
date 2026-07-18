@@ -117,7 +117,7 @@ export function Settings() {
         </div>
       ) : (
         <Tabs defaultValue="general">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+          <TabsList className="flex w-full justify-start overflow-x-auto lg:w-auto">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               return (

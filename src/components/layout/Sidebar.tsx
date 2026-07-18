@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
-import { LogOut, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, Menu, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import { moduleNavItems } from '@/modules/registry';
 
 interface SidebarProps {
@@ -18,7 +18,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: SidebarProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
   const location = useLocation();
 
@@ -28,7 +28,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
 
   const NavContent = ({ collapsed = isCollapsed }: { collapsed?: boolean }) => (
     <>
-      <div className="flex items-center justify-between border-b border-sidebar-border/80 p-3">
+      <div className="flex items-center justify-between border-b border-sidebar-border/80 p-3 pe-12 lg:pe-3">
         <div className={cn('flex min-w-0 items-center gap-3', collapsed && 'justify-center')}>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-sidebar-border bg-background/70 shadow-sm">
             <img
@@ -91,7 +91,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
             return (
               <Tooltip key={item.id}>
                 <TooltipTrigger asChild>{navLink}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
+                <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={8}>
                   {item.label}
                 </TooltipContent>
               </Tooltip>
@@ -120,7 +120,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
     <>
       {/* Mobile Sidebar */}
       <Sheet open={isMobileOpen} onOpenChange={onMobileClose}>
-        <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
+        <SheetContent side={i18n.dir() === 'rtl' ? 'right' : 'left'} className="w-[min(18rem,calc(100vw-1.25rem))] border-sidebar-border bg-sidebar p-0 pb-[env(safe-area-inset-bottom)] text-sidebar-foreground">
           <VisuallyHidden>
             <SheetTitle>Navigation Menu</SheetTitle>
             <SheetDescription>Navigate to different sections of the application</SheetDescription>
@@ -134,7 +134,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          'hidden h-screen flex-col border-r border-sidebar-border bg-sidebar/95 text-sidebar-foreground shadow-[8px_0_30px_hsl(222_47%_11%_/_0.04)] backdrop-blur-xl transition-[width,background-color,border-color] duration-300 ease-out lg:flex',
+          'hidden h-dvh flex-col border-e border-sidebar-border bg-sidebar/95 text-sidebar-foreground shadow-[8px_0_30px_hsl(222_47%_11%_/_0.04)] backdrop-blur-xl transition-[width,background-color,border-color] duration-300 ease-out lg:flex',
           isCollapsed ? 'w-16' : 'w-64'
         )}
       >
@@ -146,8 +146,82 @@ export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: 
 
 export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button variant="ghost" size="icon" className="lg:hidden" onClick={onClick} aria-label="Open navigation">
+    <Button variant="ghost" size="icon" className="size-10 lg:hidden" onClick={onClick} aria-label="Open navigation">
       <Menu className="h-5 w-5" />
     </Button>
+  );
+}
+
+const MOBILE_NAV_PRIORITY: Record<string, string[]> = {
+  superadmin: ['dashboard.nav', 'students.nav', 'attendance.nav', 'messages.nav'],
+  admin: ['dashboard.nav', 'students.nav', 'attendance.nav', 'messages.nav'],
+  teacher: ['dashboard.nav', 'students.nav', 'attendance.nav', 'grades.nav'],
+  librarian: ['dashboard.nav', 'library.nav', 'messages.nav', 'profile.nav'],
+  student: ['dashboard.nav', 'students.myProfile.nav', 'classes.nav', 'calendar.nav'],
+  parent: ['parents.portal.nav'],
+};
+
+export function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (!user) return null;
+
+  const accessibleItems = moduleNavItems.filter((item) => item.roles.includes(user.role));
+  const priorities = MOBILE_NAV_PRIORITY[user.role] ?? [];
+  const primaryItems = priorities
+    .map((id) => accessibleItems.find((item) => item.id === id))
+    .filter((item): item is (typeof accessibleItems)[number] => Boolean(item))
+    .slice(0, 4);
+  const primaryPaths = new Set(primaryItems.map((item) => item.path));
+  const isMoreActive = accessibleItems.some((item) => {
+    if (primaryPaths.has(item.path)) return false;
+    return item.path === '/'
+      ? location.pathname === '/'
+      : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+  });
+
+  return (
+    <nav
+      aria-label={t('nav.mobileNavigation')}
+      className="fixed inset-x-0 bottom-0 z-40 grid min-h-16 border-t border-border/70 bg-background/92 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_32px_hsl(222_47%_11%_/_0.08)] backdrop-blur-xl lg:hidden"
+      style={{ gridTemplateColumns: `repeat(${primaryItems.length + 1}, minmax(0, 1fr))` }}
+    >
+      {primaryItems.map((item) => {
+        const Icon = item.icon;
+        const active = item.path === '/'
+          ? location.pathname === '/'
+          : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+        return (
+          <NavLink
+            key={item.id}
+            to={item.path}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-medium text-muted-foreground transition-colors',
+              active && 'text-primary',
+            )}
+          >
+            {active && <span className="absolute inset-x-4 top-1 h-0.5 rounded-full bg-primary" />}
+            <Icon className={cn('h-5 w-5', active && 'stroke-[2.4]')} />
+            <span className="max-w-full truncate">{t(item.labelKey)}</span>
+          </NavLink>
+        );
+      })}
+      <button
+        type="button"
+        onClick={onMoreClick}
+        className={cn(
+          'relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-medium text-muted-foreground transition-colors',
+          isMoreActive && 'text-primary',
+        )}
+        aria-label={t('nav.more')}
+      >
+        {isMoreActive && <span className="absolute inset-x-4 top-1 h-0.5 rounded-full bg-primary" />}
+        <MoreHorizontal className="h-5 w-5" />
+        <span>{t('nav.more')}</span>
+      </button>
+    </nav>
   );
 }

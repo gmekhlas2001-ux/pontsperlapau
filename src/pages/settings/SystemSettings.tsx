@@ -146,7 +146,7 @@ export function SystemSettings({ settings, onSettingsChange }: Props) {
                   <CardDescription>{t('settings.databaseOverviewDescription')}</CardDescription>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={loadStats}>
+              <Button variant="ghost" size="icon" onClick={loadStats} aria-label="Refresh system statistics">
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>

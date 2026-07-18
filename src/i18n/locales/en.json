@@ -26,7 +26,9 @@
     "auditLog": "Audit Log",
     "settings": "Settings",
     "logout": "Logout",
-    "profile": "Profile"
+    "profile": "Profile",
+    "more": "More",
+    "mobileNavigation": "Quick navigation"
   },
   "documents": {
     "title": "Important documents",
@@ -175,6 +177,7 @@
     "notes": "Notes",
     "address": "Address",
     "notProvided": "Not provided",
+    "invalidDateOfBirth": "Enter a valid date of birth as DD/MM/YYYY.",
     "optional": "optional"
   },
   "auth": {

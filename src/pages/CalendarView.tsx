@@ -27,6 +27,7 @@ import { RefreshCw, CalendarDays, Clock, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { getClassesList } from '@/services/classService';
 import type { ClassRecord as ClassItem } from '@/services/classService';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // ─── localizer ────────────────────────────────────────────────────────────────
 
@@ -166,6 +167,13 @@ export default function CalendarView() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<(typeof Views)[keyof typeof Views]>(Views.WEEK);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (isMobile) {
+      setView((current) => current === Views.WEEK ? Views.AGENDA : current);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     setLoading(true);
@@ -207,7 +215,7 @@ export default function CalendarView() {
   });
 
   return (
-    <div className="p-6 space-y-4 max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl space-y-4 p-0 sm:p-2 lg:p-4">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">{t('calendar.title')}</h1>
@@ -234,7 +242,7 @@ export default function CalendarView() {
               {t('common.loading')}
             </div>
           ) : (
-            <div style={{ height: 640 }}>
+            <div className="min-h-[28rem] h-[min(40rem,calc(100dvh-13rem))]">
               <Calendar
                 localizer={localizer}
                 events={events}

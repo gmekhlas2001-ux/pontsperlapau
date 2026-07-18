@@ -69,7 +69,7 @@ export function PasswordResets() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-6 pb-4 border-b">
+      <div className="flex items-center justify-between gap-3 border-b p-2 pb-4 sm:p-4 lg:p-6 lg:pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <KeyRound className="h-6 w-6" />
@@ -79,12 +79,12 @@ export function PasswordResets() {
             {t('passwordResets.subtitle')}
           </p>
         </div>
-        <Button variant="outline" size="icon" onClick={load} title={t('common.refresh')}>
+        <Button variant="outline" size="icon" onClick={load} title={t('common.refresh')} aria-label={t('common.refresh')}>
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 space-y-4">
+      <div className="flex-1 space-y-4 p-1 pt-4 sm:p-4 lg:overflow-auto lg:p-6">
         <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
           <TabsList>
             <TabsTrigger value="pending">
