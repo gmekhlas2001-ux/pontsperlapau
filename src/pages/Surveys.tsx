@@ -48,7 +48,8 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import {
-  getSurveys, getSurveyListStats, getSurveyFull, getSurveyResults, getBranchSubmission,
+  getSurveys, getSurveyListStats, getSurveyFull, getSurveyResultsFast,
+  getAllIndividualResponses, getBranchSubmissionFast,
   createSurvey, updateSurveyMeta, updateSurveyStructure, deleteSurvey, saveBranchData, saveIndividualResponses, getSurveyRespondentOptions,
   addSurveyRespondent, updateSurveyRespondent, deleteSurveyRespondent, optionsForQuestion,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
@@ -1577,7 +1578,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   useEffect(() => {
     if (!branchId || !open) return;
     setLoading(true);
-    getBranchSubmission(survey.id, branchId).then(({ submission, responses, individualResponses, error }) => {
+    getBranchSubmissionFast(survey.id, branchId).then(({ submission, responses, individualResponses, error }) => {
       if (error) {
         toast.error(`Failed to load saved responses: ${error}`);
         setLoading(false);
@@ -1784,7 +1785,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
           answers,
         );
         if (!res.success) { toast.error(res.error); return; }
-        const latest = await getBranchSubmission(survey.id, branchId);
+        const latest = await getBranchSubmissionFast(survey.id, branchId);
         if (latest.error) {
           toast.error(`Responses were saved, but could not be reloaded: ${latest.error}`);
           return;
@@ -2358,6 +2359,8 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
 function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () => void; survey: SurveyFull }) {
   const [results, setResults] = useState<BranchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingIndividual, setLoadingIndividual] = useState(false);
+  const [individualLoaded, setIndividualLoaded] = useState(false);
   const [exportingGeneralPdf, setExportingGeneralPdf] = useState(false);
   const [exportingGeneralExcel, setExportingGeneralExcel] = useState(false);
   const [exportingIndividualPdf, setExportingIndividualPdf] = useState(false);
@@ -2366,14 +2369,34 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
   const [selectedExportTargetKey, setSelectedExportTargetKey] = useState('');
   const [tab, setTab] = useState('overview');
 
+  // Fast initial load: fetches aggregated counts only (no individual response rows)
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    getSurveyResults(survey.id).then((res) => {
+    setIndividualLoaded(false);
+    getSurveyResultsFast(survey.id).then((res) => {
       if (res.success && res.data) setResults(res.data);
       setLoading(false);
     });
   }, [open, survey.id]);
+
+  // Lazy load: fetch individual responses only when the Individual tab is opened
+  useEffect(() => {
+    if (tab !== 'individual' || individualLoaded || loading) return;
+    setLoadingIndividual(true);
+    getAllIndividualResponses(survey.id).then(({ data, error }) => {
+      if (error) {
+        toast.error(`Failed to load individual responses: ${error}`);
+      } else {
+        setResults((prev) => prev.map((branch) => ({
+          ...branch,
+          individualResponses: data.filter((r) => r.branch_id === branch.branchId),
+        })));
+        setIndividualLoaded(true);
+      }
+      setLoadingIndividual(false);
+    });
+  }, [tab, individualLoaded, loading, survey.id]);
 
   const totalRespondents = results.reduce((s, b) => s + b.totalRespondents, 0);
   const submittedBranches = results.filter((b) => b.submitted).length;
@@ -2777,7 +2800,13 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       })}
                     </tbody>
                   </table>
-                  {individualRows.length === 0 && (
+                  {loadingIndividual && (
+                    <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                      Loading individual responses…
+                    </div>
+                  )}
+                  {!loadingIndividual && individualRows.length === 0 && (
                     <div className="px-4 py-12 text-center text-sm text-muted-foreground">
                       No individual student or staff responses have been saved yet.
                     </div>

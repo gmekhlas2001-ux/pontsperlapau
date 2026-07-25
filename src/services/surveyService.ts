@@ -189,6 +189,13 @@ export interface SurveyListStats {
 // response reads must be paginated explicitly.
 const SURVEY_DATA_PAGE_SIZE = 1000;
 
+// ─── In-memory cache ──────────────────────────────────────────────────────────
+// Survey structure (questions, options, sections) rarely changes during a
+// session. Caching avoids 5 parallel Data API calls every time the user opens
+// the results dialog or data-entry dialog for the same survey.
+const surveyFullCache = new Map<string, { data: SurveyFull; ts: number }>();
+const SURVEY_FULL_CACHE_TTL = 5 * 60_000; // 5 minutes
+
 type SurveyDataTable =
   | 'survey_respondents'
   | 'survey_branch_responses'
@@ -286,6 +293,12 @@ export async function getSurveyListStats(
 }
 
 export async function getSurveyFull(surveyId: string): Promise<{ success: boolean; data?: SurveyFull; error?: string }> {
+  // Return cached structure if fresh
+  const cached = surveyFullCache.get(surveyId);
+  if (cached && Date.now() - cached.ts < SURVEY_FULL_CACHE_TTL) {
+    return { success: true, data: cached.data };
+  }
+
   const [surveyRes, sectionsRes, questionsRes, optionsRes, respondentsRes] = await Promise.all([
     supabase.from('surveys').select('*').eq('id', surveyId).single(),
     supabase.from('survey_sections').select('*').eq('survey_id', surveyId).order('order_index'),
@@ -302,18 +315,23 @@ export async function getSurveyFull(surveyId: string): Promise<{ success: boolea
   if (respondentsRes.error && !respondentTableUnavailable) {
     return { success: false, error: respondentsRes.error.message };
   }
-  return {
-    success: true,
-    data: {
-      ...(surveyRes.data as Survey),
-      sections: (sectionsRes.data ?? []) as SurveySection[],
-      questions: (questionsRes.data ?? []) as SurveyQuestion[],
-      options: (optionsRes.data ?? []) as SurveyResponseOption[],
-      respondents: respondentTableUnavailable
-        ? []
-        : respondentsRes.data.sort((a, b) => a.respondent_name.localeCompare(b.respondent_name)),
-    },
+  const data: SurveyFull = {
+    ...(surveyRes.data as Survey),
+    sections: (sectionsRes.data ?? []) as SurveySection[],
+    questions: (questionsRes.data ?? []) as SurveyQuestion[],
+    options: (optionsRes.data ?? []) as SurveyResponseOption[],
+    respondents: respondentTableUnavailable
+      ? []
+      : respondentsRes.data.sort((a, b) => a.respondent_name.localeCompare(b.respondent_name)),
   };
+  surveyFullCache.set(surveyId, { data, ts: Date.now() });
+  return { success: true, data };
+}
+
+/** Evict cached survey structure after mutations (e.g. editing survey). */
+export function invalidateSurveyFullCache(surveyId?: string) {
+  if (surveyId) surveyFullCache.delete(surveyId);
+  else surveyFullCache.clear();
 }
 
 export function optionsForQuestion(survey: Pick<SurveyFull, 'options'>, questionId: string) {
@@ -392,6 +410,133 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
     });
 
   return { success: true, data: results };
+}
+
+/**
+ * Fast path: uses a server-side Postgres function to compute aggregated survey
+ * results in a single round trip, instead of fetching thousands of individual
+ * response rows across multiple paginated API calls.
+ *
+ * The individual responses are NOT returned by this fast path — they are only
+ * needed for the "Individual" tab and export, so the caller should lazy-load
+ * them separately via `getAllIndividualResponses` when actually needed.
+ */
+export async function getSurveyResultsFast(
+  surveyId: string,
+): Promise<{ success: boolean; data?: BranchResult[]; error?: string }> {
+  const fullRes = await getSurveyFull(surveyId);
+  if (!fullRes.success || !fullRes.data) return { success: false, error: fullRes.error };
+
+  const rpcRes = await callEdgeFunction<{
+    success: boolean;
+    data: {
+      branches: { branchId: string; branchName: string; totalRespondents: number; submitted: boolean; hasAggregateAnswers: boolean }[];
+      questionCounts: { branchId: string; questionId: string; optionId: string; count: number }[];
+    };
+  }>('app-actions', { operation: 'get_survey_results_fast', surveyId });
+
+  if (!rpcRes.ok || !rpcRes.data?.data) {
+    // Fall back to the original slow path if the RPC is not available yet
+    return getSurveyResults(surveyId);
+  }
+
+  const { branches: rpcBranches, questionCounts } = rpcRes.data.data;
+  const { questions } = fullRes.data;
+
+  // Build a lookup: branchId -> questionId -> optionId -> count
+  const countLookup = new Map<string, Map<string, Map<string, number>>>();
+  (questionCounts ?? []).forEach((row) => {
+    if (!countLookup.has(row.branchId)) countLookup.set(row.branchId, new Map());
+    const branchMap = countLookup.get(row.branchId)!;
+    if (!branchMap.has(row.questionId)) branchMap.set(row.questionId, new Map());
+    branchMap.get(row.questionId)!.set(row.optionId, row.count);
+  });
+
+  const results: BranchResult[] = (rpcBranches ?? []).map((branch) => {
+    const branchCounts = countLookup.get(branch.branchId);
+
+    const questionResults = questions.map((q) => {
+      const questionOptions = optionsForQuestion(fullRes.data!, q.id);
+      const qCounts = branchCounts?.get(q.id);
+      const counts = questionOptions.map((opt) => ({
+        optionId: opt.id,
+        label: opt.label,
+        sentiment: opt.sentiment,
+        count: qCounts?.get(opt.id) ?? 0,
+      }));
+      const total = counts.reduce((s, c) => s + c.count, 0);
+      const positiveCount = counts.filter((c) => c.sentiment === 'positive').reduce((s, c) => s + c.count, 0);
+      const negativeCount = counts.filter((c) => c.sentiment === 'negative').reduce((s, c) => s + c.count, 0);
+      return {
+        questionId: q.id,
+        questionText: q.question_text,
+        counts,
+        total,
+        positiveRate: total > 0 ? positiveCount / total : 0,
+        negativeRate: total > 0 ? negativeCount / total : 0,
+      };
+    });
+
+    return {
+      branchId: branch.branchId,
+      branchName: branch.branchName,
+      totalRespondents: branch.totalRespondents,
+      submitted: branch.submitted,
+      questionResults,
+      individualResponses: [], // loaded lazily when the Individual tab is opened
+    };
+  });
+
+  return { success: true, data: results };
+}
+
+/**
+ * Fetches all individual responses for a survey. Used to lazily populate
+ * the "Individual" tab after the fast aggregated results have already loaded.
+ */
+export async function getAllIndividualResponses(
+  surveyId: string,
+): Promise<{ data: SurveyIndividualResponse[]; error: string | null }> {
+  const res = await getAllSurveyRows<SurveyIndividualResponse>('survey_individual_responses', surveyId);
+  return { data: res.data, error: res.error?.message ?? null };
+}
+
+/**
+ * Fast path for loading branch submission data using a server-side Postgres
+ * function. Falls back to the original implementation if the RPC fails.
+ */
+export async function getBranchSubmissionFast(surveyId: string, branchId: string) {
+  const rpcRes = await callEdgeFunction<{
+    success: boolean;
+    data: {
+      submission: SurveyBranchSubmission | null;
+      responses: { question_id: string; option_id: string; count: number }[];
+      individualResponses: SurveyIndividualResponse[];
+      totalRespondents: number;
+    };
+  }>('app-actions', { operation: 'get_branch_submission_fast', surveyId, branchId });
+
+  if (!rpcRes.ok || !rpcRes.data?.data) {
+    // Fall back to the original slow path
+    return getBranchSubmission(surveyId, branchId);
+  }
+
+  const { submission, responses, individualResponses, totalRespondents } = rpcRes.data.data;
+  return {
+    submission: submission
+      ? { ...submission, total_respondents: totalRespondents }
+      : null,
+    responses: (responses ?? []).map((r) => ({
+      ...r,
+      id: `${r.question_id}:${r.option_id}`,
+      survey_id: surveyId,
+      branch_id: branchId,
+      entered_by: undefined,
+      updated_at: new Date().toISOString(),
+    })) as unknown as SurveyBranchResponse[],
+    individualResponses: individualResponses ?? [],
+    error: undefined,
+  };
 }
 
 export async function getSurveyRespondentOptions(branchId: string) {

@@ -2092,6 +2092,45 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(req, { success: true, data });
     }
 
+    if (op === "get_survey_results_fast") {
+      const roleError = assertRoles(req, caller, ADMIN_ROLES);
+      if (roleError) return roleError;
+      const surveyId = cleanString(body.surveyId);
+      if (!surveyId) return errorResponse(req, 400, "Missing surveyId");
+
+      const { data: scopedSurvey, error: scopedSurveyError } = await supabase
+        .from("surveys")
+        .select("id, branch_id")
+        .eq("id", surveyId)
+        .maybeSingle();
+      if (scopedSurveyError || !scopedSurvey) return errorResponse(req, 404, "Survey not found", scopedSurveyError);
+
+      const branchError = assertBranch(req, caller, scopedSurvey.branch_id);
+      if (branchError) return branchError;
+
+      const { data, error } = await supabase.rpc("get_survey_results_fast", { p_survey_id: surveyId });
+      if (error) return errorResponse(req, 500, "Failed to get survey results", error);
+      return jsonResponse(req, { success: true, data });
+    }
+
+    if (op === "get_branch_submission_fast") {
+      const roleError = assertRoles(req, caller, ADMIN_ROLES);
+      if (roleError) return roleError;
+      const surveyId = cleanString(body.surveyId);
+      const branchId = cleanString(body.branchId);
+      if (!surveyId || !branchId) return errorResponse(req, 400, "Missing surveyId or branchId");
+
+      const branchError = assertBranch(req, caller, branchId);
+      if (branchError) return branchError;
+
+      const { data, error } = await supabase.rpc("get_branch_submission_fast", {
+        p_survey_id: surveyId,
+        p_branch_id: branchId,
+      });
+      if (error) return errorResponse(req, 500, "Failed to get branch submission", error);
+      return jsonResponse(req, { success: true, data });
+    }
+
     return errorResponse(req, 400, "Unknown operation");
   } catch (err) {
     console.error("[app-actions] uncaught:", err);
