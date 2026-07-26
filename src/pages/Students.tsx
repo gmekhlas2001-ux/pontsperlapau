@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import Papa from 'papaparse';
 import { DocumentsManager, flushPendingDocuments } from '@/components/DocumentsManager';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router';
 import { DataTable } from '@/components/ui-custom/DataTable';
 import { BirthDateInput } from '@/components/ui-custom/BirthDateInput';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';

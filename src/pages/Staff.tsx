@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { DataTable } from '@/components/ui-custom/DataTable';
 import { BirthDateInput } from '@/components/ui-custom/BirthDateInput';
 import { StatusBadge } from '@/components/ui-custom/StatusBadge';

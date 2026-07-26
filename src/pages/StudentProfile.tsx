@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import {

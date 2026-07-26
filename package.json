@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "engines": {
-    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+    "node": ">=22.22.0"
   },
   "scripts": {
     "dev": "vite",
@@ -62,19 +62,18 @@
     "lucide-react": "^0.562.0",
     "next-themes": "^0.4.6",
     "papaparse": "^5.5.3",
-    "react": "^19.2.0",
+    "react": "^19.2.8",
     "react-big-calendar": "^1.19.4",
     "react-day-picker": "^9.13.0",
-    "react-dom": "^19.2.0",
+    "react-dom": "^19.2.8",
     "react-hook-form": "^7.71.2",
     "react-i18next": "^16.5.4",
     "react-resizable-panels": "^4.2.2",
-    "react-router-dom": "^7.13.1",
+    "react-router": "^8.3.0",
     "recharts": "^2.15.4",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "vaul": "^1.1.2",
-    "vite-plugin-pwa": "^1.3.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -99,9 +98,14 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
+    "vite-plugin-pwa": "^1.3.0",
     "vitest": "4.1.10"
   },
   "overrides": {
+    "exceljs": {
+      "archiver": "8.0.0",
+      "unzipper": "0.12.5"
+    },
     "uuid": "11.1.1"
   }
 }
