@@ -176,7 +176,7 @@ describe('survey full cache and fast results', () => {
   });
 
   it('invalidates cached survey data after a successful metadata update', async () => {
-    vi.mocked(callEdgeFunction).mockResolvedValue({ ok: true, data: { success: true } });
+    vi.mocked(callEdgeFunction).mockResolvedValue({ ok: true, status: 200, data: { success: true } });
 
     await getSurveyFull('survey-a');
     await getSurveyFull('survey-a');
@@ -191,6 +191,7 @@ describe('survey full cache and fast results', () => {
   it('keeps individual answer totals in the fast summary without loading answer rows', async () => {
     vi.mocked(callEdgeFunction).mockResolvedValue({
       ok: true,
+      status: 200,
       data: {
         success: true,
         data: {
