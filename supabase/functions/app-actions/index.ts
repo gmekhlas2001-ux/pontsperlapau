@@ -2123,6 +2123,14 @@ Deno.serve(async (req: Request) => {
       const branchError = assertBranch(req, caller, branchId);
       if (branchError) return branchError;
 
+      const { data: scopedSurvey, error: scopedSurveyError } = await supabase
+        .from("surveys")
+        .select("id, branch_id")
+        .eq("id", surveyId)
+        .maybeSingle();
+      if (scopedSurveyError || !scopedSurvey) return errorResponse(req, 404, "Survey not found", scopedSurveyError);
+      if (scopedSurvey.branch_id !== branchId) return errorResponse(req, 403, "Survey is outside this branch");
+
       const { data, error } = await supabase.rpc("get_branch_submission_fast", {
         p_survey_id: surveyId,
         p_branch_id: branchId,

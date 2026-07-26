@@ -134,6 +134,7 @@ export interface BranchResult {
   branchName: string;
   totalRespondents: number;
   submitted: boolean;
+  individualAnswerCount: number;
   questionResults: {
     questionId: string;
     questionText: string;
@@ -404,6 +405,7 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
         branchName: branch.name,
         totalRespondents: Math.max(hasAggregateAnswers ? submission?.total_respondents ?? 0 : 0, individualRespondentCount),
         submitted: hasAggregateAnswers || branchIndividualResponses.length > 0,
+        individualAnswerCount: branchIndividualResponses.length,
         questionResults,
         individualResponses: branchIndividualResponses,
       };
@@ -430,7 +432,14 @@ export async function getSurveyResultsFast(
   const rpcRes = await callEdgeFunction<{
     success: boolean;
     data: {
-      branches: { branchId: string; branchName: string; totalRespondents: number; submitted: boolean; hasAggregateAnswers: boolean }[];
+      branches: {
+        branchId: string;
+        branchName: string;
+        totalRespondents: number;
+        individualAnswerCount: number;
+        submitted: boolean;
+        hasAggregateAnswers: boolean;
+      }[];
       questionCounts: { branchId: string; questionId: string; optionId: string; count: number }[];
     };
   }>('app-actions', { operation: 'get_survey_results_fast', surveyId });
@@ -482,6 +491,7 @@ export async function getSurveyResultsFast(
       branchName: branch.branchName,
       totalRespondents: branch.totalRespondents,
       submitted: branch.submitted,
+      individualAnswerCount: branch.individualAnswerCount ?? 0,
       questionResults,
       individualResponses: [], // loaded lazily when the Individual tab is opened
     };
@@ -621,6 +631,7 @@ export async function updateSurveyMeta(surveyId: string, fields: { title?: strin
     fields,
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to update survey' };
+  invalidateSurveyFullCache(surveyId);
   logActivity({ action_type: 'UPDATE', table_name: 'surveys', description: `Updated survey` });
   return { success: true };
 }
@@ -645,6 +656,7 @@ export async function updateSurveyStructure(
     options: payload.options,
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to update survey questions' };
+  invalidateSurveyFullCache(surveyId);
   logActivity({ action_type: 'UPDATE', table_name: 'survey_questions', description: 'Updated survey questions' });
   return { success: true };
 }
@@ -655,6 +667,7 @@ export async function deleteSurvey(surveyId: string) {
     surveyId,
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to delete survey' };
+  invalidateSurveyFullCache(surveyId);
   logActivity({ action_type: 'DELETE', table_name: 'surveys', description: `Deleted survey` });
   return { success: true };
 }
@@ -698,6 +711,7 @@ export async function addSurveyRespondent(
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to add respondent' };
 
+  invalidateSurveyFullCache(surveyId);
   logActivity({ action_type: 'INSERT', table_name: 'survey_respondents', description: `Added survey respondent: ${name}` });
   return { success: true, respondent: res.data?.respondent };
 }
@@ -720,6 +734,7 @@ export async function updateSurveyRespondent(
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to update respondent' };
 
+  invalidateSurveyFullCache(surveyId);
   logActivity({ action_type: 'UPDATE', table_name: 'survey_respondents', description: `Updated survey respondent: ${name}` });
   return { success: true, respondent: res.data?.respondent };
 }
@@ -738,6 +753,7 @@ export async function deleteSurveyRespondent(
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to delete respondent' };
 
+  invalidateSurveyFullCache(surveyId);
   logActivity({ action_type: 'DELETE', table_name: 'survey_respondents', description: 'Deleted manual survey respondent' });
   return { success: true };
 }

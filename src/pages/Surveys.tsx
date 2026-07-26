@@ -11,7 +11,7 @@
  * (distinguished by the `existing` prop).
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,10 +44,6 @@ import {
   Grip, X, Building2, ArrowLeft, FileSpreadsheet, Copy, Search,
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts';
-import {
   getSurveys, getSurveyListStats, getSurveyFull, getSurveyResultsFast,
   getAllIndividualResponses, getBranchSubmissionFast,
   createSurvey, updateSurveyMeta, updateSurveyStructure, deleteSurvey, saveBranchData, saveIndividualResponses, getSurveyRespondentOptions,
@@ -57,14 +53,7 @@ import {
   type SurveyRespondent, type SurveyIndividualResponse, type SurveyLanguage,
 } from '@/services/surveyService';
 import { getBranches, type Branch } from '@/services/branchService';
-import {
-  exportSurveyIndividualExcel,
-  exportSurveyIndividualsExcel,
-  exportSurveyIndividualPDF,
-  exportSurveyResultsExcel,
-  exportSurveyResultsPDF,
-  type SurveyIndividualExportTarget,
-} from '@/services/exportService';
+import type { SurveyIndividualExportTarget } from '@/services/exportService';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n';
 
@@ -142,7 +131,11 @@ const STATUS_CONFIG: Record<SurveyStatus, { label: string; className: string; ic
 };
 
 
-const PIE_COLORS = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#65a30d', '#9333ea'];
+const SurveyResultsCharts = lazy(() => import('@/components/surveys/SurveyResultsCharts').then((module) => ({
+  default: module.SurveyResultsCharts,
+})));
+
+const loadSurveyExportService = () => import('@/services/exportService');
 
 const SURVEY_LANGUAGE_OPTIONS: Array<{ value: SurveyLanguage; label: string }> = [
   { value: 'en', label: 'English' },
@@ -2368,37 +2361,62 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
   const [selectedExportTargetKeys, setSelectedExportTargetKeys] = useState<string[]>([]);
   const [selectedExportTargetKey, setSelectedExportTargetKey] = useState('');
   const [tab, setTab] = useState('overview');
+  const resultsRequestId = useRef(0);
+  const individualRequestId = useRef(0);
 
   // Fast initial load: fetches aggregated counts only (no individual response rows)
   useEffect(() => {
+    const requestId = ++resultsRequestId.current;
+    ++individualRequestId.current;
     if (!open) return;
+    setResults([]);
     setLoading(true);
+    setLoadingIndividual(false);
     setIndividualLoaded(false);
+    setSelectedExportTargetKeys([]);
+    setSelectedExportTargetKey('');
+    setTab('overview');
     getSurveyResultsFast(survey.id).then((res) => {
-      if (res.success && res.data) setResults(res.data);
+      if (requestId !== resultsRequestId.current) return;
+      if (res.success && res.data) {
+        setResults(res.data);
+      } else {
+        toast.error(`Failed to load survey results: ${res.error ?? 'Unknown error'}`);
+      }
       setLoading(false);
     });
   }, [open, survey.id]);
 
-  // Lazy load: fetch individual responses only when the Individual tab is opened
-  useEffect(() => {
-    if (tab !== 'individual' || individualLoaded || loading) return;
+  const loadIndividualResponses = useCallback(async () => {
+    if (!open || individualLoaded || loadingIndividual) return;
+    const requestId = ++individualRequestId.current;
     setLoadingIndividual(true);
-    getAllIndividualResponses(survey.id).then(({ data, error }) => {
-      if (error) {
-        toast.error(`Failed to load individual responses: ${error}`);
-      } else {
-        setResults((prev) => prev.map((branch) => ({
+    const { data, error } = await getAllIndividualResponses(survey.id);
+    if (requestId !== individualRequestId.current) return;
+    if (error) {
+      toast.error(`Failed to load individual responses: ${error}`);
+    } else {
+      setResults((previous) => previous.map((branch) => {
+        const branchResponses = data.filter((response) => response.branch_id === branch.branchId);
+        return {
           ...branch,
-          individualResponses: data.filter((r) => r.branch_id === branch.branchId),
-        })));
-        setIndividualLoaded(true);
-      }
-      setLoadingIndividual(false);
-    });
-  }, [tab, individualLoaded, loading, survey.id]);
+          individualAnswerCount: branchResponses.length,
+          individualResponses: branchResponses,
+        };
+      }));
+      setIndividualLoaded(true);
+    }
+    setLoadingIndividual(false);
+  }, [individualLoaded, loadingIndividual, open, survey.id]);
+
+  // Lazy load: fetch individual responses only when the Individual tab is opened.
+  useEffect(() => {
+    if (tab !== 'individual' || loading) return;
+    void loadIndividualResponses();
+  }, [loadIndividualResponses, loading, tab]);
 
   const totalRespondents = results.reduce((s, b) => s + b.totalRespondents, 0);
+  const totalIndividualAnswers = results.reduce((sum, branch) => sum + branch.individualAnswerCount, 0);
   const submittedBranches = results.filter((b) => b.submitted).length;
 
   const hasSentimentAnalytics = survey.questions.some((question) => question.sentiment_enabled);
@@ -2554,7 +2572,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                     { label: 'Branches Submitted', value: `${submittedBranches} / ${results.length}`, icon: Building2, color: 'text-emerald-600' },
                     hasSentimentAnalytics
                       ? { label: 'Avg Satisfaction', value: `${Math.round(avgSatisfaction * 100)}%`, icon: TrendingUp, color: avgSatisfaction >= 0.75 ? 'text-emerald-600' : avgSatisfaction >= 0.5 ? 'text-amber-600' : 'text-red-600' }
-                      : { label: 'Individual Answers', value: individualRows.length.toLocaleString(i18n.language), icon: FileText, color: 'text-teal-600' },
+                      : { label: 'Individual Answers', value: totalIndividualAnswers.toLocaleString(i18n.language), icon: FileText, color: 'text-teal-600' },
                   ].map((kpi) => (
                     <Card key={kpi.label} className="border">
                       <CardContent className="p-4 flex items-center gap-3">
@@ -2572,37 +2590,14 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
 
                 {/* Charts */}
                 {hasResultData ? (
-                  <div className="grid gap-6 xl:grid-cols-2">
-                    <div className="rounded-lg border bg-background p-4">
-                      <p className="mb-3 text-sm font-semibold">{hasSentimentAnalytics ? 'Overall Response Distribution' : 'Answer Distribution'}</p>
-                      <ResponsiveContainer width="100%" height={320}>
-                        <PieChart>
-                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={75} outerRadius={115} paddingAngle={3} dataKey="value">
-                            {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                          </Pie>
-                          <Tooltip formatter={(v) => hasSentimentAnalytics ? `${v}%` : Number(v).toLocaleString(i18n.language)} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="rounded-lg border bg-background p-4">
-                      <p className="mb-3 text-sm font-semibold">{hasSentimentAnalytics ? 'Satisfaction by Branch' : 'Responses by Branch'}</p>
-                      <ResponsiveContainer width="100%" height={320}>
-                        <BarChart data={branchBarData} layout="vertical" margin={{ left: 12, right: 18 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            type="number"
-                            domain={hasSentimentAnalytics ? [0, 100] : undefined}
-                            tickFormatter={(v) => hasSentimentAnalytics ? `${v}%` : String(v)}
-                            tick={{ fontSize: 11 }}
-                          />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
-                          <Tooltip formatter={(v) => hasSentimentAnalytics ? `${v}%` : `${v} respondents`} />
-                          <Bar dataKey="metric" fill="#10b981" radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                  <Suspense fallback={<Skeleton className="h-[360px] w-full rounded-lg" />}>
+                    <SurveyResultsCharts
+                      pieData={pieData}
+                      branchBarData={branchBarData}
+                      hasSentimentAnalytics={hasSentimentAnalytics}
+                      locale={i18n.language}
+                    />
+                  </Suspense>
                 ) : (
                   <div className="rounded-lg border bg-background p-8 text-center">
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
@@ -2696,7 +2691,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                                       : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
                                   : 'bg-muted text-muted-foreground'
                               )}>
-                                {hasSentimentAnalytics ? `${Math.round(avg * 100)}%` : b.individualResponses.length.toLocaleString(i18n.language)}
+                                {hasSentimentAnalytics ? `${Math.round(avg * 100)}%` : b.individualAnswerCount.toLocaleString(i18n.language)}
                               </span>
                             </td>
                             {b.questionResults.map((qr) => (
@@ -2827,6 +2822,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                   onClick={async () => {
                     setExportingGeneralPdf(true);
                     try {
+                      const { exportSurveyResultsPDF } = await loadSurveyExportService();
                       await exportSurveyResultsPDF(survey, results);
                     } catch {
                       toast.error('PDF export failed. Downloaded an HTML fallback instead.');
@@ -2844,6 +2840,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                   onClick={async () => {
                     setExportingGeneralExcel(true);
                     try {
+                      const { exportSurveyResultsExcel } = await loadSurveyExportService();
                       await exportSurveyResultsExcel(survey, results);
                     } catch {
                       toast.error('Excel export failed');
@@ -2860,6 +2857,16 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
 
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:w-20">Individual</span>
+                {!individualLoaded && (
+                  <Button
+                    variant="outline"
+                    onClick={() => void loadIndividualResponses()}
+                    disabled={loading || loadingIndividual}
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    {loadingIndividual ? 'Loading people...' : 'Load people'}
+                  </Button>
+                )}
                 <Select
                   value={selectedIndividualExportTarget?.key ?? ''}
                   onValueChange={setSelectedExportTargetKey}
@@ -2885,6 +2892,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                     }
                     setExportingIndividualPdf(true);
                     try {
+                      const { exportSurveyIndividualPDF } = await loadSurveyExportService();
                       await exportSurveyIndividualPDF(survey, results, selectedIndividualExportTarget);
                     } catch {
                       toast.error('Individual PDF export failed. Downloaded an HTML fallback instead.');
@@ -2906,6 +2914,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                     }
                     setExportingIndividualExcel(true);
                     try {
+                      const { exportSurveyIndividualExcel } = await loadSurveyExportService();
                       await exportSurveyIndividualExcel(survey, results, selectedIndividualExportTarget);
                     } catch {
                       toast.error('Individual Excel export failed');
@@ -2927,6 +2936,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                     }
                     setExportingIndividualExcel(true);
                     try {
+                      const { exportSurveyIndividualsExcel } = await loadSurveyExportService();
                       await exportSurveyIndividualsExcel(survey, results, selectedIndividualExportTargets);
                     } catch {
                       toast.error('Selected Excel export failed');

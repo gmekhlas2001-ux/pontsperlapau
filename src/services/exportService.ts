@@ -696,7 +696,7 @@ function exportSurveyResultsNativePDF(survey: SurveyFull, results: BranchResult[
       ? results.map((branch) => {
           const tagged = branch.questionResults.filter((q) => taggedIds.has(q.questionId) && q.total > 0);
           const avg = tagged.length > 0 ? tagged.reduce((s, q) => s + q.positiveRate, 0) / tagged.length : 0;
-          return [branch.branchName, String(branch.totalRespondents), String(branch.individualResponses.length), branch.submitted ? t.submitted : t.noData, ...(hasSentiment ? [pct(avg)] : [])];
+          return [branch.branchName, String(branch.totalRespondents), String(branch.individualAnswerCount), branch.submitted ? t.submitted : t.noData, ...(hasSentiment ? [pct(avg)] : [])];
         })
       : [[t.emptyBranches, ...Array(hasSentiment ? 4 : 3).fill('')]],
     styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
@@ -827,7 +827,7 @@ export async function exportSurveyResultsPDF(survey: SurveyFull, results: Branch
       <tr>
         <td dir="auto">${escapeHtml(branch.branchName)}</td>
         <td>${escapeHtml(branch.totalRespondents)}</td>
-        <td>${escapeHtml(branch.individualResponses.length)}</td>
+        <td>${escapeHtml(branch.individualAnswerCount)}</td>
         <td>${escapeHtml(branch.submitted ? t.submitted : t.noData)}</td>
         ${hasSentimentAnalytics ? `<td>${escapeHtml(pct(avg))}</td>` : ''}
       </tr>
@@ -1353,7 +1353,7 @@ export async function exportSurveyResultsExcel(survey: SurveyFull, results: Bran
         index + 1,
         branch.branchName,
         branch.totalRespondents,
-        branch.individualResponses.length,
+        branch.individualAnswerCount,
         branch.submitted ? t.submitted : t.noData,
         pct(pctOfMax),
         makeBar(branch.totalRespondents, maxBranchRespondents),
@@ -1453,7 +1453,7 @@ export async function exportSurveyResultsExcel(survey: SurveyFull, results: Bran
     return {
       [t.colBranch]: branch.branchName,
       [t.colRespondents]: branch.totalRespondents,
-      [t.colIndividual]: branch.individualResponses.length,
+      [t.colIndividual]: branch.individualAnswerCount,
       [t.colStatus]: branch.submitted ? t.submitted : t.noData,
       ...(hasSentimentAnalytics ? { [t.colTagged]: pct(avg) } : {}),
     };
