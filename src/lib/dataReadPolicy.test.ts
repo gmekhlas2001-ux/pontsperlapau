@@ -26,6 +26,14 @@ describe('data-read projection policy', () => {
     expect(validateDataReadSelect('users', 'id,password_hash', { role: 'superadmin' })).toContain('prohibited');
   });
 
+  it('allows the branch label embedded by the password-reset admin screen', () => {
+    expect(validateDataReadSelect(
+      'password_reset_requests',
+      '*,user:users!user_id(id,first_name,last_name,role,branch_id,branch:branches!branch_id(id,name))',
+      { role: 'admin' },
+    )).toBeNull();
+  });
+
   it('blocks unapproved nested relation hops', () => {
     expect(validateDataReadSelect('books', '*,borrowings:book_borrowings(*)', { role: 'librarian' }))
       .toContain('Relation is not readable');

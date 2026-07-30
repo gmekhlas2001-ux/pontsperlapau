@@ -13,6 +13,8 @@ const ADMIN_USER_FIELDS = new Set([
   "session_invalid_before",
 ]);
 
+const SAFE_BRANCH_FIELDS = new Set(["id", "name"]);
+
 // Relations used by the SPA. An embedded relation is not separately scoped by
 // PostgREST when the request is forwarded with service_role, so anything not
 // listed here must fail closed.
@@ -64,7 +66,18 @@ function validateUserProjection(select: string, allowPrivate: boolean): string |
   // row scoping and therefore stay minimal for non-admin roles.
   const allowed = allowPrivate ? ADMIN_USER_FIELDS : SAFE_USER_FIELDS;
   for (const item of splitTopLevel(select)) {
-    if (item === "*" || item.includes("(")) return "User records require explicit safe fields";
+    const open = item.indexOf("(");
+    if (open >= 0) {
+      if (!item.endsWith(")") || relationTarget(item.slice(0, open)) !== "branches") {
+        return "User records require explicit safe fields";
+      }
+      const branchFields = splitTopLevel(item.slice(open + 1, -1));
+      if (branchFields.some((field) => !SAFE_BRANCH_FIELDS.has(field))) {
+        return "User branch records require explicit safe fields";
+      }
+      continue;
+    }
+    if (item === "*") return "User records require explicit safe fields";
     const field = item.split(":").pop()?.trim() ?? "";
     if (!allowed.has(field)) return `User field is not readable: ${field || "unknown"}`;
   }
