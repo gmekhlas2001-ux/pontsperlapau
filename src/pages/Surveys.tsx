@@ -41,7 +41,7 @@ import {
 import {
   ClipboardList, Plus, Pencil, Trash2, BarChart3, Send, MoveHorizontal as MoreHorizontal,
   CheckCircle2, Clock, FileText, Users, TrendingUp, ChevronUp, ChevronDown,
-  Grip, X, Building2, ArrowLeft, FileSpreadsheet, Copy, Search,
+  Grip, X, Building2, ArrowLeft, FileSpreadsheet, Copy, Search, AlertTriangle,
 } from 'lucide-react';
 import {
   getSurveys, getSurveyListStats, getSurveyFull, getSurveyResultsFast,
@@ -50,10 +50,11 @@ import {
   addSurveyRespondent, updateSurveyRespondent, deleteSurveyRespondent, optionsForQuestion,
   type Survey, type SurveyFull, type BranchResult, type SurveyStatus, type Sentiment,
   type SurveyRespondentType, type SurveyRespondentKind, type SurveyQuestionType,
-  type SurveyRespondent, type SurveyIndividualResponse, type SurveyLanguage,
+  type SurveyRespondent, type SurveyIndividualResponse, type SurveyLanguage, type SurveyCode,
 } from '@/services/surveyService';
 import { getBranches, type Branch } from '@/services/branchService';
 import type { SurveyIndividualExportTarget } from '@/services/exportService';
+import { SurveyManagementDashboard } from '@/components/surveys/SurveyManagementDashboard';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n';
 
@@ -144,6 +145,78 @@ const SURVEY_LANGUAGE_OPTIONS: Array<{ value: SurveyLanguage; label: string }> =
   { value: 'fa', label: 'دری (Dari)' },
 ];
 
+const SURVEY_CODE_OPTIONS: SurveyCode[] = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'];
+const CURRENT_SURVEY_REPORTING_CYCLE_ID = '3548c98d-a07e-8c64-cd7a-95fd08b1c9ef';
+const REPORTING_CYCLE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function surveyReportingMetadataError(surveyCode: SurveyCode | '', reportingCycleId: string) {
+  const cycleId = reportingCycleId.trim();
+  if (!surveyCode && !cycleId) return null;
+  if (!surveyCode || !cycleId) return 'Survey code and reporting cycle must be set together';
+  return REPORTING_CYCLE_ID_PATTERN.test(cycleId) ? null : 'Reporting cycle must be a valid cycle ID';
+}
+
+interface SurveyReportingFieldsProps {
+  idPrefix: string;
+  surveyCode: SurveyCode | '';
+  reportingCycleId: string;
+  onSurveyCodeChange: (value: SurveyCode | '') => void;
+  onReportingCycleIdChange: (value: string) => void;
+}
+
+function SurveyReportingFields({
+  idPrefix,
+  surveyCode,
+  reportingCycleId,
+  onSurveyCodeChange,
+  onReportingCycleIdChange,
+}: SurveyReportingFieldsProps) {
+  const helpId = `${idPrefix}-reporting-help`;
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-code`}>Survey Code</Label>
+        <Select
+          value={surveyCode || 'none'}
+          onValueChange={(value) => {
+            const nextCode = value === 'none' ? '' : value as SurveyCode;
+            onSurveyCodeChange(nextCode);
+            onReportingCycleIdChange(nextCode
+              ? reportingCycleId || CURRENT_SURVEY_REPORTING_CYCLE_ID
+              : '');
+          }}
+        >
+          <SelectTrigger id={`${idPrefix}-code`} aria-describedby={helpId}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Additional survey (no code)</SelectItem>
+            {SURVEY_CODE_OPTIONS.map((code) => <SelectItem key={code} value={code}>{code}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-cycle`}>Reporting set</Label>
+        <div
+          id={`${idPrefix}-cycle`}
+          className="flex min-h-10 items-center rounded-md border bg-muted/30 px-3 text-sm"
+          aria-describedby={helpId}
+        >
+          {surveyCode
+            ? reportingCycleId === CURRENT_SURVEY_REPORTING_CYCLE_ID
+              ? 'Current six-survey reporting round'
+              : 'Existing six-survey reporting round'
+            : 'Not part of the six-survey reporting set'}
+        </div>
+        <p id={helpId} className="text-xs text-muted-foreground">
+          T1–T6 surveys are grouped automatically. Choose “Additional survey” for work outside the core reporting set.
+        </p>
+      </div>
+    </>
+  );
+}
+
 /** Sensible default language for a new survey: the current app language, else Dari. */
 function defaultSurveyLanguage(): SurveyLanguage {
   const current = (i18n.language || '').split('-')[0];
@@ -189,6 +262,7 @@ function createBlankQuestion(overrides: Partial<BuilderQuestion> = {}): BuilderQ
     sectionIndex: null,
     questionType: 'multiple_choice',
     sentimentEnabled: false,
+    required: true,
     options: cloneOptions(DEFAULT_QUESTION_OPTIONS),
     ...overrides,
   };
@@ -202,6 +276,7 @@ interface BuilderQuestion {
   sectionIndex: number | null;
   questionType?: SurveyQuestionType;
   sentimentEnabled?: boolean;
+  required: boolean;
   options?: BuilderOption[];
 }
 interface BuilderOption { label: string; sentiment: Sentiment }
@@ -229,6 +304,7 @@ function normalizedBuilderStructure(
         sectionIndex: question.sectionIndex,
         questionType: question.questionType ?? 'multiple_choice',
         sentimentEnabled: question.sentimentEnabled ?? false,
+        required: question.required,
         options: questionUsesOptions(question.questionType)
           ? (question.options ?? options).filter((option) => option.label.trim()).map((option) => ({
               label: option.label.trim(),
@@ -258,6 +334,7 @@ function normalizedExistingStructure(existing: SurveyFull) {
       sectionIndex: question.section_id ? sectionIndexById.get(question.section_id) ?? null : null,
       questionType: question.question_type ?? 'multiple_choice',
       sentimentEnabled: question.sentiment_enabled ?? false,
+      required: question.required ?? true,
       options: questionUsesOptions(question.question_type)
         ? optionsForQuestion(existing, question.id)
             .filter((option) => option.label.trim())
@@ -287,6 +364,8 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
   const [description, setDescription] = useState('');
   const [period, setPeriod] = useState('');
   const [surveyDate, setSurveyDate] = useState('');
+  const [surveyCode, setSurveyCode] = useState<SurveyCode | ''>('');
+  const [reportingCycleId, setReportingCycleId] = useState('');
   const [status, setStatus] = useState<SurveyStatus>('draft');
   const [language, setLanguage] = useState<SurveyLanguage>('fa');
 
@@ -308,6 +387,8 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
         setDescription(existing.description ?? '');
         setPeriod(existing.period ?? '');
         setSurveyDate(existing.survey_date ?? '');
+        setSurveyCode(existing.survey_code ?? '');
+        setReportingCycleId(existing.reporting_cycle_id ?? '');
         setStatus(existing.status);
         setLanguage(existing.language ?? 'fa');
         setOptions(existing.options.map((o) => ({ label: o.label, sentiment: o.sentiment })));
@@ -321,13 +402,14 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                   sectionIndex: sec >= 0 ? sec : null,
                   questionType: q.question_type,
                   sentimentEnabled: q.sentiment_enabled,
+                  required: q.required ?? true,
                   options: cloneOptions(optionsForQuestion(existing, q.id)),
                 };
               })
             : [createBlankQuestion()]
         );
       } else {
-        setTitle(''); setDescription(''); setPeriod(''); setSurveyDate(''); setStatus('draft');
+        setTitle(''); setDescription(''); setPeriod(''); setSurveyDate(''); setSurveyCode(''); setReportingCycleId(''); setStatus('draft');
         setLanguage(defaultSurveyLanguage());
         setOptions(DEFAULT_OPTIONS);
         setSections([]); setQuestions([createBlankQuestion()]);
@@ -402,6 +484,8 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
 
   const handleSave = async () => {
     if (!title.trim()) { toast.error('Survey title is required'); setTab('details'); return; }
+    const reportingMetadataError = surveyReportingMetadataError(surveyCode, reportingCycleId);
+    if (reportingMetadataError) { toast.error(reportingMetadataError); setTab('details'); return; }
     const filledQuestions = questions.filter((q) => q.text.trim());
     if (filledQuestions.length === 0) { toast.error('Add at least one question'); setTab('questions'); return; }
     const missingOptions = filledQuestions.find((q) =>
@@ -421,6 +505,8 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
         description: description.trim() || null,
         period: period.trim() || null,
         surveyDate: surveyDate || null,
+        surveyCode: surveyCode || null,
+        reportingCycleId: reportingCycleId.trim() || null,
         language,
         status,
         ...structure,
@@ -435,6 +521,8 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
               description: payload.description,
               period: payload.period,
               survey_date: payload.surveyDate,
+              survey_code: payload.surveyCode,
+              reporting_cycle_id: payload.reportingCycleId,
               status: payload.status,
               language: payload.language,
             });
@@ -543,6 +631,13 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                         <Label>Survey Date</Label>
                         <Input type="date" value={surveyDate} onChange={(e) => setSurveyDate(e.target.value)} />
                       </div>
+                      <SurveyReportingFields
+                        idPrefix="survey-builder"
+                        surveyCode={surveyCode}
+                        reportingCycleId={reportingCycleId}
+                        onSurveyCodeChange={setSurveyCode}
+                        onReportingCycleIdChange={setReportingCycleId}
+                      />
                       <div className="space-y-2">
                         <Label>Status</Label>
                         <Select value={status} onValueChange={(v) => setStatus(v as SurveyStatus)}>
@@ -710,7 +805,7 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                                   onChange={(event) => updateQuestion(idx, { text: event.target.value })}
                                   className="min-h-20 resize-none text-sm"
                                 />
-                                <div className="flex shrink-0 flex-col gap-2 sm:flex-row xl:w-[28rem]">
+                                <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:max-w-[38rem] xl:justify-end">
                                   <Select value={q.questionType ?? 'multiple_choice'} onValueChange={(value) => changeQuestionType(idx, value as SurveyQuestionType)}>
                                     <SelectTrigger className="h-9 bg-background sm:w-56">
                                       <SelectValue />
@@ -741,6 +836,17 @@ function SurveyBuilder({ open, onClose, onSaved, existing }: SurveyBuilderProps)
                                       </SelectContent>
                                     </Select>
                                   )}
+                                  <label
+                                    htmlFor={`survey-builder-question-${idx}-required`}
+                                    className="flex h-9 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-xs font-medium"
+                                  >
+                                    <Checkbox
+                                      id={`survey-builder-question-${idx}-required`}
+                                      checked={q.required}
+                                      onCheckedChange={(checked) => updateQuestion(idx, { required: checked === true })}
+                                    />
+                                    Required
+                                  </label>
                                   <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-red-500" onClick={() => setQuestions(questions.filter((_, i) => i !== idx))} disabled={questions.length === 1} aria-label="Remove question">
                                     <X className="h-4 w-4" />
                                   </Button>
@@ -847,6 +953,8 @@ export function SurveyCreatePage() {
   const [description, setDescription] = useState('');
   const [period, setPeriod] = useState('');
   const [surveyDate, setSurveyDate] = useState('');
+  const [surveyCode, setSurveyCode] = useState<SurveyCode | ''>('');
+  const [reportingCycleId, setReportingCycleId] = useState('');
   const [status, setStatus] = useState<SurveyStatus>('draft');
   const [language, setLanguage] = useState<SurveyLanguage>(defaultSurveyLanguage());
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -986,6 +1094,8 @@ export function SurveyCreatePage() {
     if (!title.trim()) { toast.error('Survey title is required'); setTab('details'); return; }
     if (!selectedBranchId) { toast.error('Select a branch for this survey'); setTab('details'); return; }
     if (selectedRespondents.length === 0) { toast.error('Select at least one respondent'); setTab('details'); return; }
+    const reportingMetadataError = surveyReportingMetadataError(surveyCode, reportingCycleId);
+    if (reportingMetadataError) { toast.error(reportingMetadataError); setTab('details'); return; }
     const filledQuestions = questions.filter((q) => q.text.trim());
     if (filledQuestions.length === 0) { toast.error('Add at least one question'); setTab('questions'); return; }
     const missingOptions = filledQuestions.find((q) =>
@@ -1004,6 +1114,8 @@ export function SurveyCreatePage() {
         description: description.trim() || undefined,
         period: period.trim() || undefined,
         surveyDate: surveyDate || undefined,
+        surveyCode: surveyCode || undefined,
+        reportingCycleId: reportingCycleId.trim() || undefined,
         branchId: selectedBranchId,
         respondentType,
         respondentIds: selectedRespondents,
@@ -1015,6 +1127,7 @@ export function SurveyCreatePage() {
           sectionIndex: q.sectionIndex,
           questionType: q.questionType ?? 'multiple_choice',
           sentimentEnabled: q.sentimentEnabled ?? false,
+          required: q.required,
           options: questionUsesOptions(q.questionType)
             ? (q.options ?? []).filter((option) => option.label.trim()).map((option) => ({
                 label: option.label.trim(),
@@ -1099,11 +1212,18 @@ export function SurveyCreatePage() {
 	                <Label>Survey Period</Label>
 	                <Input placeholder="e.g. December 2026" value={period} onChange={(e) => setPeriod(e.target.value)} />
 	              </div>
-	              <div className="space-y-2">
-	                <Label>Survey Date</Label>
-	                <Input type="date" value={surveyDate} onChange={(e) => setSurveyDate(e.target.value)} />
-	              </div>
-	              <div className="space-y-2">
+		              <div className="space-y-2">
+		                <Label>Survey Date</Label>
+		                <Input type="date" value={surveyDate} onChange={(e) => setSurveyDate(e.target.value)} />
+		              </div>
+		              <SurveyReportingFields
+		                idPrefix="survey-create"
+		                surveyCode={surveyCode}
+		                reportingCycleId={reportingCycleId}
+		                onSurveyCodeChange={setSurveyCode}
+		                onReportingCycleIdChange={setReportingCycleId}
+		              />
+		              <div className="space-y-2">
 	                <Label>Branch</Label>
 	                {isSuperadmin ? (
 	                  <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
@@ -1389,6 +1509,17 @@ export function SurveyCreatePage() {
                           </SelectContent>
                         </Select>
                       )}
+                      <label
+                        htmlFor={`survey-create-question-${idx}-required`}
+                        className="flex h-9 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-xs font-medium"
+                      >
+                        <Checkbox
+                          id={`survey-create-question-${idx}-required`}
+                          checked={q.required}
+                          onCheckedChange={(checked) => updateQuestion(idx, { required: checked === true })}
+                        />
+                        Required
+                      </label>
                       <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-red-500" onClick={() => setQuestions(questions.filter((_, i) => i !== idx))} disabled={questions.length === 1} aria-label="Remove question">
                         <X className="h-4 w-4" />
                       </Button>
@@ -1499,6 +1630,10 @@ function isMultiAnswerType(type?: SurveyQuestionType) {
   return MULTI_ANSWER_TYPES.includes(type ?? 'multiple_choice');
 }
 
+function allowsAggregateSelectionsAboveRespondentTotal(type?: SurveyQuestionType) {
+  return isMultiAnswerType(type) || type === 'multiple_choice_grid';
+}
+
 function respondentKey(respondent: Pick<SurveyRespondent, 'respondent_type' | 'respondent_id'>) {
   return `${respondent.respondent_type}:${respondent.respondent_id}`;
 }
@@ -1531,6 +1666,8 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   const [individualAnswers, setIndividualAnswers] = useState<Record<string, IndividualAnswerValue>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const submissionRequest = useRef(0);
 
   // Manual respondent form — add a person (name, province, details) directly to
   // this survey when they are not in the student/staff records.
@@ -1566,12 +1703,15 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     setRespondentToDelete(null);
     setRespondentToEdit(null);
     setEntryMode('individual');
+    setIsDirty(false);
   }, [open, defaultBranchId, branches, survey.respondents]);
 
   useEffect(() => {
     if (!branchId || !open) return;
+    const requestId = ++submissionRequest.current;
     setLoading(true);
     getBranchSubmissionFast(survey.id, branchId).then(({ submission, responses, individualResponses, error }) => {
+      if (requestId !== submissionRequest.current) return;
       if (error) {
         toast.error(`Failed to load saved responses: ${error}`);
         setLoading(false);
@@ -1591,8 +1731,12 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
           ? current
           : branchRespondents[0] ? respondentKey(branchRespondents[0]) : ''
       ));
+      setIsDirty(false);
       setLoading(false);
     });
+    return () => {
+      if (submissionRequest.current === requestId) submissionRequest.current += 1;
+    };
   }, [branchId, open, survey.id, respondents]);
 
   useEffect(() => {
@@ -1631,10 +1775,12 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
 
   const setCount = (qId: string, oId: string, val: string) => {
     setCounts((prev) => ({ ...prev, [qId]: { ...(prev[qId] ?? {}), [oId]: val } }));
+    setIsDirty(true);
   };
 
   const setIndividualAnswer = (questionId: string, value: IndividualAnswerValue) => {
     setIndividualAnswers((current) => ({ ...current, [questionId]: value }));
+    setIsDirty(true);
   };
 
   const clearIndividualAnswer = (questionId: string) => {
@@ -1643,6 +1789,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
       delete next[questionId];
       return next;
     });
+    setIsDirty(true);
   };
 
   const toggleSingleAnswer = (questionId: string, optionId: string) => {
@@ -1654,6 +1801,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
       }
       return { ...current, [questionId]: optionId };
     });
+    setIsDirty(true);
   };
 
   const toggleMultiAnswer = (questionId: string, optionId: string) => {
@@ -1664,7 +1812,16 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
         : [...selected, optionId];
       return { ...current, [questionId]: next };
     });
+    setIsDirty(true);
   };
+
+  const changeContext = (change: () => void) => {
+    if (isDirty && !window.confirm('Discard unsaved survey changes?')) return;
+    setIsDirty(false);
+    change();
+  };
+
+  const handleClose = () => changeContext(onClose);
 
   const rowTotal = (qId: string) =>
     optionsForQuestion(survey, qId).reduce((s, o) => s + (parseInt(counts[qId]?.[o.id] ?? '0') || 0), 0);
@@ -1761,6 +1918,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
     try {
       if (entryMode === 'individual') {
         if (!selectedRespondent) { toast.error('Select a respondent'); return; }
+        if (individualFilledCount === 0) { toast.error('Enter at least one answer before saving'); return; }
         const answers = survey.questions.map((question) => {
           const value = individualAnswers[question.id];
           if (isMultiAnswerType(question.question_type)) {
@@ -1785,18 +1943,28 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
         }
         setIndividualResponses(latest.individualResponses);
         setTotalRespondents(latest.submission ? String(latest.submission.total_respondents) : totalRespondents);
+        setIsDirty(false);
         toast.success('Individual response saved');
         onSaved();
-        onClose();
+        const currentIndex = branchRespondents.findIndex((respondent) => respondentKey(respondent) === selectedRespondentKey);
+        const nextRespondent = branchRespondents[currentIndex + 1];
+        if (nextRespondent) setSelectedRespondentKey(respondentKey(nextRespondent));
         return;
       }
 
       const total = parseInt(totalRespondents) || 0;
+      if (total <= 0) { toast.error('Enter a positive total respondent count'); return; }
+      if (aggregateFilledCount === 0) { toast.error('Enter at least one positive aggregate count before saving'); return; }
+      const overLimitQuestion = survey.questions.find((question) => (
+        !allowsAggregateSelectionsAboveRespondentTotal(question.question_type) && rowTotal(question.id) > total
+      ));
+      if (overLimitQuestion) { toast.error('A question total exceeds the respondent total'); return; }
       const flatCounts = survey.questions.flatMap((q) =>
         optionsForQuestion(survey, q.id).map((o) => ({ questionId: q.id, optionId: o.id, count: parseInt(counts[q.id]?.[o.id] ?? '0') || 0 }))
       );
       const res = await saveBranchData(survey.id, branchId, total, flatCounts);
       if (!res.success) { toast.error(res.error); return; }
+      setIsDirty(false);
       toast.success('Aggregate data saved');
       onSaved();
       onClose();
@@ -1830,7 +1998,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(value) => { if (!value) handleClose(); }}>
       <DialogContent
         showCloseButton={false}
         className="!fixed !inset-0 !left-0 !top-0 z-50 flex !h-dvh !w-screen !max-w-none !translate-x-0 !translate-y-0 flex-col gap-0 overflow-hidden !rounded-none border-0 p-0 shadow-none sm:!max-w-none"
@@ -1848,7 +2016,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                 </DialogDescription>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close data entry">
+            <Button variant="ghost" size="icon" onClick={handleClose} aria-label="Close data entry">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -1860,7 +2028,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
               <Label className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted-foreground">
                 <Building2 className="h-3 w-3" /> Branch
               </Label>
-              <Select value={branchId} onValueChange={setBranchId}>
+              <Select value={branchId} onValueChange={(value) => changeContext(() => setBranchId(value))}>
                 <SelectTrigger className="h-10 bg-background"><SelectValue placeholder="Select branch" /></SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
@@ -1872,7 +2040,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
               <Button
                 type="button"
                 variant={entryMode === 'individual' ? 'default' : 'outline'}
-                onClick={() => setEntryMode('individual')}
+                onClick={() => changeContext(() => setEntryMode('individual'))}
               >
                 <Users className="mr-2 h-4 w-4" />
                 Individual Responses
@@ -1880,7 +2048,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
               <Button
                 type="button"
                 variant={entryMode === 'aggregate' ? 'default' : 'outline'}
-                onClick={() => setEntryMode('aggregate')}
+                onClick={() => changeContext(() => setEntryMode('aggregate'))}
               >
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Aggregate Counts
@@ -2012,7 +2180,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                       >
                         <button
                           type="button"
-                          onClick={() => setSelectedRespondentKey(key)}
+                          onClick={() => changeContext(() => setSelectedRespondentKey(key))}
                           className="min-w-0 flex-1 px-3 py-2 text-left"
                         >
                           <span className="block truncate text-sm font-medium">{respondent.respondent_name}</span>
@@ -2224,7 +2392,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                       placeholder="0"
                       className="h-10 text-center text-base font-semibold tabular-nums"
                       value={totalRespondents}
-                      onChange={(e) => setTotalRespondents(e.target.value)}
+                      onChange={(e) => { setTotalRespondents(e.target.value); setIsDirty(true); }}
                     />
                   </div>
                 </div>
@@ -2233,7 +2401,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
               {survey.questions.map((q, qi) => {
               const questionOptions = optionsForQuestion(survey, q.id);
               const total = rowTotal(q.id);
-              const over = respondentsNum > 0 && total > respondentsNum;
+              const over = respondentsNum > 0 && !allowsAggregateSelectionsAboveRespondentTotal(q.question_type) && total > respondentsNum;
               const exact = respondentsNum > 0 && total === respondentsNum;
 
               return (
@@ -2331,7 +2499,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button variant="outline" onClick={handleClose}>Cancel</Button>
             <Button onClick={handleSave} disabled={saving || loading} className="min-w-[100px]">
               {saving ? (
                 <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Saving...</span>
@@ -2419,8 +2587,6 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
   const totalIndividualAnswers = results.reduce((sum, branch) => sum + branch.individualAnswerCount, 0);
   const submittedBranches = results.filter((b) => b.submitted).length;
 
-  const hasSentimentAnalytics = survey.questions.some((question) => question.sentiment_enabled);
-
   // Aggregate per question across all branches
   const questionAggregates = survey.questions.map((q) => {
     let positiveTotal = 0, negativeTotal = 0, neutralTotal = 0, grandTotal = 0;
@@ -2445,12 +2611,23 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
       neutralRate: grandTotal > 0 ? neutralTotal / grandTotal : 0,
       grandTotal,
       optionCounts: Array.from(optionTotals.values()),
+      positiveTotal,
+      negativeTotal,
+      neutralTotal,
     };
   });
 
-  const avgSatisfaction = questionAggregates.length > 0
-    ? questionAggregates.reduce((s, q) => s + q.positiveRate, 0) / questionAggregates.length
-    : 0;
+  const sentimentQuestionAggregates = questionAggregates.filter((aggregate) => (
+    aggregate.question.sentiment_enabled && aggregate.grandTotal > 0
+  ));
+  const sentimentAnswerTotal = sentimentQuestionAggregates.reduce((sum, aggregate) => sum + aggregate.grandTotal, 0);
+  const sentimentPositiveTotal = sentimentQuestionAggregates.reduce((sum, aggregate) => sum + aggregate.positiveTotal, 0);
+  const sentimentNegativeTotal = sentimentQuestionAggregates.reduce((sum, aggregate) => sum + aggregate.negativeTotal, 0);
+  const sentimentNeutralTotal = sentimentQuestionAggregates.reduce((sum, aggregate) => sum + aggregate.neutralTotal, 0);
+  const hasSentimentAnalytics = sentimentAnswerTotal > 0;
+  // Weight by the number of answers. Averaging question percentages gives an
+  // unanswered or very small question the same influence as a large one.
+  const avgSatisfaction = hasSentimentAnalytics ? sentimentPositiveTotal / sentimentAnswerTotal : 0;
 
   const optionDistribution = Array.from(
     questionAggregates
@@ -2464,16 +2641,25 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
 
   const pieData = hasSentimentAnalytics
     ? [
-        { name: 'Positive', value: Math.round(avgSatisfaction * 100) },
-        { name: 'Negative', value: Math.round(questionAggregates.reduce((s, q) => s + q.negativeRate, 0) / (questionAggregates.length || 1) * 100) },
-        { name: 'Neutral', value: Math.round(questionAggregates.reduce((s, q) => s + q.neutralRate, 0) / (questionAggregates.length || 1) * 100) },
+        { name: 'Positive', value: Math.round((sentimentPositiveTotal / sentimentAnswerTotal) * 100) },
+        { name: 'Negative', value: Math.round((sentimentNegativeTotal / sentimentAnswerTotal) * 100) },
+        { name: 'Neutral', value: Math.round((sentimentNeutralTotal / sentimentAnswerTotal) * 100) },
       ]
     : optionDistribution;
 
   const branchBarData = results.map((b) => {
-    const avg = b.questionResults.length > 0
-      ? b.questionResults.reduce((s, q) => s + q.positiveRate, 0) / b.questionResults.length
-      : 0;
+    const sentimentQuestionIds = new Set(
+      survey.questions.filter((question) => question.sentiment_enabled).map((question) => question.id),
+    );
+    const sentimentResults = b.questionResults.filter((question) => (
+      sentimentQuestionIds.has(question.questionId) && question.total > 0
+    ));
+    const weightedTotal = sentimentResults.reduce((sum, question) => sum + question.total, 0);
+    const weightedPositive = sentimentResults.reduce(
+      (sum, question) => sum + (question.positiveRate * question.total),
+      0,
+    );
+    const avg = weightedTotal > 0 ? weightedPositive / weightedTotal : 0;
     return {
       name: b.branchName,
       metric: hasSentimentAnalytics ? Math.round(avg * 100) : b.totalRespondents,
@@ -2516,6 +2702,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
   const selectedIndividualExportTargets = individualExportTargets.filter((target) => selectedExportTargetKeys.includes(target.key));
   const allIndividualExportTargetsSelected = individualExportTargets.length > 0 && selectedIndividualExportTargets.length === individualExportTargets.length;
   const hasResultData = results.length > 0 && (totalRespondents > 0 || questionAggregates.some((q) => q.grandTotal > 0));
+  const mixedSourceBranches = results.filter((branch) => branch.responseMode === 'mixed');
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -2565,6 +2752,17 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
             <div className="flex-1 overflow-y-auto bg-muted/10">
               {/* Overview */}
               <TabsContent value="overview" className="m-0 mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+                {mixedSourceBranches.length > 0 && (
+                  <div className="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100" role="status">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold">Mixed response sources need review</p>
+                      <p className="mt-1 text-sm opacity-90">
+                        {mixedSourceBranches.map((branch) => branch.branchName).join(', ')} contain both named responses and positive aggregate counts. Neither source is selected here: totals stay separate in Analytics &amp; tracking until a human resolves the conflict.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {/* KPI cards */}
                 <div className="grid gap-4 md:grid-cols-3">
                   {[
@@ -2662,6 +2860,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       <tr className="bg-muted/50">
                         <th className="text-left p-3 font-semibold text-xs uppercase tracking-wide border-b">Branch</th>
                         <th className="text-center p-3 font-semibold text-xs uppercase tracking-wide border-b">Respondents</th>
+                        <th className="text-center p-3 font-semibold text-xs uppercase tracking-wide border-b">Source</th>
                         <th className="text-center p-3 font-semibold text-xs uppercase tracking-wide border-b">{hasSentimentAnalytics ? 'Avg Satisfaction' : 'Answers'}</th>
                         {survey.questions.map((q, i) => (
                           <th key={q.id} className="text-center p-2 font-medium text-xs border-b min-w-[55px]">Q{i + 1}</th>
@@ -2670,9 +2869,18 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                     </thead>
                     <tbody>
                       {results.map((b) => {
-                        const avg = b.questionResults.length > 0
-                          ? b.questionResults.reduce((s, q) => s + q.positiveRate, 0) / b.questionResults.length
-                          : 0;
+                        const sentimentQuestionIds = new Set(
+                          survey.questions.filter((question) => question.sentiment_enabled).map((question) => question.id),
+                        );
+                        const sentimentResults = b.questionResults.filter((question) => (
+                          sentimentQuestionIds.has(question.questionId) && question.total > 0
+                        ));
+                        const weightedTotal = sentimentResults.reduce((sum, question) => sum + question.total, 0);
+                        const weightedPositive = sentimentResults.reduce(
+                          (sum, question) => sum + (question.positiveRate * question.total),
+                          0,
+                        );
+                        const avg = weightedTotal > 0 ? weightedPositive / weightedTotal : 0;
                         return (
                           <tr key={b.branchId} className="border-b hover:bg-muted/20">
                             <td className="p-3 font-medium">
@@ -2682,6 +2890,16 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                               </div>
                             </td>
                             <td className="p-3 text-center tabular-nums">{b.totalRespondents}</td>
+                            <td className="p-3 text-center">
+                              <span className={cn(
+                                'rounded-full px-2 py-0.5 text-xs font-semibold capitalize',
+                                b.responseMode === 'mixed'
+                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                  : 'bg-muted text-muted-foreground',
+                              )}>
+                                {b.responseMode.replaceAll('_', ' ')}
+                              </span>
+                            </td>
                             <td className="p-3 text-center">
                               <span className={cn(
                                 'px-2 py-0.5 rounded-full text-xs font-semibold',
@@ -2973,6 +3191,8 @@ function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: Dup
   const [title, setTitle] = useState('');
   const [period, setPeriod] = useState('');
   const [surveyDate, setSurveyDate] = useState('');
+  const [surveyCode, setSurveyCode] = useState<SurveyCode | ''>('');
+  const [reportingCycleId, setReportingCycleId] = useState('');
   const [status, setStatus] = useState<SurveyStatus>('draft');
   const [language, setLanguage] = useState<SurveyLanguage>('fa');
   const [branchId, setBranchId] = useState('');
@@ -2988,6 +3208,10 @@ function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: Dup
     setTitle(`Copy of ${source.title}`);
     setPeriod(source.period ?? '');
     setSurveyDate('');
+    // A duplicate starts outside the core set so it cannot silently collide
+    // with the target branch's existing T1–T6 survey.
+    setSurveyCode('');
+    setReportingCycleId('');
     setStatus('draft');
     setLanguage(source.language ?? 'fa');
     setRespondentType(source.respondent_type ?? 'students');
@@ -3029,6 +3253,8 @@ function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: Dup
     if (!title.trim()) { toast.error('Survey title is required'); return; }
     if (!branchId) { toast.error('Select a branch'); return; }
     if (selected.length === 0) { toast.error('Select at least one respondent'); return; }
+    const reportingMetadataError = surveyReportingMetadataError(surveyCode, reportingCycleId);
+    if (reportingMetadataError) { toast.error(reportingMetadataError); return; }
 
     const orderedSections = [...source.sections].sort((a, b) => a.order_index - b.order_index);
     const sectionIndexById = new Map<string, number>();
@@ -3041,6 +3267,7 @@ function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: Dup
         sectionIndex: q.section_id != null ? (sectionIndexById.get(q.section_id) ?? null) : null,
         questionType: q.question_type,
         sentimentEnabled: q.sentiment_enabled,
+        required: q.required ?? true,
         options: questionUsesOptions(q.question_type)
           ? optionsForQuestion(source, q.id).map((o) => ({ label: o.label, sentiment: o.sentiment }))
           : [],
@@ -3054,6 +3281,8 @@ function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: Dup
         description: source.description || undefined,
         period: period.trim() || undefined,
         surveyDate: surveyDate || undefined,
+        surveyCode: surveyCode || undefined,
+        reportingCycleId: reportingCycleId.trim() || undefined,
         branchId,
         respondentType,
         respondentIds: selected,
@@ -3124,6 +3353,13 @@ function DuplicateSurveyDialog({ open, onClose, onSaved, source, branches }: Dup
               <Label>Survey Date</Label>
               <Input type="date" value={surveyDate} onChange={(e) => setSurveyDate(e.target.value)} />
             </div>
+            <SurveyReportingFields
+              idPrefix="survey-duplicate"
+              surveyCode={surveyCode}
+              reportingCycleId={reportingCycleId}
+              onSurveyCodeChange={setSurveyCode}
+              onReportingCycleIdChange={setReportingCycleId}
+            />
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as SurveyStatus)}>
@@ -3234,6 +3470,16 @@ export function Surveys() {
   const [statusFilter, setStatusFilter] = useState<'all' | SurveyStatus>('all');
   const [branchFilter, setBranchFilter] = useState('all');
   const [surveySearch, setSurveySearch] = useState('');
+  const workspaceView: 'analytics' | 'library' = searchParams.get('surveyMode') === 'library'
+    ? 'library'
+    : 'analytics';
+
+  const selectWorkspaceView = useCallback((view: 'analytics' | 'library') => {
+    const next = new URLSearchParams(searchParams);
+    if (view === 'analytics') next.delete('surveyMode');
+    else next.set('surveyMode', view);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const [editingSurvey, setEditingSurvey] = useState<SurveyFull | null>(null);
   const [editBuilderOpen, setEditBuilderOpen] = useState(false);
@@ -3362,9 +3608,9 @@ export function Surveys() {
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
             <ClipboardList className="h-7 w-7 text-primary" />
-            Surveys
+            Survey Management
           </h1>
-          <p className="text-muted-foreground">Manage and collect survey data across branches</p>
+          <p className="text-muted-foreground">Track respondents, compare six-survey progress, analyse questions, and manage survey forms</p>
         </div>
         {isAdmin && (
           <Button onClick={() => navigate('/surveys/new')}>
@@ -3373,6 +3619,29 @@ export function Surveys() {
         )}
       </div>
 
+      <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border bg-card p-1 sm:w-fit" role="tablist" aria-label="Survey workspace view">
+        <Button
+          role="tab"
+          aria-selected={workspaceView === 'analytics'}
+          variant={workspaceView === 'analytics' ? 'secondary' : 'ghost'}
+          onClick={() => selectWorkspaceView('analytics')}
+        >
+          <BarChart3 className="mr-2 h-4 w-4" /> Analytics & tracking
+        </Button>
+        <Button
+          role="tab"
+          aria-selected={workspaceView === 'library'}
+          variant={workspaceView === 'library' ? 'secondary' : 'ghost'}
+          onClick={() => selectWorkspaceView('library')}
+        >
+          <ClipboardList className="mr-2 h-4 w-4" /> Survey library
+        </Button>
+      </div>
+
+      {workspaceView === 'analytics' ? (
+        <SurveyManagementDashboard branches={branches} />
+      ) : (
+        <>
       {/* Survey filters */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border p-1 overscroll-x-contain sm:w-fit">
@@ -3443,11 +3712,6 @@ export function Surveys() {
             const cfg = STATUS_CONFIG[survey.status];
             const StatusIcon = cfg.icon;
             const stats = surveyStats[survey.id];
-            const responseActivityPct = stats?.totalRespondents
-              ? 100
-              : stats?.submittedBranches
-                ? 45
-                : 0;
             const branchName = survey.branch_id ? branchNameById.get(survey.branch_id) : undefined;
             return (
               <Card key={survey.id} className="group overflow-hidden border hover:shadow-md transition-shadow">
@@ -3505,19 +3769,14 @@ export function Surveys() {
 
                   <div className="mt-4 rounded-lg border bg-muted/20 p-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-muted-foreground">Response activity</span>
+                      <span className="font-medium text-muted-foreground">Recorded activity</span>
                       <span className="font-semibold">{stats?.totalRespondents ?? 0}</span>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${responseActivityPct}%` }}
-                      />
-                    </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{stats?.totalRespondents ?? 0} respondents</span>
-                      <span>{stats?.submittedBranches ?? 0} submitted</span>
+                      <span>{stats?.totalRespondents ?? 0} respondent records</span>
+                      <span>{stats?.submittedBranches ?? 0} branches with data</span>
                     </div>
+                    <p className="mt-2 text-[11px] text-muted-foreground">Use Analytics & tracking for assigned, completed, incomplete, and not-responded counts.</p>
                   </div>
 
                   <div className="mt-4 flex gap-3">
@@ -3546,6 +3805,8 @@ export function Surveys() {
             );
           })}
         </div>
+      )}
+        </>
       )}
 
       <SurveyBuilder

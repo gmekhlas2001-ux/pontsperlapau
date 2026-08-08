@@ -33,6 +33,7 @@ const SEMESTERS = ["fall", "spring", "summer"];
 const ATTENDANCE_STATUSES = ["present", "absent", "late", "excused"];
 const SURVEY_STATUSES = ["draft", "active", "closed"];
 const SURVEY_LANGUAGES = ["en", "es", "ca", "fa"];
+const SURVEY_CODES = ["T1", "T2", "T3", "T4", "T5", "T6"];
 const SENTIMENTS = ["positive", "negative", "neutral"];
 const SURVEY_RESPONDENT_TYPES = ["students", "staff", "students_staff"];
 const SURVEY_RESPONDENT_KINDS = ["student", "staff"];
@@ -86,6 +87,32 @@ function cleanString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+// PostgreSQL's uuid type accepts any canonical 8-4-4-4-12 hexadecimal value.
+// The legacy reporting-cycle backfill is MD5-derived and therefore does not
+// necessarily contain RFC version/variant bits.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function cleanOptionalUuid(value: unknown): { value: string | null; error?: string } {
+  const cleaned = cleanString(value);
+  if (!cleaned) return { value: null };
+  if (!UUID_PATTERN.test(cleaned)) return { value: null, error: "Invalid reporting cycle ID" };
+  return { value: cleaned.toLowerCase() };
+}
+
+function validateSurveyReportingMetadata(
+  current: { survey_code?: unknown; reporting_cycle_id?: unknown },
+  updates: Record<string, unknown>,
+): string | null {
+  if (!("survey_code" in updates) && !("reporting_cycle_id" in updates)) return null;
+  const surveyCode = "survey_code" in updates ? updates.survey_code : current.survey_code;
+  const reportingCycleId = "reporting_cycle_id" in updates
+    ? updates.reporting_cycle_id
+    : current.reporting_cycle_id;
+  return Boolean(surveyCode) === Boolean(reportingCycleId)
+    ? null
+    : "Survey code and reporting cycle ID must be set together";
+}
+
 function cleanSurveyUpdateFields(fields: any): { updates: Record<string, unknown>; error?: string } {
   const updates: Record<string, unknown> = {};
   const source = fields && typeof fields === "object" ? fields : {};
@@ -98,6 +125,16 @@ function cleanSurveyUpdateFields(fields: any): { updates: Record<string, unknown
   if ("description" in source) updates.description = cleanString(source.description);
   if ("period" in source) updates.period = cleanString(source.period);
   if ("survey_date" in source) updates.survey_date = cleanString(source.survey_date);
+  if ("survey_code" in source) {
+    const surveyCode = cleanString(source.survey_code);
+    if (surveyCode && !isOneOf(surveyCode, SURVEY_CODES)) return { updates, error: "Invalid survey code" };
+    updates.survey_code = surveyCode;
+  }
+  if ("reporting_cycle_id" in source) {
+    const reportingCycle = cleanOptionalUuid(source.reporting_cycle_id);
+    if (reportingCycle.error) return { updates, error: reportingCycle.error };
+    updates.reporting_cycle_id = reportingCycle.value;
+  }
   if ("status" in source) {
     if (!isOneOf(source.status, SURVEY_STATUSES)) return { updates, error: "Invalid survey status" };
     updates.status = source.status;
@@ -1115,10 +1152,21 @@ Deno.serve(async (req: Request) => {
         const respondentType = isOneOf(body.respondentType, SURVEY_RESPONDENT_TYPES)
           ? body.respondentType
           : "students";
+        const surveyCode = cleanString(body.surveyCode);
+        if (surveyCode && !isOneOf(surveyCode, SURVEY_CODES)) {
+          return errorResponse(req, 400, "Invalid survey code");
+        }
+        const reportingCycle = cleanOptionalUuid(body.reportingCycleId);
+        if (reportingCycle.error) return errorResponse(req, 400, reportingCycle.error);
+        if (Boolean(surveyCode) !== Boolean(reportingCycle.value)) {
+          return errorResponse(req, 400, "Survey code and reporting cycle ID must be set together");
+        }
         const surveyInsert: Record<string, unknown> = {
           title: String(body.title),
           description: cleanString(body.description),
           period: cleanString(body.period),
+          survey_code: surveyCode,
+          reporting_cycle_id: reportingCycle.value,
           branch_id: surveyBranchId,
           respondent_type: respondentType,
           language: isOneOf(body.language, SURVEY_LANGUAGES) ? body.language : "fa",
@@ -1169,6 +1217,7 @@ Deno.serve(async (req: Request) => {
               question_text: String(question.text ?? ""),
               question_type: isOneOf(question.questionType, SURVEY_QUESTION_TYPES) ? question.questionType : "multiple_choice",
               sentiment_enabled: Boolean(question.sentimentEnabled),
+              required: question.required !== false,
               order_index: index,
             })),
           ).select("id");
@@ -1259,7 +1308,7 @@ Deno.serve(async (req: Request) => {
         if (!surveyId) return errorResponse(req, 400, "Missing survey id");
         const { data: survey, error: surveyErr } = await supabase
           .from("surveys")
-          .select("id, branch_id")
+          .select("id, branch_id, survey_code, reporting_cycle_id")
           .eq("id", surveyId)
           .maybeSingle();
         if (surveyErr || !survey) return errorResponse(req, 404, "Survey not found", surveyErr);
@@ -1268,6 +1317,8 @@ Deno.serve(async (req: Request) => {
 
         const { updates, error: fieldsError } = cleanSurveyUpdateFields(body.fields ?? {});
         if (fieldsError) return errorResponse(req, 400, fieldsError);
+        const reportingMetadataError = validateSurveyReportingMetadata(survey, updates);
+        if (reportingMetadataError) return errorResponse(req, 400, reportingMetadataError);
         if (Object.keys(updates).length === 0) return jsonResponse(req, { success: true });
 
         const { error } = await supabase.from("surveys").update(updates).eq("id", surveyId);
@@ -1281,7 +1332,7 @@ Deno.serve(async (req: Request) => {
 
         const { data: survey, error: surveyErr } = await supabase
           .from("surveys")
-          .select("id, branch_id")
+          .select("id, branch_id, survey_code, reporting_cycle_id")
           .eq("id", surveyId)
           .maybeSingle();
         if (surveyErr || !survey) return errorResponse(req, 404, "Survey not found", surveyErr);
@@ -1290,6 +1341,8 @@ Deno.serve(async (req: Request) => {
 
         const { updates, error: fieldsError } = cleanSurveyUpdateFields(body.fields ?? {});
         if (fieldsError) return errorResponse(req, 400, fieldsError);
+        const reportingMetadataError = validateSurveyReportingMetadata(survey, updates);
+        if (reportingMetadataError) return errorResponse(req, 400, reportingMetadataError);
 
         const sections = Array.isArray(body.sections) ? body.sections : [];
         const questions = Array.isArray(body.questions) ? body.questions : [];
@@ -1338,6 +1391,7 @@ Deno.serve(async (req: Request) => {
             question_text: text,
             question_type: questionType,
             sentiment_enabled: Boolean(question.sentimentEnabled),
+            required: question.required !== false,
             order_index: questionRows.length,
           });
         });
@@ -1618,6 +1672,10 @@ Deno.serve(async (req: Request) => {
           return [];
         });
 
+        if (rows.length === 0) {
+          return errorResponse(req, 400, "Enter at least one answer before saving");
+        }
+
         const { error: saveError } = await supabase.rpc("save_survey_individual_atomic", {
           p_survey_id: surveyId,
           p_branch_id: branchId,
@@ -1632,14 +1690,19 @@ Deno.serve(async (req: Request) => {
             text_answer: row.text_answer,
           })),
         });
-        if (saveError) return errorResponse(req, 500, "Failed to save individual survey responses", saveError);
+        if (saveError) {
+          const conflict = String(saveError.message ?? "").includes("aggregate counts already exist");
+          return errorResponse(req, conflict ? 409 : 400, conflict
+            ? "This survey already uses aggregate entry. Resolve the source mode before adding named answers."
+            : "Failed to save individual survey responses", saveError);
+        }
 
         return jsonResponse(req, { success: true });
       }
 
       const totalRespondents = Number(body.totalRespondents);
-      if (!Number.isInteger(totalRespondents) || totalRespondents < 0) {
-        return errorResponse(req, 400, "Invalid branch survey payload");
+      if (!Number.isInteger(totalRespondents) || totalRespondents <= 0) {
+        return errorResponse(req, 400, "Enter a positive total respondent count");
       }
 
       const counts = Array.isArray(body.counts) ? body.counts : [];
@@ -1679,6 +1742,10 @@ Deno.serve(async (req: Request) => {
 
       }
 
+      if (!cleanedCounts.some((count) => count.count > 0)) {
+        return errorResponse(req, 400, "Enter at least one positive aggregate count before saving");
+      }
+
       const { error: aggregateError } = await supabase.rpc("save_survey_aggregate_atomic", {
         p_survey_id: surveyId,
         p_branch_id: branchId,
@@ -1690,7 +1757,12 @@ Deno.serve(async (req: Request) => {
           count: count.count,
         })),
       });
-      if (aggregateError) return errorResponse(req, 500, "Failed to save survey responses", aggregateError);
+      if (aggregateError) {
+        const conflict = String(aggregateError.message ?? "").includes("named respondent answers exist");
+        return errorResponse(req, conflict ? 409 : 400, conflict
+          ? "This survey already uses named respondent entry. Aggregate counts cannot be added."
+          : "Failed to save survey responses", aggregateError);
+      }
 
       return jsonResponse(req, { success: true });
     }
@@ -2089,6 +2161,48 @@ Deno.serve(async (req: Request) => {
       }
       const { data, error } = await supabase.from("books").update(updates).eq("id", bookId).select().single();
       if (error) return errorResponse(req, 500, bookWriteMessage(error, "Failed to update book"), error);
+      return jsonResponse(req, { success: true, data });
+    }
+
+    if (op === "get-survey-management-overview") {
+      const roleError = assertRoles(req, caller, ADMIN_ROLES);
+      if (roleError) return roleError;
+
+      const requestedBranchId = cleanString(body.branchId);
+      const branchId = caller.role === "superadmin" ? requestedBranchId : caller.branch_id;
+      if (branchId) {
+        const branchError = assertBranch(req, caller, branchId);
+        if (branchError) return branchError;
+      }
+
+      const { data, error } = await supabase.rpc("get_survey_management_overview", {
+        p_branch_id: branchId ?? null,
+      });
+      if (error) return errorResponse(req, 500, "Failed to get survey management overview", error);
+      return jsonResponse(req, { success: true, data });
+    }
+
+    if (op === "get-branch-survey-dashboard") {
+      const roleError = assertRoles(req, caller, ADMIN_ROLES);
+      if (roleError) return roleError;
+
+      const branchId = caller.role === "superadmin" ? cleanString(body.branchId) : caller.branch_id;
+      if (!branchId) return errorResponse(req, 400, "Missing branchId");
+      const branchError = assertBranch(req, caller, branchId);
+      if (branchError) return branchError;
+
+      const { data: branch, error: branchLookupError } = await supabase
+        .from("branches")
+        .select("id")
+        .eq("id", branchId)
+        .maybeSingle();
+      if (branchLookupError) return errorResponse(req, 500, "Failed to validate branch", branchLookupError);
+      if (!branch) return errorResponse(req, 404, "Branch not found");
+
+      const { data, error } = await supabase.rpc("get_branch_survey_dashboard", {
+        p_branch_id: branchId,
+      });
+      if (error) return errorResponse(req, 500, "Failed to get branch survey dashboard", error);
       return jsonResponse(req, { success: true, data });
     }
 

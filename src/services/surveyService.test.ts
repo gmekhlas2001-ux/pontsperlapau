@@ -16,6 +16,7 @@ import {
   getSurveyResultsFast,
   invalidateSurveyFullCache,
   updateSurveyMeta,
+  updateSurveyStructure,
 } from './surveyService';
 
 function mockSurveyFullQueries() {
@@ -33,6 +34,7 @@ function mockSurveyFullQueries() {
     question_text: 'Question A',
     question_type: 'multiple_choice',
     sentiment_enabled: false,
+    required: true,
     order_index: 0,
   }];
   const options = [
@@ -188,6 +190,41 @@ describe('survey full cache and fast results', () => {
     expect(supabase.from).toHaveBeenCalledTimes(10);
   });
 
+  it('forwards reporting metadata and optional questions through the atomic structure update', async () => {
+    vi.mocked(callEdgeFunction).mockResolvedValue({ ok: true, status: 200, data: { success: true } });
+    const reportingCycleId = '3548c98d-a07e-8c64-cd7a-95fd08b1c9ef';
+
+    const result = await updateSurveyStructure('survey-a', {
+      title: 'Survey A',
+      description: null,
+      period: '2026',
+      surveyDate: null,
+      surveyCode: 'T2',
+      reportingCycleId,
+      language: 'en',
+      status: 'draft',
+      sections: [],
+      questions: [{
+        text: 'Optional context',
+        sectionIndex: null,
+        questionType: 'paragraph',
+        required: false,
+      }],
+      options: [],
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(callEdgeFunction).toHaveBeenCalledWith('app-actions', expect.objectContaining({
+      operation: 'update-survey-structure',
+      surveyId: 'survey-a',
+      fields: expect.objectContaining({
+        survey_code: 'T2',
+        reporting_cycle_id: reportingCycleId,
+      }),
+      questions: [expect.objectContaining({ required: false })],
+    }));
+  });
+
   it('keeps individual answer totals in the fast summary without loading answer rows', async () => {
     vi.mocked(callEdgeFunction).mockResolvedValue({
       ok: true,
@@ -225,5 +262,46 @@ describe('survey full cache and fast results', () => {
       { optionId: 'option-a', label: 'Good', sentiment: 'positive', count: 3 },
       { optionId: 'option-b', label: 'Bad', sentiment: 'negative', count: 0 },
     ]);
+  });
+
+  it('never selects or sums one source when fast results report a mixed branch', async () => {
+    vi.mocked(callEdgeFunction).mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: {
+        success: true,
+        data: {
+          branches: [{
+            branchId: 'branch-a',
+            branchName: 'Branch A',
+            totalRespondents: 3,
+            namedRespondentTotal: 3,
+            aggregateRespondentTotal: 10,
+            individualAnswerCount: 7,
+            submitted: true,
+            hasAggregateAnswers: true,
+            responseMode: 'mixed',
+          }],
+          // Mixed branches intentionally have no selected count. The source
+          // arrays are diagnostic and must remain separate.
+          questionCounts: [],
+          individualQuestionCounts: [{
+            branchId: 'branch-a', questionId: 'question-a', optionId: 'option-a', count: 3,
+          }],
+          aggregateQuestionCounts: [{
+            branchId: 'branch-a', questionId: 'question-a', optionId: 'option-a', count: 10,
+          }],
+        },
+      },
+    });
+
+    const result = await getSurveyResultsFast('survey-a');
+
+    expect(result.data?.[0]).toMatchObject({
+      responseMode: 'mixed',
+      namedRespondentTotal: 3,
+      aggregateRespondentTotal: 10,
+    });
+    expect(result.data?.[0].questionResults[0].counts.every((count) => count.count === 0)).toBe(true);
   });
 });

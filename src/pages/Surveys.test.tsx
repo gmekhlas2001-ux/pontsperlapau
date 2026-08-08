@@ -3,6 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { Surveys } from './Surveys';
 
+vi.mock('@/components/surveys/SurveyManagementDashboard', () => ({
+  SurveyManagementDashboard: () => <div>Survey analytics dashboard</div>,
+}));
+
 // Mock Services
 vi.mock('@/services/surveyService', () => ({
   getSurveys: vi.fn().mockResolvedValue({
@@ -35,7 +39,7 @@ describe('Surveys Component', () => {
     vi.clearAllMocks();
   });
 
-  it('renders surveys page title', async () => {
+  it('opens on the survey analytics workspace', async () => {
     render(
       <MemoryRouter>
         <Surveys />
@@ -43,7 +47,8 @@ describe('Surveys Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Surveys')).toBeInTheDocument();
+      expect(screen.getByText('Survey Management')).toBeInTheDocument();
+      expect(screen.getByText('Survey analytics dashboard')).toBeInTheDocument();
     });
   });
 });

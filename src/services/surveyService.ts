@@ -19,6 +19,7 @@ import { scopedBranchId } from '@/lib/scope';
 
 export type SurveyStatus = 'draft' | 'active' | 'closed';
 export type SurveyLanguage = 'en' | 'es' | 'ca' | 'fa';
+export type SurveyCode = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6';
 export type Sentiment = 'positive' | 'negative' | 'neutral';
 export type SurveyRespondentType = 'students' | 'staff' | 'students_staff';
 export type SurveyRespondentKind = 'student' | 'staff' | 'manual';
@@ -41,6 +42,8 @@ export interface Survey {
   description?: string;
   period?: string;
   survey_date?: string;
+  survey_code?: SurveyCode | null;
+  reporting_cycle_id?: string | null;
   branch_id?: string | null;
   respondent_type?: SurveyRespondentType;
   language?: SurveyLanguage;
@@ -65,6 +68,7 @@ export interface SurveyQuestion {
   question_text: string;
   question_type: SurveyQuestionType;
   sentiment_enabled: boolean;
+  required: boolean;
   order_index: number;
 }
 
@@ -135,6 +139,9 @@ export interface BranchResult {
   totalRespondents: number;
   submitted: boolean;
   individualAnswerCount: number;
+  responseMode: 'individual' | 'aggregate' | 'mixed' | 'aggregate_empty' | 'none';
+  namedRespondentTotal?: number;
+  aggregateRespondentTotal?: number | null;
   questionResults: {
     questionId: string;
     questionText: string;
@@ -151,6 +158,8 @@ export interface CreateSurveyPayload {
   description?: string;
   period?: string;
   surveyDate?: string;
+  surveyCode?: SurveyCode | null;
+  reportingCycleId?: string | null;
   branchId?: string;
   respondentType: SurveyRespondentType;
   respondentIds: { type: SurveyRespondentKind; id: string; name: string }[];
@@ -162,6 +171,7 @@ export interface CreateSurveyPayload {
     sectionIndex: number | null;
     questionType?: SurveyQuestionType;
     sentimentEnabled?: boolean;
+    required?: boolean;
     options?: { label: string; sentiment: Sentiment }[];
   }[];
   options: { label: string; sentiment: Sentiment }[];
@@ -172,6 +182,8 @@ export interface UpdateSurveyStructurePayload {
   description?: string | null;
   period?: string | null;
   surveyDate?: string | null;
+  surveyCode?: SurveyCode | null;
+  reportingCycleId?: string | null;
   language: SurveyLanguage;
   status: SurveyStatus;
   sections: CreateSurveyPayload['sections'];
@@ -348,7 +360,7 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
     getAllSurveyRows<SurveyBranchResponse>('survey_branch_responses', surveyId),
     supabase.from('survey_branch_submissions').select('*').eq('survey_id', surveyId),
     getAllSurveyRows<SurveyIndividualResponse>('survey_individual_responses', surveyId),
-    supabase.from('branches').select('id, name').eq('status', 'active'),
+    supabase.from('branches').select('id, name'),
   ]);
   if (!fullRes.success || !fullRes.data) return { success: false, error: fullRes.error };
   const readError = responsesRes.error ?? submissionsRes.error ?? individualResponsesRes.error ?? branchesRes.error;
@@ -359,14 +371,17 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
   const individualResponses = individualResponsesRes.data;
   const branches = (branchesRes.data ?? []) as { id: string; name: string }[];
 
-  // Only include branches that have any submission data
-  const activeBranchIds = new Set([
+  // Include the survey's expected branch and empty submission records so a
+  // missing response remains visible instead of disappearing from results.
+  const relevantBranchIds = new Set([
+    ...(fullRes.data.branch_id ? [fullRes.data.branch_id] : []),
+    ...submissions.map((submission) => submission.branch_id),
     ...responses.filter((r) => r.count > 0).map((r) => r.branch_id),
     ...individualResponses.map((r) => r.branch_id),
   ]);
 
   const results: BranchResult[] = branches
-    .filter((b) => activeBranchIds.has(b.id))
+    .filter((b) => relevantBranchIds.has(b.id))
     .map((branch) => {
       const submission = submissions.find((s) => s.branch_id === branch.id);
       const branchResponses = responses.filter((r) => r.branch_id === branch.id);
@@ -375,17 +390,34 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
         branchIndividualResponses.map((r) => `${r.respondent_type}:${r.respondent_id}`),
       ).size;
       const hasAggregateAnswers = branchResponses.some((response) => response.count > 0);
+      const hasIndividualAnswers = branchIndividualResponses.length > 0;
+      const responseMode: BranchResult['responseMode'] = hasIndividualAnswers && hasAggregateAnswers
+        ? 'mixed'
+        : hasIndividualAnswers
+          ? 'individual'
+          : hasAggregateAnswers
+            ? 'aggregate'
+            : branchResponses.length > 0 || submission
+              ? 'aggregate_empty'
+              : 'none';
 
       const questionResults = questions.map((q) => {
         const questionOptions = optionsForQuestion(fullRes.data!, q.id);
         const qResponses = branchResponses.filter((r) => r.question_id === q.id);
         const qIndividualResponses = branchIndividualResponses.filter((r) => r.question_id === q.id);
         const counts = questionOptions.map((opt) => {
-          const r = qResponses.find((r) => r.option_id === opt.id);
           const individualCount = qIndividualResponses.filter((answer) => answer.option_id === opt.id).length;
-          // Aggregate entry already represents the branch total. Individual
-          // rows add detail for the same people, not a second population.
-          return { optionId: opt.id, label: opt.label, sentiment: opt.sentiment, count: r ? r.count : individualCount };
+          const aggregateCount = qResponses.find((response) => response.option_id === opt.id)?.count ?? 0;
+          return {
+            optionId: opt.id,
+            label: opt.label,
+            sentiment: opt.sentiment,
+            count: responseMode === 'individual'
+              ? individualCount
+              : responseMode === 'aggregate'
+                ? aggregateCount
+                : 0,
+          };
         });
         const total = counts.reduce((s, c) => s + c.count, 0);
         const positiveCount = counts.filter((c) => c.sentiment === 'positive').reduce((s, c) => s + c.count, 0);
@@ -403,9 +435,14 @@ export async function getSurveyResults(surveyId: string): Promise<{ success: boo
       return {
         branchId: branch.id,
         branchName: branch.name,
-        totalRespondents: Math.max(hasAggregateAnswers ? submission?.total_respondents ?? 0 : 0, individualRespondentCount),
-        submitted: hasAggregateAnswers || branchIndividualResponses.length > 0,
+        totalRespondents: responseMode === 'individual' || responseMode === 'mixed'
+          ? individualRespondentCount
+          : submission?.total_respondents ?? 0,
+        namedRespondentTotal: individualRespondentCount,
+        aggregateRespondentTotal: submission?.total_respondents ?? null,
+        submitted: responseMode !== 'none',
         individualAnswerCount: branchIndividualResponses.length,
+        responseMode,
         questionResults,
         individualResponses: branchIndividualResponses,
       };
@@ -439,6 +476,9 @@ export async function getSurveyResultsFast(
         individualAnswerCount: number;
         submitted: boolean;
         hasAggregateAnswers: boolean;
+        responseMode?: BranchResult['responseMode'];
+        namedRespondentTotal?: number;
+        aggregateRespondentTotal?: number | null;
       }[];
       questionCounts: { branchId: string; questionId: string; optionId: string; count: number }[];
     };
@@ -492,6 +532,9 @@ export async function getSurveyResultsFast(
       totalRespondents: branch.totalRespondents,
       submitted: branch.submitted,
       individualAnswerCount: branch.individualAnswerCount ?? 0,
+      responseMode: branch.responseMode ?? (branch.hasAggregateAnswers ? 'aggregate' : 'none'),
+      namedRespondentTotal: branch.namedRespondentTotal ?? 0,
+      aggregateRespondentTotal: branch.aggregateRespondentTotal ?? null,
       questionResults,
       individualResponses: [], // loaded lazily when the Individual tab is opened
     };
@@ -624,7 +667,7 @@ export async function createSurvey(payload: CreateSurveyPayload): Promise<{ succ
   return { success: true, id: res.data?.id };
 }
 
-export async function updateSurveyMeta(surveyId: string, fields: { title?: string; description?: string | null; period?: string | null; survey_date?: string | null; status?: SurveyStatus; language?: SurveyLanguage }) {
+export async function updateSurveyMeta(surveyId: string, fields: { title?: string; description?: string | null; period?: string | null; survey_date?: string | null; survey_code?: SurveyCode | null; reporting_cycle_id?: string | null; status?: SurveyStatus; language?: SurveyLanguage }) {
   const res = await callEdgeFunction('app-actions', {
     operation: 'update-survey-meta',
     surveyId,
@@ -648,6 +691,8 @@ export async function updateSurveyStructure(
       description: payload.description ?? null,
       period: payload.period ?? null,
       survey_date: payload.surveyDate ?? null,
+      survey_code: payload.surveyCode ?? null,
+      reporting_cycle_id: payload.reportingCycleId ?? null,
       status: payload.status,
       language: payload.language,
     },
