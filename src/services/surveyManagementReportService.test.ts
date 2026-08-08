@@ -55,6 +55,7 @@ const detail: BranchSurveyDashboard = {
     expected: 1,
     answerCount: null,
     skippedCount: null,
+    notStartedCount: 0,
     responseBase: 'mixed',
     denominatorKnown: false,
     namedAnswerCount: 1,
@@ -83,6 +84,7 @@ const detail: BranchSurveyDashboard = {
       namedAnswerRows: 1,
       positiveAggregateCells: 1,
       aggregateRespondentTotal: 5,
+      invalidAggregateCellCount: 1,
     }],
     historicalCompletionRule: 'Historical timestamps are inferred.',
     manualIdentityRule: 'Manual IDs remain separate.',
@@ -107,11 +109,76 @@ describe('branch survey management report', () => {
 
     expect(html).toContain('Cross-survey respondent matrix');
     expect(html).toContain('Question-by-question analysis');
-    expect(html).toContain('Named answers (1)');
+    expect(html).toContain('Named respondents answering (1)');
     expect(html).toContain('Aggregate answers (4; reported total 5)');
     expect(html).toContain('sources are reported separately and are never summed');
+    expect(html).toContain('Incomplete reporting cycle');
+    expect(html).toContain('Completed all six');
+    expect(html).toContain('Unavailable');
+    expect(html).toContain('1 preserved legacy aggregate cell above the reported respondent total');
     expect(html).toContain('Useful &amp; clear');
     expect(html).toContain('Person &lt;A&gt;');
     expect(html).not.toContain('authoritative in analytics');
+  });
+
+  it('labels aggregate checkbox counts as selections and uses the reported respondent total', () => {
+    const checkboxDetail: BranchSurveyDashboard = {
+      ...detail,
+      questions: [{
+        ...detail.questions[0],
+        questionType: 'checkboxes',
+        answerCount: null,
+        skippedCount: null,
+        notStartedCount: null,
+        responseBase: 'aggregate',
+        namedAnswerCount: 0,
+        aggregateAnswerCount: 3,
+        aggregateRespondentTotal: 2,
+        options: [
+          { optionId: 'yes', label: 'Yes', sentiment: 'positive', count: 2 },
+          { optionId: 'sometimes', label: 'Sometimes', sentiment: 'neutral', count: 1 },
+        ],
+        namedOptions: [],
+        aggregateOptions: [
+          { optionId: 'yes', label: 'Yes', sentiment: 'positive', count: 2 },
+          { optionId: 'sometimes', label: 'Sometimes', sentiment: 'neutral', count: 1 },
+        ],
+      }],
+    };
+
+    const html = buildBranchSurveyManagementReportHtml(checkboxDetail, [], []);
+
+    expect(html).toContain('3 option selections');
+    expect(html).not.toContain('3 answered');
+    expect(html).toContain('2 (100%)');
+    expect(html).toContain('1 (50%)');
+    expect(html).toContain('Percentages use the reported respondent total as the denominator.');
+  });
+
+  it('reports skipped-after-starting separately from assigned people who never started', () => {
+    const namedDetail: BranchSurveyDashboard = {
+      ...detail,
+      surveys: [{ ...detail.surveys[0], expected: 3, started: 2 }],
+      questions: [{
+        ...detail.questions[0],
+        expected: 3,
+        answerCount: 1,
+        skippedCount: 1,
+        notStartedCount: 1,
+        responseBase: 'named',
+        namedAnswerCount: 1,
+        aggregateAnswerCount: 0,
+        aggregateRespondentTotal: null,
+        options: [{ optionId: 'yes', label: 'Yes', sentiment: 'positive', count: 1 }],
+        namedOptions: [{ optionId: 'yes', label: 'Yes', sentiment: 'positive', count: 1 }],
+        aggregateOptions: [],
+      }],
+    };
+
+    const html = buildBranchSurveyManagementReportHtml(namedDetail, [], []);
+
+    expect(html).toContain('1 answered');
+    expect(html).toContain('1 skipped after starting');
+    expect(html).toContain('1 not started');
   });
 });

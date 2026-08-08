@@ -164,15 +164,17 @@ export function canonicalRespondentIdentity(
 
 export function deriveCrossSurveyFilters(
   cells: readonly CrossSurveyMatrixCell[],
+  completedAllRequiredSurveyCount = cells.length,
 ): CrossSurveyFilterFlags {
   const hasSurveys = cells.length > 0;
+  const hasRequiredSurveySet = hasSurveys && cells.length === completedAllRequiredSurveyCount;
   const missingStatuses: ReadonlySet<SurveyMatrixCellStatus> = new Set([
     'not_responded',
     'not_assigned',
   ]);
 
   return {
-    completedAll: hasSurveys && cells.every((cell) => cell.status === 'completed'),
+    completedAll: hasRequiredSurveySet && cells.every((cell) => cell.status === 'completed'),
     missingAny: cells.some((cell) => missingStatuses.has(cell.status)),
     incomplete: cells.some((cell) => cell.status === 'incomplete'),
     noResponse: hasSurveys && cells.every((cell) => missingStatuses.has(cell.status)),
@@ -263,6 +265,7 @@ function uniqueSurveyColumns(
 export function buildCrossSurveyRespondentMatrix(
   rows: readonly SurveyAssignmentStatusRow[],
   requestedSurveys?: readonly SurveyMatrixSurvey[],
+  completedAllRequiredSurveyCount?: number,
 ): CrossSurveyRespondentMatrixRow[] {
   const surveys = uniqueSurveyColumns(rows, requestedSurveys);
   const surveysById = new Map(surveys.map((survey) => [survey.survey_id, survey]));
@@ -350,7 +353,7 @@ export function buildCrossSurveyRespondentMatrix(
         notRespondedCount,
         notAssignedCount,
         completionRate: cells.length > 0 ? completedCount / cells.length : 0,
-        filters: deriveCrossSurveyFilters(cells),
+        filters: deriveCrossSurveyFilters(cells, completedAllRequiredSurveyCount ?? cells.length),
       };
     })
     .sort((left, right) => {

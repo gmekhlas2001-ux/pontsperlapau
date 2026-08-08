@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { Surveys } from './Surveys';
+import { aggregateCountValidationError, Surveys } from './Surveys';
 
 vi.mock('@/components/surveys/SurveyManagementDashboard', () => ({
   SurveyManagementDashboard: () => <div>Survey analytics dashboard</div>,
@@ -50,5 +50,30 @@ describe('Surveys Component', () => {
       expect(screen.getByText('Survey Management')).toBeInTheDocument();
       expect(screen.getByText('Survey analytics dashboard')).toBeInTheDocument();
     });
+  });
+
+  it('allows multi-select sums above the respondent total when every option count is valid', () => {
+    expect(aggregateCountValidationError(10, [{
+      questionType: 'checkboxes',
+      counts: [7, 6],
+    }])).toBeNull();
+  });
+
+  it('rejects any aggregate option count above the respondent total, including grids', () => {
+    expect(aggregateCountValidationError(10, [{
+      questionType: 'checkbox_grid',
+      counts: [11, 2],
+    }])).toBe('An answer option count cannot exceed the total respondent count');
+    expect(aggregateCountValidationError(10, [{
+      questionType: 'multiple_choice_grid',
+      counts: [3, 12],
+    }])).toBe('An answer option count cannot exceed the total respondent count');
+  });
+
+  it('still rejects single-answer question totals above the respondent total', () => {
+    expect(aggregateCountValidationError(10, [{
+      questionType: 'multiple_choice',
+      counts: [6, 5],
+    }])).toBe('A question total exceeds the respondent total');
   });
 });

@@ -35,10 +35,12 @@ import {
 import { cn } from '@/lib/utils';
 import type { Branch } from '@/services/branchService';
 import {
+  CORE_SURVEY_CODES,
   getBranchSurveyDashboard,
   getSurveyManagementOverview,
   type BranchSurveyDashboard,
   type SurveyManagementOverview,
+  type SurveyManagementSurveySummary,
   type SurveyQuestionAnalytics,
   type SurveyResponseStatus,
 } from '@/services/surveyManagementService';
@@ -57,10 +59,45 @@ const MATRIX_FILTERS: { value: CrossSurveyRespondentFilter; label: string }[] = 
   { value: 'no_response', label: 'No response' },
 ];
 
-const CORE_SURVEY_CODES = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'] as const;
+function isMultiResponseQuestion(questionType: string) {
+  return questionType.includes('checkbox') || questionType === 'multiple_choice_grid';
+}
 
-function isCheckboxQuestion(questionType: string) {
-  return questionType.includes('checkbox');
+function questionAnswerSummary(question: SurveyQuestionAnalytics) {
+  const multiResponseQuestion = isMultiResponseQuestion(question.questionType);
+  if (question.responseBase === 'mixed') {
+    return multiResponseQuestion
+      ? `${question.namedAnswerCount} named respondents / ${question.aggregateAnswerCount} aggregate selections`
+      : `${question.namedAnswerCount} named / ${question.aggregateAnswerCount} aggregate`;
+  }
+  if (question.responseBase === 'aggregate' && multiResponseQuestion) {
+    return `${question.aggregateAnswerCount} option selections`;
+  }
+  return `${question.answerCount ?? 'Unknown'} answered`;
+}
+
+function questionParticipationCounts(
+  question: SurveyQuestionAnalytics,
+  survey?: SurveyManagementSurveySummary,
+) {
+  const hasExplicitNotStartedCount = question.notStartedCount !== undefined;
+  const hasNamedRoster = question.responseBase === 'named'
+    || question.responseBase === 'mixed'
+    || question.responseBase === 'none';
+  const notStartedCount = hasExplicitNotStartedCount
+    ? question.notStartedCount ?? null
+    : hasNamedRoster && survey
+      ? Math.max(question.expected - survey.started, 0)
+      : null;
+  let skippedCount = question.skippedCount;
+  if (!hasExplicitNotStartedCount && survey) {
+    if (question.responseBase === 'named' || question.responseBase === 'mixed') {
+      skippedCount = Math.max(survey.started - question.namedAnswerCount, 0);
+    } else if (question.responseBase === 'none') {
+      skippedCount = survey.started;
+    }
+  }
+  return { skippedCount, notStartedCount };
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -179,13 +216,13 @@ function OptionDistribution({
   denominatorLabel?: string;
 }) {
   const optionTotal = options.reduce((sum, option) => sum + option.count, 0);
-  const checkboxQuestion = isCheckboxQuestion(questionType);
+  const multiResponseQuestion = isMultiResponseQuestion(questionType);
   if (options.length === 0) return null;
   return (
     <div className="space-y-2 rounded-lg border bg-muted/10 p-3">
       {title && <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>}
       {options.map((option) => {
-        const denominator = checkboxQuestion ? respondentDenominator : optionTotal || answerCount;
+        const denominator = multiResponseQuestion ? respondentDenominator : optionTotal || answerCount;
         const percentage = denominator && denominator > 0
           ? Math.round((option.count / denominator) * 100)
           : null;
@@ -201,7 +238,7 @@ function OptionDistribution({
           </div>
         );
       })}
-      {checkboxQuestion && (
+      {multiResponseQuestion && (
         <p className="text-[11px] text-muted-foreground">
           {respondentDenominator && respondentDenominator > 0
             ? `Percentages use ${denominatorLabel ?? 'respondents'} as the denominator.`
@@ -212,7 +249,15 @@ function OptionDistribution({
   );
 }
 
-function QuestionCard({ question }: { question: SurveyQuestionAnalytics }) {
+function QuestionCard({
+  question,
+  survey,
+}: {
+  question: SurveyQuestionAnalytics;
+  survey?: SurveyManagementSurveySummary;
+}) {
+  const multiResponseQuestion = isMultiResponseQuestion(question.questionType);
+  const { skippedCount, notStartedCount } = questionParticipationCounts(question, survey);
   const sourceLabel = question.responseBase === 'named'
     ? 'Named respondent source'
     : question.responseBase === 'aggregate'
@@ -235,22 +280,23 @@ function QuestionCard({ question }: { question: SurveyQuestionAnalytics }) {
             {question.question}
           </h3>
         </div>
-        <div className="flex shrink-0 gap-2 text-xs">
+        <div className="flex shrink-0 flex-wrap justify-end gap-2 text-xs">
           <span className="rounded-md bg-emerald-50 px-2 py-1 font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-            {question.responseBase === 'mixed'
-              ? `${question.namedAnswerCount} named / ${question.aggregateAnswerCount} aggregate`
-              : `${question.answerCount ?? 'Unknown'} answered`}
+            {questionAnswerSummary(question)}
           </span>
           <span className="rounded-md bg-muted px-2 py-1 font-semibold text-muted-foreground">
-            {question.skippedCount ?? 'Unknown'} skipped
+            {skippedCount ?? 'Unavailable'} {question.responseBase === 'mixed' ? 'named skipped after starting' : 'skipped after starting'}
+          </span>
+          <span className="rounded-md bg-muted px-2 py-1 font-semibold text-muted-foreground">
+            {notStartedCount ?? 'Unavailable'} {question.responseBase === 'mixed' ? 'named roster not started' : 'not started'}
           </span>
         </div>
       </div>
 
       {question.responseBase === 'mixed' ? (
         <div className="mt-4 grid gap-3 xl:grid-cols-2">
-          <OptionDistribution title={`Named answers (${question.namedAnswerCount})`} options={question.namedOptions} answerCount={question.namedAnswerCount} questionType={question.questionType} respondentDenominator={question.namedAnswerCount} denominatorLabel="named respondents who answered" />
-          <OptionDistribution title={`Aggregate answers (${question.aggregateAnswerCount}; reported total ${question.aggregateRespondentTotal ?? 'unknown'})`} options={question.aggregateOptions} answerCount={question.aggregateAnswerCount} questionType={question.questionType} respondentDenominator={question.aggregateRespondentTotal} denominatorLabel="the reported respondent total" />
+          <OptionDistribution title={`Named respondents answering (${question.namedAnswerCount})`} options={question.namedOptions} answerCount={question.namedAnswerCount} questionType={question.questionType} respondentDenominator={question.namedAnswerCount} denominatorLabel="named respondents who answered" />
+          <OptionDistribution title={`${multiResponseQuestion ? 'Aggregate option selections' : 'Aggregate answers'} (${question.aggregateAnswerCount}; reported total ${question.aggregateRespondentTotal ?? 'unknown'})`} options={question.aggregateOptions} answerCount={question.aggregateAnswerCount} questionType={question.questionType} respondentDenominator={question.aggregateRespondentTotal} denominatorLabel="the reported respondent total" />
         </div>
       ) : (
         <div className="mt-4">
@@ -320,7 +366,9 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
     if (result.success) {
       setOverview(result.data);
       setSelectedBranchId((current) => {
-        if (user?.branchId) return user.branchId;
+        if (user?.branchId && result.data.branches.some((branch) => branch.branchId === user.branchId)) {
+          return user.branchId;
+        }
         if (current && result.data.branches.some((branch) => branch.branchId === current)) return current;
         return result.data.branches[0]?.branchId ?? '';
       });
@@ -377,6 +425,7 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
   }, [branchOptions, selectedBranchId]);
 
   const canonicalSurveys = useMemo(() => detail ? canonicalSurveyList(detail) : [], [detail]);
+  const surveyById = useMemo(() => new Map((detail?.surveys ?? []).map((survey) => [survey.surveyId, survey])), [detail?.surveys]);
   const analyticsRows = useMemo(() => detail ? toAnalyticsRows(detail) : [], [detail]);
   const matrix = useMemo(() => detail ? buildCrossSurveyRespondentMatrix(
     analyticsRows,
@@ -385,6 +434,7 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
       survey_name: survey.surveyCode ?? survey.title,
       branch_id: detail.branch.id,
     })),
+    CORE_SURVEY_CODES.length,
   ) : [], [analyticsRows, canonicalSurveys, detail]);
   const uncertainPairs = useMemo(() => findUncertainManualNamePairs(analyticsRows), [analyticsRows]);
 
@@ -412,10 +462,14 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
   const missingCoreCodes = CORE_SURVEY_CODES.filter((code) => (
     !canonicalSurveys.some((survey) => survey.surveyCode === code)
   ));
-  const completedAll = canonicalSurveys.length === 6
-    ? matrix.filter((row) => row.filters.completedAll).length
-    : 0;
+  const hasCompleteCoreCycle = missingCoreCodes.length === 0
+    && canonicalSurveys.length === CORE_SURVEY_CODES.length;
+  const completedAll = matrix.filter((row) => row.filters.completedAll).length;
   const someSurveys = Math.max(uniqueParticipants - completedAll, 0);
+  const invalidAggregateCellCount = detail?.dataQuality.mixedResponseSources.reduce(
+    (sum, source) => sum + (source.invalidAggregateCellCount ?? 0),
+    0,
+  ) ?? 0;
   const selectedBranchSummary = overview?.branches.find((branch) => branch.branchId === selectedBranchId);
   const expectedCoreAssignments = canonicalSurveys.reduce((sum, survey) => sum + survey.expected, 0);
   const completedCoreAssignments = canonicalSurveys.reduce((sum, survey) => sum + survey.completed, 0);
@@ -423,6 +477,10 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
   const completionRate = expectedCoreAssignments
     ? completedCoreAssignments / expectedCoreAssignments
     : 0;
+
+  useEffect(() => {
+    if (!hasCompleteCoreCycle && matrixFilter === 'completed_all') setMatrixFilter('all');
+  }, [hasCompleteCoreCycle, matrixFilter]);
 
   const activityTrend = useMemo(() => {
     const byDay = new Map<string, number>();
@@ -545,7 +603,15 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {metricCard('Tracked participants', uniqueParticipants, 'Stable identities with activity; manual matches remain review-only', Users, 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300')}
-            {metricCard('Completed all six', completedAll, 'People completed across every core survey', CheckCircle2, 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300')}
+            {metricCard(
+              'Completed all six',
+              hasCompleteCoreCycle ? completedAll : 'Unavailable',
+              hasCompleteCoreCycle
+                ? 'People completed across every core survey'
+                : `Incomplete reporting cycle: missing ${missingCoreCodes.join(', ')}`,
+              CheckCircle2,
+              'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+            )}
             {metricCard('Some surveys', someSurveys, 'Participants missing or incomplete elsewhere', Clock3, 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300')}
             {metricCard('Missing assignments', missingCoreAssignments, 'Core respondent-survey assignments with no activity', UserX, 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300')}
             {metricCard('Completion rate', `${Math.round(completionRate * 100)}%`, 'Completed assignments divided by expected assignments', BarChart3, 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300')}
@@ -569,6 +635,7 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
                   {detail.dataQuality.titleBranchMismatches.length > 0 && <p>{detail.dataQuality.titleBranchMismatches.length} survey {detail.dataQuality.titleBranchMismatches.length === 1 ? 'title references' : 'titles reference'} a different branch and should be reviewed.</p>}
                   {detail.dataQuality.orphanedRegisteredAssignments.length > 0 && <p>{detail.dataQuality.orphanedRegisteredAssignments.length} registered {detail.dataQuality.orphanedRegisteredAssignments.length === 1 ? 'assignment points' : 'assignments point'} to a missing student or staff record. Answers remain preserved.</p>}
                   {detail.dataQuality.mixedResponseSources.length > 0 && <p>{detail.dataQuality.mixedResponseSources.length} {detail.dataQuality.mixedResponseSources.length === 1 ? 'survey contains' : 'surveys contain'} named and positive aggregate answers. Both sources are shown separately and never summed.</p>}
+                  {invalidAggregateCellCount > 0 && <p>{invalidAggregateCellCount} preserved legacy aggregate {invalidAggregateCellCount === 1 ? 'cell exceeds' : 'cells exceed'} the reported respondent total and {invalidAggregateCellCount === 1 ? 'requires' : 'require'} review.</p>}
                   {uncertainPairs.length > 0 && <p>{uncertainPairs.length} possible manual-name {uncertainPairs.length === 1 ? 'match requires' : 'matches require'} human review and {uncertainPairs.length === 1 ? 'has' : 'have'} not been merged.</p>}
                   <p className="text-xs opacity-80">{detail.dataQuality.historicalCompletionRule}</p>
                 </div>
@@ -665,7 +732,10 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
                   <Label htmlFor="respondent-search">Search people</Label>
                   <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" /><Input id="respondent-search" className="min-h-11 pl-9" placeholder="Name or type" value={respondentSearch} onChange={(event) => setRespondentSearch(event.target.value)} /></div>
                 </div>
-                <div className="space-y-1.5"><Label htmlFor="respondent-participation">Participation</Label><Select value={matrixFilter} onValueChange={(value) => setMatrixFilter(value as CrossSurveyRespondentFilter)}><SelectTrigger id="respondent-participation" className="min-h-11"><SelectValue /></SelectTrigger><SelectContent>{MATRIX_FILTERS.map((filter) => <SelectItem key={filter.value} value={filter.value}>{filter.label}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-1.5"><Label htmlFor="respondent-participation">Participation</Label><Select value={matrixFilter} onValueChange={(value) => setMatrixFilter(value as CrossSurveyRespondentFilter)}><SelectTrigger id="respondent-participation" className="min-h-11"><SelectValue /></SelectTrigger><SelectContent>{MATRIX_FILTERS.map((filter) => {
+                  const completedAllUnavailable = filter.value === 'completed_all' && !hasCompleteCoreCycle;
+                  return <SelectItem key={filter.value} value={filter.value} disabled={completedAllUnavailable}>{completedAllUnavailable ? 'Completed all six (cycle incomplete)' : filter.label}</SelectItem>;
+                })}</SelectContent></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="respondent-survey">Survey</Label><Select value={surveyFilter} onValueChange={setSurveyFilter}><SelectTrigger id="respondent-survey" className="min-h-11"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All core surveys</SelectItem>{canonicalSurveys.map((survey) => <SelectItem key={survey.surveyId} value={survey.surveyId}>{survey.surveyCode}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="respondent-status">Response status</Label><Select value={responseStatusFilter} onValueChange={(value) => setResponseStatusFilter(value as RespondentStatusFilter)}><SelectTrigger id="respondent-status" className="min-h-11"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="completed">Completed</SelectItem><SelectItem value="incomplete">Incomplete</SelectItem><SelectItem value="not_responded">Not Responded</SelectItem></SelectContent></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="activity-from">Activity from</Label><Input id="activity-from" className="min-h-11" type="date" max={dateTo || undefined} value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></div>
@@ -711,8 +781,8 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
                 <div className="space-y-1.5"><Label htmlFor="question-survey">Survey</Label><Select value={questionSurveyFilter} onValueChange={setQuestionSurveyFilter}><SelectTrigger id="question-survey" className="min-h-11"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All surveys</SelectItem>{detail.surveys.map((survey) => <SelectItem key={survey.surveyId} value={survey.surveyId}>{survey.surveyCode ?? 'Other'} - {survey.title}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="question-search">Search questions or sections</Label><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" /><Input id="question-search" className="min-h-11 pl-9" value={questionSearch} onChange={(event) => setQuestionSearch(event.target.value)} placeholder="Search question text" /></div></div>
               </div>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-muted-foreground">{visibleQuestions.length} questions</p><p className="text-xs text-muted-foreground">Answered and skipped counts use the expected respondent roster when a denominator is available.</p></div>
-              <div className="space-y-3">{visibleQuestions.map((question) => <QuestionCard key={question.questionId} question={question} />)}</div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-muted-foreground">{visibleQuestions.length} questions</p><p className="text-xs text-muted-foreground">Skipped counts include only people who started; not started is reported separately. Aggregate rates use the reported respondent total when available.</p></div>
+              <div className="space-y-3">{visibleQuestions.map((question) => <QuestionCard key={question.questionId} question={question} survey={surveyById.get(question.surveyId)} />)}</div>
               {visibleQuestions.length === 0 && <div className="rounded-xl border py-16 text-center"><FileQuestion className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 text-sm font-medium">No questions match these filters.</p></div>}
             </TabsContent>
 

@@ -1,6 +1,6 @@
 -- Survey management analytics and respondent activity tracking.
 --
--- Existing answer rows are preserved. Historical activity timestamps are only
+-- All existing answer rows are preserved. Historical activity timestamps are only
 -- an inference from the current rows because legacy saves rewrote answers.
 
 ALTER TABLE public.surveys

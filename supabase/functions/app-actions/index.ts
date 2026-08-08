@@ -1717,6 +1717,9 @@ Deno.serve(async (req: Request) => {
         if (cleanedCounts.some((count) => !count.questionId || !count.optionId || !Number.isInteger(count.count) || count.count < 0)) {
           return errorResponse(req, 400, "Invalid survey counts");
         }
+        if (cleanedCounts.some((count) => count.count > totalRespondents)) {
+          return errorResponse(req, 400, "An answer option count cannot exceed the total respondent count");
+        }
         const questionIds = [...new Set(cleanedCounts.map((count) => count.questionId as string))];
         const { data: validQuestions, error: questionsError } = await supabase
           .from("survey_questions")

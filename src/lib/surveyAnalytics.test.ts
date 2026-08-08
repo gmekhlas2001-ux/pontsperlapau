@@ -280,6 +280,27 @@ describe('cross-survey respondent matrix', () => {
     });
   });
 
+  it('does not classify a respondent as completed-all when the required six-survey set is incomplete', () => {
+    const partialSurveys = surveys.slice(0, 2);
+    const completedRows = partialSurveys.map((survey) => ({
+      survey_id: survey.survey_id,
+      survey_name: survey.survey_name,
+      branch_id: survey.branch_id,
+      branch_name: 'Branch A',
+      respondent_type: 'student' as const,
+      respondent_id: 'student-complete-partial',
+      respondent_name: 'Partial Cycle Person',
+      response_status: 'completed' as const,
+    }));
+
+    const matrix = buildCrossSurveyRespondentMatrix(completedRows, partialSurveys, 6);
+
+    expect(matrix).toHaveLength(1);
+    expect(matrix[0].completedCount).toBe(2);
+    expect(matrix[0].filters.completedAll).toBe(false);
+    expect(filterCrossSurveyRespondents(matrix, 'completed_all')).toEqual([]);
+  });
+
   it('serializes to plain JSON with PDF columns resolved in the requested survey order', () => {
     const matrix = buildCrossSurveyRespondentMatrix([
       assignment({ survey_id: 'survey-2', response_status: 'incomplete' }),

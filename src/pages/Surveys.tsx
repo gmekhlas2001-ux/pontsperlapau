@@ -1634,6 +1634,25 @@ function allowsAggregateSelectionsAboveRespondentTotal(type?: SurveyQuestionType
   return isMultiAnswerType(type) || type === 'multiple_choice_grid';
 }
 
+export function aggregateCountValidationError(
+  totalRespondents: number,
+  questions: readonly {
+    questionType?: SurveyQuestionType;
+    counts: readonly number[];
+  }[],
+) {
+  if (questions.some((question) => question.counts.some((count) => count > totalRespondents))) {
+    return 'An answer option count cannot exceed the total respondent count';
+  }
+  if (questions.some((question) => (
+    !allowsAggregateSelectionsAboveRespondentTotal(question.questionType)
+    && question.counts.reduce((sum, count) => sum + count, 0) > totalRespondents
+  ))) {
+    return 'A question total exceeds the respondent total';
+  }
+  return null;
+}
+
 function respondentKey(respondent: Pick<SurveyRespondent, 'respondent_type' | 'respondent_id'>) {
   return `${respondent.respondent_type}:${respondent.respondent_id}`;
 }
@@ -1955,10 +1974,13 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
       const total = parseInt(totalRespondents) || 0;
       if (total <= 0) { toast.error('Enter a positive total respondent count'); return; }
       if (aggregateFilledCount === 0) { toast.error('Enter at least one positive aggregate count before saving'); return; }
-      const overLimitQuestion = survey.questions.find((question) => (
-        !allowsAggregateSelectionsAboveRespondentTotal(question.question_type) && rowTotal(question.id) > total
-      ));
-      if (overLimitQuestion) { toast.error('A question total exceeds the respondent total'); return; }
+      const countValidationError = aggregateCountValidationError(total, survey.questions.map((question) => ({
+        questionType: question.question_type,
+        counts: optionsForQuestion(survey, question.id).map((option) => (
+          parseInt(counts[question.id]?.[option.id] ?? '0') || 0
+        )),
+      })));
+      if (countValidationError) { toast.error(countValidationError); return; }
       const flatCounts = survey.questions.flatMap((q) =>
         optionsForQuestion(survey, q.id).map((o) => ({ questionId: q.id, optionId: o.id, count: parseInt(counts[q.id]?.[o.id] ?? '0') || 0 }))
       );
@@ -2463,6 +2485,7 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
                               <input
                                 type="number"
                                 min="0"
+                                max={respondentsNum > 0 ? respondentsNum : undefined}
                                 placeholder="0"
                                 value={val}
                                 onChange={(e) => setCount(q.id, opt.id, e.target.value)}

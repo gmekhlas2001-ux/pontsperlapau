@@ -12,7 +12,10 @@ const serviceMocks = vi.hoisted(() => ({
   getBranchSurveyDashboard: vi.fn(),
 }));
 
-vi.mock('@/services/surveyManagementService', () => serviceMocks);
+vi.mock('@/services/surveyManagementService', () => ({
+  ...serviceMocks,
+  CORE_SURVEY_CODES: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'],
+}));
 
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -147,6 +150,7 @@ const detail: BranchSurveyDashboard = {
     expected: 0,
     answerCount: 3,
     skippedCount: null,
+    notStartedCount: null,
     responseBase: 'aggregate',
     denominatorKnown: false,
     namedAnswerCount: 0,
@@ -196,6 +200,41 @@ describe('SurveyManagementDashboard', () => {
     expect(screen.getByRole('progressbar', {
       name: 'T1: 1 of 1 assignments completed, 100%',
     })).toBeInTheDocument();
+    const completedAllMetric = screen.getByText('Completed all six').parentElement;
+    expect(completedAllMetric).toHaveTextContent('Unavailable');
+    expect(completedAllMetric).toHaveTextContent('Incomplete reporting cycle: missing T3, T4, T5, T6');
+  });
+
+  it('falls back to the first reporting branch when the signed-in branch is unavailable', async () => {
+    serviceMocks.getSurveyManagementOverview.mockResolvedValue({
+      success: true,
+      data: {
+        ...overview,
+        branches: [{ ...overview.branches[0], branchId: 'branch-b', branchName: 'Branch B' }],
+      },
+    });
+    serviceMocks.getBranchSurveyDashboard.mockResolvedValue({
+      success: true,
+      data: { ...detail, branch: { id: 'branch-b', name: 'Branch B' } },
+    });
+
+    render(<SurveyManagementDashboard branches={[]} />);
+
+    await waitFor(() => {
+      expect(serviceMocks.getBranchSurveyDashboard).toHaveBeenCalledWith('branch-b');
+    });
+  });
+
+  it('disables completed-all filtering when the six-survey cycle is incomplete', async () => {
+    const user = userEvent.setup();
+    render(<SurveyManagementDashboard branches={[]} />);
+
+    await screen.findByText('Six-survey progress');
+    await user.click(screen.getByRole('tab', { name: 'Respondents' }));
+    await user.click(screen.getByRole('combobox', { name: 'Participation' }));
+
+    expect(await screen.findByRole('option', { name: 'Completed all six (cycle incomplete)' }))
+      .toHaveAttribute('aria-disabled', 'true');
   });
 
   it('uses the selected survey as an actual respondent filter', async () => {
@@ -226,5 +265,93 @@ describe('SurveyManagementDashboard', () => {
     expect(screen.getByText('2 (rate unavailable)')).toBeInTheDocument();
     expect(screen.getByText('1 (rate unavailable)')).toBeInTheDocument();
     expect(screen.getByText('Percentages are unavailable because no respondent denominator was recorded.')).toBeInTheDocument();
+  });
+
+  it('labels aggregate checkbox totals as selections and uses the reported respondent denominator', async () => {
+    const user = userEvent.setup();
+    serviceMocks.getBranchSurveyDashboard.mockResolvedValue({
+      success: true,
+      data: {
+        ...detail,
+        questions: [{
+          ...detail.questions[0],
+          answerCount: null,
+          aggregateAnswerCount: 3,
+          aggregateRespondentTotal: 2,
+          options: [
+            { optionId: 'option-a', label: 'Option A', sentiment: 'neutral', count: 2 },
+            { optionId: 'option-b', label: 'Option B', sentiment: 'neutral', count: 1 },
+          ],
+        }],
+      },
+    });
+    render(<SurveyManagementDashboard branches={[]} />);
+
+    await screen.findByText('Six-survey progress');
+    await user.click(screen.getByRole('tab', { name: 'Questions' }));
+
+    expect(screen.getByText('3 option selections')).toBeInTheDocument();
+    expect(screen.queryByText('3 answered')).not.toBeInTheDocument();
+    expect(screen.getByText('2 (100%)')).toBeInTheDocument();
+    expect(screen.getByText('1 (50%)')).toBeInTheDocument();
+    expect(screen.getByText('Percentages use the reported respondent total as the denominator.')).toBeInTheDocument();
+  });
+
+  it('separates skipped-after-starting from people who never started', async () => {
+    const user = userEvent.setup();
+    serviceMocks.getBranchSurveyDashboard.mockResolvedValue({
+      success: true,
+      data: {
+        ...detail,
+        surveys: [{ ...detail.surveys[0], expected: 3, started: 2 }],
+        respondents: detail.respondents.filter((respondent) => respondent.surveyId === 'survey-t1'),
+        questions: [{
+          ...detail.questions[0],
+          questionType: 'multiple_choice',
+          expected: 3,
+          answerCount: 1,
+          skippedCount: 1,
+          notStartedCount: 1,
+          responseBase: 'named',
+          denominatorKnown: true,
+          namedAnswerCount: 1,
+          aggregateAnswerCount: 0,
+          aggregateRespondentTotal: null,
+          options: [{ optionId: 'option-a', label: 'Option A', sentiment: 'neutral', count: 1 }],
+        }],
+      },
+    });
+    render(<SurveyManagementDashboard branches={[]} />);
+
+    await screen.findByText('Six-survey progress');
+    await user.click(screen.getByRole('tab', { name: 'Questions' }));
+
+    expect(screen.getByText('1 answered')).toBeInTheDocument();
+    expect(screen.getByText('1 skipped after starting')).toBeInTheDocument();
+    expect(screen.getByText('1 not started')).toBeInTheDocument();
+  });
+
+  it('visibly flags preserved aggregate cells above the respondent total', async () => {
+    serviceMocks.getBranchSurveyDashboard.mockResolvedValue({
+      success: true,
+      data: {
+        ...detail,
+        dataQuality: {
+          ...detail.dataQuality,
+          mixedResponseSources: [{
+            surveyId: 'survey-t1',
+            surveyCode: 'T1',
+            title: 'T1 survey',
+            namedAnswerRows: 4,
+            positiveAggregateCells: 1,
+            aggregateRespondentTotal: 3,
+            invalidAggregateCellCount: 1,
+          }],
+        },
+      },
+    });
+    render(<SurveyManagementDashboard branches={[]} />);
+
+    expect(await screen.findByText('1 preserved legacy aggregate cell exceeds the reported respondent total and requires review.')).toBeInTheDocument();
   });
 });

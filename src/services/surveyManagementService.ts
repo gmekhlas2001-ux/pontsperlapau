@@ -2,6 +2,8 @@ import { callEdgeFunction } from '@/lib/edge';
 
 export type SurveyResponseStatus = 'completed' | 'incomplete' | 'not_responded';
 
+export const CORE_SURVEY_CODES = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'] as const;
+
 export interface SurveyManagementSummary {
   expectedAssignments: number;
   completed: number;
@@ -104,8 +106,10 @@ export interface SurveyQuestionAnalytics {
   required: boolean;
   orderIndex: number;
   expected: number;
+  started?: number | null;
   answerCount: number | null;
   skippedCount: number | null;
+  notStartedCount?: number | null;
   responseBase: 'named' | 'aggregate' | 'mixed' | 'none';
   denominatorKnown: boolean;
   namedAnswerCount: number;
@@ -147,6 +151,7 @@ export interface SurveyDashboardDataQuality {
     namedAnswerRows: number;
     positiveAggregateCells: number;
     aggregateRespondentTotal: number | null;
+    invalidAggregateCellCount?: number;
   }[];
   historicalCompletionRule: string;
   manualIdentityRule: string;

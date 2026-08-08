@@ -8,6 +8,7 @@ import type {
   SurveyManagementSurveySummary,
   SurveyQuestionAnalytics,
 } from '@/services/surveyManagementService';
+import { CORE_SURVEY_CODES } from '@/services/surveyManagementService';
 
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
@@ -49,8 +50,45 @@ function statusClass(value: string): string {
   return 'status-unassigned';
 }
 
-function isCheckboxQuestion(questionType: string): boolean {
-  return questionType === 'checkboxes' || questionType === 'checkbox_grid';
+function isMultiResponseQuestion(questionType: string): boolean {
+  return questionType.includes('checkbox') || questionType === 'multiple_choice_grid';
+}
+
+function questionAnswerSummary(question: SurveyQuestionAnalytics): string {
+  const multiResponseQuestion = isMultiResponseQuestion(question.questionType);
+  if (question.responseBase === 'mixed') {
+    return multiResponseQuestion
+      ? `${question.namedAnswerCount} named respondents / ${question.aggregateAnswerCount} aggregate selections`
+      : `${question.namedAnswerCount} named / ${question.aggregateAnswerCount} aggregate`;
+  }
+  if (question.responseBase === 'aggregate' && multiResponseQuestion) {
+    return `${question.aggregateAnswerCount} option selections`;
+  }
+  return `${question.answerCount ?? 'Unknown'} answered`;
+}
+
+function questionParticipationCounts(
+  question: SurveyQuestionAnalytics,
+  survey?: SurveyManagementSurveySummary,
+) {
+  const hasExplicitNotStartedCount = question.notStartedCount !== undefined;
+  const hasNamedRoster = question.responseBase === 'named'
+    || question.responseBase === 'mixed'
+    || question.responseBase === 'none';
+  const notStartedCount = hasExplicitNotStartedCount
+    ? question.notStartedCount ?? null
+    : hasNamedRoster && survey
+      ? Math.max(question.expected - survey.started, 0)
+      : null;
+  let skippedCount = question.skippedCount;
+  if (!hasExplicitNotStartedCount && survey) {
+    if (question.responseBase === 'named' || question.responseBase === 'mixed') {
+      skippedCount = Math.max(survey.started - question.namedAnswerCount, 0);
+    } else if (question.responseBase === 'none') {
+      skippedCount = survey.started;
+    }
+  }
+  return { skippedCount, notStartedCount };
 }
 
 function coreSurveys(detail: BranchSurveyDashboard): SurveyManagementSurveySummary[] {
@@ -111,16 +149,16 @@ function renderOptionRows(
   denominatorLabel?: string,
 ): string {
   const total = options.reduce((sum, option) => sum + option.count, 0);
-  const checkboxQuestion = isCheckboxQuestion(questionType);
+  const multiResponseQuestion = isMultiResponseQuestion(questionType);
   if (options.length === 0) return '<div class="empty compact">No option answers recorded.</div>';
   const rows = options.map((option) => {
-    const denominator = checkboxQuestion ? respondentDenominator : total || answerCount;
+    const denominator = multiResponseQuestion ? respondentDenominator : total || answerCount;
     const percent = denominator && denominator > 0
       ? Math.round((option.count / denominator) * 100)
       : null;
     return `<div class="option-row"><div dir="auto">${escapeHtml(option.label)}</div><div class="bar"><span style="width:${Math.min(percent ?? 0, 100)}%"></span></div><div>${escapeHtml(option.count)} ${percent === null ? '(rate unavailable)' : `(${percent}%)`}</div></div>`;
   }).join('');
-  const denominatorNote = checkboxQuestion
+  const denominatorNote = multiResponseQuestion
     ? `<div class="subtle">${respondentDenominator && respondentDenominator > 0
       ? `Percentages use ${escapeHtml(denominatorLabel ?? 'respondents')} as the denominator.`
       : 'Percentages are unavailable because no respondent denominator was recorded.'}</div>`
@@ -128,9 +166,15 @@ function renderOptionRows(
   return `${title ? `<h4>${escapeHtml(title)}</h4>` : ''}${rows}${denominatorNote}`;
 }
 
-function renderQuestion(question: SurveyQuestionAnalytics, index: number): string {
+function renderQuestion(
+  question: SurveyQuestionAnalytics,
+  index: number,
+  survey?: SurveyManagementSurveySummary,
+): string {
+  const multiResponseQuestion = isMultiResponseQuestion(question.questionType);
+  const { skippedCount, notStartedCount } = questionParticipationCounts(question, survey);
   const optionRows = question.responseBase === 'mixed'
-    ? `<div class="source-grid"><div>${renderOptionRows(question.namedOptions, question.namedAnswerCount, question.questionType, `Named answers (${question.namedAnswerCount})`, question.namedAnswerCount, 'named respondents who answered')}</div><div>${renderOptionRows(question.aggregateOptions, question.aggregateAnswerCount, question.questionType, `Aggregate answers (${question.aggregateAnswerCount}; reported total ${question.aggregateRespondentTotal ?? 'unknown'})`, question.aggregateRespondentTotal, 'the reported respondent total')}</div></div>`
+    ? `<div class="source-grid"><div>${renderOptionRows(question.namedOptions, question.namedAnswerCount, question.questionType, `Named respondents answering (${question.namedAnswerCount})`, question.namedAnswerCount, 'named respondents who answered')}</div><div>${renderOptionRows(question.aggregateOptions, question.aggregateAnswerCount, question.questionType, `${multiResponseQuestion ? 'Aggregate option selections' : 'Aggregate answers'} (${question.aggregateAnswerCount}; reported total ${question.aggregateRespondentTotal ?? 'unknown'})`, question.aggregateRespondentTotal, 'the reported respondent total')}</div></div>`
     : renderOptionRows(
       question.options,
       question.answerCount ?? 0,
@@ -145,9 +189,7 @@ function renderQuestion(question: SurveyQuestionAnalytics, index: number): strin
         ? 'the reported respondent total'
         : 'named respondents who answered',
     );
-  const answerSummary = question.responseBase === 'mixed'
-    ? `${question.namedAnswerCount} named / ${question.aggregateAnswerCount} aggregate`
-    : `${question.answerCount ?? 'Unknown'} answered`;
+  const answerSummary = questionAnswerSummary(question);
   const sourceLabel = question.responseBase === 'named'
     ? 'named respondent answers'
     : question.responseBase === 'aggregate'
@@ -163,7 +205,7 @@ function renderQuestion(question: SurveyQuestionAnalytics, index: number): strin
     <section class="question pdf-block">
       <div class="question-head">
         <div><span class="code">${escapeHtml(question.surveyCode ?? 'Other')}</span> <span class="subtle">Question ${index + 1} · ${escapeHtml(question.questionType.replaceAll('_', ' '))}${question.sectionTitle ? ` · ${escapeHtml(question.sectionTitle)}` : ''}</span></div>
-        <div><span class="good">${escapeHtml(answerSummary)}</span> · <span class="bad">${escapeHtml(question.skippedCount ?? 'Unknown')} skipped</span></div>
+        <div><span class="good">${escapeHtml(answerSummary)}</span> · <span class="bad">${escapeHtml(skippedCount ?? 'Unavailable')} ${question.responseBase === 'mixed' ? 'named skipped after starting' : 'skipped after starting'}</span> · <span class="bad">${escapeHtml(notStartedCount ?? 'Unavailable')} ${question.responseBase === 'mixed' ? 'named roster not started' : 'not started'}</span></div>
       </div>
       <h3 dir="auto">${escapeHtml(question.question)}</h3>
       <div class="subtle">Source: ${escapeHtml(sourceLabel)} · Expected roster: ${escapeHtml(question.expected || 'No target list')} · ${question.required ? 'Required' : 'Optional'}</div>
@@ -175,8 +217,12 @@ function renderQuestion(question: SurveyQuestionAnalytics, index: number): strin
 function renderQualityNotes(
   detail: BranchSurveyDashboard,
   uncertainPairs: UncertainManualNamePair[],
+  missingCoreCodes: readonly string[],
 ): string {
   const notes: string[] = [];
+  if (missingCoreCodes.length > 0) {
+    notes.push(`Incomplete reporting cycle: missing core survey ${missingCoreCodes.join(', ')}. Completed-all-six is unavailable.`);
+  }
   detail.dataQuality.additionalSurveys.forEach((survey) => {
     notes.push(`Additional survey excluded from the six-survey matrix: ${survey.title}.`);
   });
@@ -191,6 +237,9 @@ function renderQualityNotes(
   });
   detail.dataQuality.mixedResponseSources.forEach((source) => {
     notes.push(`${source.surveyCode ?? source.title} contains ${source.namedAnswerRows} named answer rows and ${source.positiveAggregateCells} positive aggregate cells. The sources are reported separately and are never summed.`);
+    if ((source.invalidAggregateCellCount ?? 0) > 0) {
+      notes.push(`${source.surveyCode ?? source.title} has ${source.invalidAggregateCellCount} preserved legacy aggregate ${source.invalidAggregateCellCount === 1 ? 'cell' : 'cells'} above the reported respondent total; review before interpreting percentages.`);
+    }
   });
   if (uncertainPairs.length > 0) {
     notes.push(`${uncertainPairs.length} near-match manual identity pair(s) require human review. They were not automatically merged.`);
@@ -206,8 +255,14 @@ export function buildBranchSurveyManagementReportHtml(
   uncertainPairs: UncertainManualNamePair[],
 ): string {
   const surveys = coreSurveys(detail);
+  const surveyById = new Map(surveys.map((survey) => [survey.surveyId, survey]));
+  const missingCoreCodes = CORE_SURVEY_CODES.filter((code) => (
+    !surveys.some((survey) => survey.surveyCode === code)
+  ));
+  const hasCompleteCoreCycle = missingCoreCodes.length === 0
+    && surveys.length === CORE_SURVEY_CODES.length;
   const uniqueParticipants = matrix.filter((person) => !person.filters.noResponse).length;
-  const completedAll = surveys.length === 6 ? matrix.filter((person) => person.filters.completedAll).length : 0;
+  const completedAll = matrix.filter((person) => person.filters.completedAll).length;
   const expectedAssignments = surveys.reduce((sum, survey) => sum + survey.expected, 0);
   const completedAssignments = surveys.reduce((sum, survey) => sum + survey.completed, 0);
   const incompleteAssignments = surveys.reduce((sum, survey) => sum + survey.incomplete, 0);
@@ -267,12 +322,12 @@ export function buildBranchSurveyManagementReportHtml(
     <header class="hero pdf-block">
       <div class="eyebrow">Ponts per la Pau · Survey Management</div>
       <h1 dir="auto">${escapeHtml(detail.branch.name)}</h1>
-      <p>${surveys.length === 6 ? 'Complete six-survey branch report' : `${surveys.length}/6 core surveys available`} · Generated ${escapeHtml(generatedAt)}</p>
+      <p>${hasCompleteCoreCycle ? 'Complete six-survey branch report' : `Incomplete reporting cycle · ${surveys.length}/6 core surveys available · Missing ${escapeHtml(missingCoreCodes.join(', '))}`} · Generated ${escapeHtml(generatedAt)}</p>
     </header>
 
     <section class="metrics pdf-block">
       ${renderMetric('Tracked participant IDs', uniqueParticipants, 'Manual IDs remain separate until reviewed')}
-      ${renderMetric('Completed all six', completedAll, 'Across the core survey set')}
+      ${renderMetric('Completed all six', hasCompleteCoreCycle ? completedAll : 'Unavailable', hasCompleteCoreCycle ? 'Across the core survey set' : `Incomplete cycle; missing ${missingCoreCodes.join(', ')}`)}
       ${renderMetric('Recorded submissions', recordedSubmissions, 'Respondent-survey records with saved activity')}
       ${renderMetric('Expected assignments', expectedAssignments || '-', expectedAssignments ? 'Assigned respondent-survey pairs' : 'No target list')}
       ${renderMetric('Completed assignments', completedAssignments, `${incompleteAssignments} incomplete · ${notRespondedAssignments} not responded`)}
@@ -288,11 +343,11 @@ export function buildBranchSurveyManagementReportHtml(
     <table class="pdf-block"><thead><tr><th style="width:22%">Respondent</th>${surveys.map((survey) => `<th>${escapeHtml(survey.surveyCode)}</th>`).join('')}<th style="width:8%">Overall</th></tr></thead><tbody>${renderRespondentRows(surveys, matrix)}</tbody></table>
 
     <div class="section-title pdf-block">Question-by-question analysis</div>
-    <div class="section-note pdf-block">Answered and skipped counts use the expected roster. Percentages use a question-specific denominator; written responses are included in full.</div>
-    ${detail.questions.map(renderQuestion).join('') || '<div class="empty pdf-block">No questions are available.</div>'}
+    <div class="section-note pdf-block">Skipped counts include only people who started; not started is reported separately. Aggregate rates use the reported respondent total when available; written responses are included in full.</div>
+    ${detail.questions.map((question, index) => renderQuestion(question, index, surveyById.get(question.surveyId))).join('') || '<div class="empty pdf-block">No questions are available.</div>'}
 
     <div class="section-title pdf-block">Data quality and interpretation</div>
-    <aside class="quality pdf-block"><h3>Review notes</h3><ul>${renderQualityNotes(detail, uncertainPairs)}</ul></aside>
+    <aside class="quality pdf-block"><h3>Review notes</h3><ul>${renderQualityNotes(detail, uncertainPairs, missingCoreCodes)}</ul></aside>
     <aside class="method pdf-block"><strong>Status definitions.</strong> Completed means every currently required survey question has an answer. Incomplete means there is saved activity but one or more currently required questions remain unanswered. Not Responded means an assigned respondent has no recorded activity. Historical completion is inferred because the legacy system did not record final-submit events. Named and aggregate sources are never summed together.</aside>
   </main></body></html>`;
 }
