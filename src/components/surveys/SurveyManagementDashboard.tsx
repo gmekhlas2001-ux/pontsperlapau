@@ -174,6 +174,29 @@ function canonicalSurveyList(data: BranchSurveyDashboard) {
   return Array.from(byCode.values()).sort((a, b) => (a.surveyCode ?? '').localeCompare(b.surveyCode ?? ''));
 }
 
+function isVerifiedRespondent(row: { respondentType: BranchSurveyDashboard['respondents'][number]['respondentType'] }) {
+  return row.respondentType === 'student' || row.respondentType === 'staff';
+}
+
+function verifiedSurveyStats(
+  respondents: BranchSurveyDashboard['respondents'],
+  surveyId: string,
+) {
+  const rows = respondents.filter((respondent) => (
+    respondent.surveyId === surveyId && isVerifiedRespondent(respondent)
+  ));
+  const completed = rows.filter((respondent) => respondent.responseStatus === 'completed').length;
+  const incomplete = rows.filter((respondent) => respondent.responseStatus === 'incomplete').length;
+  const notResponded = rows.filter((respondent) => respondent.responseStatus === 'not_responded').length;
+  return {
+    expected: rows.length,
+    completed,
+    incomplete,
+    notResponded,
+    completionRate: rows.length > 0 ? completed / rows.length : null,
+  };
+}
+
 function toAnalyticsRows(data: BranchSurveyDashboard): SurveyAssignmentStatusRow[] {
   const titleById = new Map(data.surveys.map((survey) => [survey.surveyId, survey.title]));
   return data.respondents.map((row) => ({
@@ -198,6 +221,19 @@ function withinDateRange(value: string | null, dateFrom: string, dateTo: string)
   if (dateFrom && time < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
   if (dateTo && time > new Date(`${dateTo}T23:59:59.999`).getTime()) return false;
   return true;
+}
+
+function resolveSelectedBranchId(
+  overview: SurveyManagementOverview,
+  currentBranchId: string,
+  userBranchId?: string | null,
+) {
+  const hasBranch = (branchId: string | null | undefined) => (
+    !!branchId && overview.branches.some((branch) => branch.branchId === branchId)
+  );
+  if (hasBranch(userBranchId)) return userBranchId ?? '';
+  if (hasBranch(currentBranchId)) return currentBranchId;
+  return overview.branches[0]?.branchId ?? '';
 }
 
 function OptionDistribution({
@@ -358,6 +394,11 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
   const [matrixPage, setMatrixPage] = useState(1);
   const [exportingPdf, setExportingPdf] = useState(false);
   const detailRequest = useRef(0);
+  const selectedBranchIdRef = useRef(selectedBranchId);
+
+  useEffect(() => {
+    selectedBranchIdRef.current = selectedBranchId;
+  }, [selectedBranchId]);
 
   const loadOverview = useCallback(async () => {
     setLoadingOverview(true);
@@ -365,18 +406,15 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
     const result = await getSurveyManagementOverview();
     if (result.success) {
       setOverview(result.data);
-      setSelectedBranchId((current) => {
-        if (user?.branchId && result.data.branches.some((branch) => branch.branchId === user.branchId)) {
-          return user.branchId;
-        }
-        if (current && result.data.branches.some((branch) => branch.branchId === current)) return current;
-        return result.data.branches[0]?.branchId ?? '';
-      });
+      const nextBranchId = resolveSelectedBranchId(result.data, selectedBranchIdRef.current, user?.branchId);
+      setSelectedBranchId(nextBranchId);
+      setLoadingOverview(false);
+      return { success: true, branchId: nextBranchId };
     } else {
       setOverviewError(result.error);
     }
     setLoadingOverview(false);
-    return result.success;
+    return { success: false, branchId: selectedBranchIdRef.current };
   }, [user?.branchId]);
 
   const loadDetail = useCallback(async (branchId: string) => {
@@ -436,6 +474,9 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
     })),
     CORE_SURVEY_CODES.length,
   ) : [], [analyticsRows, canonicalSurveys, detail]);
+  const verifiedMatrix = useMemo(() => (
+    matrix.filter((row) => row.respondentType === 'student' || row.respondentType === 'staff')
+  ), [matrix]);
   const uncertainPairs = useMemo(() => findUncertainManualNamePairs(analyticsRows), [analyticsRows]);
 
   const filteredMatrix = useMemo(() => {
@@ -458,22 +499,33 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
     setMatrixPage((page) => Math.min(page, matrixPageCount));
   }, [matrixPageCount]);
 
-  const uniqueParticipants = matrix.filter((row) => !row.filters.noResponse).length;
+  const uniqueParticipants = verifiedMatrix.filter((row) => !row.filters.noResponse).length;
+  const unverifiedParticipants = matrix.filter((row) => row.respondentType === 'manual' && !row.filters.noResponse).length;
   const missingCoreCodes = CORE_SURVEY_CODES.filter((code) => (
     !canonicalSurveys.some((survey) => survey.surveyCode === code)
   ));
   const hasCompleteCoreCycle = missingCoreCodes.length === 0
     && canonicalSurveys.length === CORE_SURVEY_CODES.length;
-  const completedAll = matrix.filter((row) => row.filters.completedAll).length;
+  const completedAll = verifiedMatrix.filter((row) => row.filters.completedAll).length;
   const someSurveys = Math.max(uniqueParticipants - completedAll, 0);
   const invalidAggregateCellCount = detail?.dataQuality.mixedResponseSources.reduce(
     (sum, source) => sum + (source.invalidAggregateCellCount ?? 0),
     0,
   ) ?? 0;
   const selectedBranchSummary = overview?.branches.find((branch) => branch.branchId === selectedBranchId);
-  const expectedCoreAssignments = canonicalSurveys.reduce((sum, survey) => sum + survey.expected, 0);
-  const completedCoreAssignments = canonicalSurveys.reduce((sum, survey) => sum + survey.completed, 0);
-  const missingCoreAssignments = canonicalSurveys.reduce((sum, survey) => sum + survey.notResponded, 0);
+  const verifiedStatsBySurveyId = useMemo(() => new Map(canonicalSurveys.map((survey) => [
+    survey.surveyId,
+    verifiedSurveyStats(detail?.respondents ?? [], survey.surveyId),
+  ])), [canonicalSurveys, detail?.respondents]);
+  const expectedCoreAssignments = canonicalSurveys.reduce((sum, survey) => (
+    sum + (verifiedStatsBySurveyId.get(survey.surveyId)?.expected ?? 0)
+  ), 0);
+  const completedCoreAssignments = canonicalSurveys.reduce((sum, survey) => (
+    sum + (verifiedStatsBySurveyId.get(survey.surveyId)?.completed ?? 0)
+  ), 0);
+  const missingCoreAssignments = canonicalSurveys.reduce((sum, survey) => (
+    sum + (verifiedStatsBySurveyId.get(survey.surveyId)?.notResponded ?? 0)
+  ), 0);
   const completionRate = expectedCoreAssignments
     ? completedCoreAssignments / expectedCoreAssignments
     : 0;
@@ -511,8 +563,10 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
   }, [detail?.questions, questionSearch, questionSurveyFilter]);
 
   const handleRefresh = async () => {
-    const [overviewLoaded, detailLoaded] = await Promise.all([loadOverview(), loadDetail(selectedBranchId)]);
-    if (overviewLoaded && detailLoaded) toast.success('Survey analytics refreshed');
+    const overviewResult = await loadOverview();
+    const branchId = overviewResult.branchId || selectedBranchIdRef.current;
+    const detailLoaded = branchId ? await loadDetail(branchId) : false;
+    if (overviewResult.success && detailLoaded) toast.success('Survey analytics refreshed');
     else toast.error('Some survey analytics could not be refreshed');
   };
 
@@ -602,19 +656,19 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
       ) : detail ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            {metricCard('Tracked participants', uniqueParticipants, 'Stable identities with activity; manual matches remain review-only', Users, 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300')}
+            {metricCard('Verified participants', uniqueParticipants, 'Students and staff with activity; manual entries excluded', Users, 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300')}
             {metricCard(
               'Completed all six',
               hasCompleteCoreCycle ? completedAll : 'Unavailable',
               hasCompleteCoreCycle
-                ? 'People completed across every core survey'
+                ? 'Verified people completed across every core survey'
                 : `Incomplete reporting cycle: missing ${missingCoreCodes.join(', ')}`,
               CheckCircle2,
               'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
             )}
-            {metricCard('Some surveys', someSurveys, 'Participants missing or incomplete elsewhere', Clock3, 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300')}
-            {metricCard('Missing assignments', missingCoreAssignments, 'Core respondent-survey assignments with no activity', UserX, 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300')}
-            {metricCard('Completion rate', `${Math.round(completionRate * 100)}%`, 'Completed assignments divided by expected assignments', BarChart3, 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300')}
+            {metricCard('Some surveys', someSurveys, 'Verified participants missing or incomplete elsewhere', Clock3, 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300')}
+            {metricCard('Missing assignments', missingCoreAssignments, 'Verified student/staff assignments with no activity', UserX, 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300')}
+            {metricCard('Completion rate', expectedCoreAssignments ? `${Math.round(completionRate * 100)}%` : 'No verified roster', 'Verified completed assignments divided by verified expected assignments', BarChart3, 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300')}
           </div>
 
           {(missingCoreCodes.length > 0
@@ -623,7 +677,8 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
             || detail.dataQuality.titleBranchMismatches.length > 0
             || detail.dataQuality.orphanedRegisteredAssignments.length > 0
             || detail.dataQuality.mixedResponseSources.length > 0
-            || uncertainPairs.length > 0) && (
+            || uncertainPairs.length > 0
+            || unverifiedParticipants > 0) && (
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100" role="note" aria-labelledby="survey-data-quality-heading">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
@@ -636,6 +691,7 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
                   {detail.dataQuality.orphanedRegisteredAssignments.length > 0 && <p>{detail.dataQuality.orphanedRegisteredAssignments.length} registered {detail.dataQuality.orphanedRegisteredAssignments.length === 1 ? 'assignment points' : 'assignments point'} to a missing student or staff record. Answers remain preserved.</p>}
                   {detail.dataQuality.mixedResponseSources.length > 0 && <p>{detail.dataQuality.mixedResponseSources.length} {detail.dataQuality.mixedResponseSources.length === 1 ? 'survey contains' : 'surveys contain'} named and positive aggregate answers. Both sources are shown separately and never summed.</p>}
                   {invalidAggregateCellCount > 0 && <p>{invalidAggregateCellCount} preserved legacy aggregate {invalidAggregateCellCount === 1 ? 'cell exceeds' : 'cells exceed'} the reported respondent total and {invalidAggregateCellCount === 1 ? 'requires' : 'require'} review.</p>}
+                  {unverifiedParticipants > 0 && <p>{unverifiedParticipants} manual {unverifiedParticipants === 1 ? 'participant is' : 'participants are'} shown for review but excluded from the headline real-data totals.</p>}
                   {uncertainPairs.length > 0 && <p>{uncertainPairs.length} possible manual-name {uncertainPairs.length === 1 ? 'match requires' : 'matches require'} human review and {uncertainPairs.length === 1 ? 'has' : 'have'} not been merged.</p>}
                   <p className="text-xs opacity-80">{detail.dataQuality.historicalCompletionRule}</p>
                 </div>
@@ -666,22 +722,23 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
                         </div>
                       );
                     }
-                    const surveyCompletionPercent = Math.round((survey.completionRate ?? 0) * 100);
+                    const verifiedStats = verifiedStatsBySurveyId.get(survey.surveyId);
+                    const surveyCompletionPercent = Math.round((verifiedStats?.completionRate ?? 0) * 100);
                     return (
                     <div key={survey.surveyId} className="rounded-lg border p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2"><Badge>{survey.surveyCode}</Badge><span className="text-xs text-muted-foreground">{survey.expected} expected</span></div>
+                          <div className="flex items-center gap-2"><Badge>{survey.surveyCode}</Badge><span className="text-xs text-muted-foreground">{verifiedStats?.expected ?? 0} verified expected</span></div>
                           <p className="mt-2 line-clamp-2 text-sm font-semibold" dir="auto">{survey.title}</p>
                         </div>
-                        <span className="text-lg font-bold tabular-nums">{survey.expected > 0 ? `${surveyCompletionPercent}%` : '-'}</span>
+                        <span className="text-lg font-bold tabular-nums">{verifiedStats?.expected ? `${surveyCompletionPercent}%` : '-'}</span>
                       </div>
-                      <Progress className="mt-3" value={(survey.completionRate ?? 0) * 100} aria-label={`${survey.surveyCode}: ${survey.completed} of ${survey.expected} assignments completed, ${surveyCompletionPercent}%`} />
+                      <Progress className="mt-3" value={(verifiedStats?.completionRate ?? 0) * 100} aria-label={`${survey.surveyCode}: ${verifiedStats?.completed ?? 0} of ${verifiedStats?.expected ?? 0} verified assignments completed, ${surveyCompletionPercent}%`} />
                       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        {survey.expected === 0 && <span className="font-semibold">No target list</span>}
-                        <span className="text-emerald-700 dark:text-emerald-300">{survey.completed} completed</span>
-                        <span className="text-amber-700 dark:text-amber-300">{survey.incomplete} incomplete</span>
-                        <span className="text-rose-700 dark:text-rose-300">{survey.notResponded} not responded</span>
+                        {!verifiedStats?.expected && <span className="font-semibold">No verified roster</span>}
+                        <span className="text-emerald-700 dark:text-emerald-300">{verifiedStats?.completed ?? 0} completed</span>
+                        <span className="text-amber-700 dark:text-amber-300">{verifiedStats?.incomplete ?? 0} incomplete</span>
+                        <span className="text-rose-700 dark:text-rose-300">{verifiedStats?.notResponded ?? 0} not responded</span>
                       </div>
                     </div>
                     );
