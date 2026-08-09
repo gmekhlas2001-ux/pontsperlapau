@@ -102,8 +102,8 @@ const detail: BranchSurveyDashboard = {
       surveyId: 'survey-t1',
       surveyCode: 'T1',
       branchId: 'branch-a',
-      respondentType: 'manual',
-      respondentId: 'person-a',
+      respondentType: 'student',
+      respondentId: 'student-a',
       respondentName: 'Alice',
       respondentDetail: null,
       responseStatus: 'completed',
@@ -121,8 +121,8 @@ const detail: BranchSurveyDashboard = {
       surveyId: 'survey-t2',
       surveyCode: 'T2',
       branchId: 'branch-a',
-      respondentType: 'manual',
-      respondentId: 'person-b',
+      respondentType: 'student',
+      respondentId: 'student-b',
       respondentName: 'Bob',
       respondentDetail: null,
       responseStatus: 'not_responded',
@@ -198,7 +198,7 @@ describe('SurveyManagementDashboard', () => {
     expect(screen.getByText('Missing core survey definitions: T3, T4, T5, T6.')).toBeInTheDocument();
     expect(screen.getAllByText('Survey definition missing')).toHaveLength(4);
     expect(screen.getByRole('progressbar', {
-      name: 'T1: 1 of 1 assignments completed, 100%',
+      name: 'T1: 1 of 1 verified assignments completed, 100%',
     })).toBeInTheDocument();
     const completedAllMetric = screen.getByText('Completed all six').parentElement;
     expect(completedAllMetric).toHaveTextContent('Unavailable');
@@ -293,6 +293,51 @@ describe('SurveyManagementDashboard', () => {
       expect(screen.getByText('Alice')).toBeInTheDocument();
       expect(screen.queryByText('Bob')).not.toBeInTheDocument();
     });
+  });
+
+  it('excludes manual respondents from headline real-data metrics', async () => {
+    serviceMocks.getBranchSurveyDashboard.mockResolvedValue({
+      success: true,
+      data: {
+        ...detail,
+        surveys: detail.surveys.map((survey) => ({
+          ...survey,
+          expected: 2,
+          completed: survey.surveyId === 'survey-t1' ? 2 : 1,
+          notResponded: survey.surveyId === 'survey-t1' ? 0 : 1,
+          completionRate: survey.surveyId === 'survey-t1' ? 1 : 0.5,
+        })),
+        respondents: [
+          ...detail.respondents,
+          {
+            ...detail.respondents[0],
+            assignmentId: 'assignment-manual-a',
+            respondentType: 'manual',
+            respondentId: 'manual-a',
+            respondentName: 'Manual Alice',
+          },
+          {
+            ...detail.respondents[1],
+            assignmentId: 'assignment-manual-b',
+            respondentType: 'manual',
+            respondentId: 'manual-b',
+            respondentName: 'Manual Bob',
+            responseStatus: 'completed',
+            answeredQuestions: 1,
+            completedAt: '2026-08-08T10:00:00Z',
+            lastActivity: '2026-08-08T10:00:00Z',
+          },
+        ],
+      },
+    });
+
+    render(<SurveyManagementDashboard branches={[]} />);
+
+    const participantsMetric = await screen.findByText('Verified participants');
+    expect(participantsMetric.parentElement).toHaveTextContent('1');
+    expect(screen.getByText('2 manual participants are shown for review but excluded from the headline real-data totals.')).toBeInTheDocument();
+    expect(screen.getByText('Manual Alice')).toBeInTheDocument();
+    expect(screen.getByText('Manual Bob')).toBeInTheDocument();
   });
 
   it('does not invent aggregate checkbox percentages without a respondent denominator', async () => {

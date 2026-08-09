@@ -101,22 +101,49 @@ function coreSurveys(detail: BranchSurveyDashboard): SurveyManagementSurveySumma
   ));
 }
 
+function isVerifiedRespondent(row: { respondentType: BranchSurveyDashboard['respondents'][number]['respondentType'] }) {
+  return row.respondentType === 'student' || row.respondentType === 'staff';
+}
+
+function verifiedSurveyStats(
+  respondents: BranchSurveyDashboard['respondents'],
+  surveyId: string,
+) {
+  const rows = respondents.filter((respondent) => (
+    respondent.surveyId === surveyId && isVerifiedRespondent(respondent)
+  ));
+  const completed = rows.filter((respondent) => respondent.responseStatus === 'completed').length;
+  const incomplete = rows.filter((respondent) => respondent.responseStatus === 'incomplete').length;
+  const notResponded = rows.filter((respondent) => respondent.responseStatus === 'not_responded').length;
+  return {
+    expected: rows.length,
+    completed,
+    incomplete,
+    notResponded,
+    started: rows.length - notResponded,
+    completionRate: rows.length > 0 ? completed / rows.length : null,
+  };
+}
+
 function renderMetric(label: string, value: string | number, note: string): string {
   return `<div class="metric"><div class="metric-label">${escapeHtml(label)}</div><div class="metric-value">${escapeHtml(value)}</div><div class="metric-note">${escapeHtml(note)}</div></div>`;
 }
 
-function renderSurveyProgress(survey: SurveyManagementSurveySummary): string {
-  const percent = Math.round((survey.completionRate ?? 0) * 100);
-  const rate = survey.expected > 0 ? `${percent}%` : 'No target list';
+function renderSurveyProgress(
+  survey: SurveyManagementSurveySummary,
+  stats: ReturnType<typeof verifiedSurveyStats>,
+): string {
+  const percent = Math.round((stats.completionRate ?? 0) * 100);
+  const rate = stats.expected > 0 ? `${percent}%` : 'No verified roster';
   return `
     <tr>
       <td><strong>${escapeHtml(survey.surveyCode ?? 'Other')}</strong></td>
       <td dir="auto"><strong>${escapeHtml(survey.title)}</strong><div class="subtle">${escapeHtml(survey.questionCount)} questions</div></td>
-      <td>${escapeHtml(survey.expected || '-')}</td>
-      <td class="good">${escapeHtml(survey.completed)}</td>
-      <td class="warn">${escapeHtml(survey.incomplete)}</td>
-      <td class="bad">${escapeHtml(survey.notResponded)}</td>
-      <td><strong>${escapeHtml(rate)}</strong><div class="progress"><span style="width:${survey.expected > 0 ? percent : 0}%"></span></div></td>
+      <td>${escapeHtml(stats.expected || '-')}</td>
+      <td class="good">${escapeHtml(stats.completed)}</td>
+      <td class="warn">${escapeHtml(stats.incomplete)}</td>
+      <td class="bad">${escapeHtml(stats.notResponded)}</td>
+      <td><strong>${escapeHtml(rate)}</strong><div class="progress"><span style="width:${stats.expected > 0 ? percent : 0}%"></span></div></td>
       <td>${escapeHtml(formatDateTime(survey.lastActivity))}</td>
     </tr>`;
 }
@@ -261,16 +288,21 @@ export function buildBranchSurveyManagementReportHtml(
   ));
   const hasCompleteCoreCycle = missingCoreCodes.length === 0
     && surveys.length === CORE_SURVEY_CODES.length;
-  const uniqueParticipants = matrix.filter((person) => !person.filters.noResponse).length;
-  const completedAll = matrix.filter((person) => person.filters.completedAll).length;
-  const expectedAssignments = surveys.reduce((sum, survey) => sum + survey.expected, 0);
-  const completedAssignments = surveys.reduce((sum, survey) => sum + survey.completed, 0);
-  const incompleteAssignments = surveys.reduce((sum, survey) => sum + survey.incomplete, 0);
-  const notRespondedAssignments = surveys.reduce((sum, survey) => sum + survey.notResponded, 0);
-  const recordedSubmissions = surveys.reduce((sum, survey) => sum + survey.started, 0);
+  const verifiedMatrix = matrix.filter((person) => person.respondentType === 'student' || person.respondentType === 'staff');
+  const surveyStats = new Map(surveys.map((survey) => [
+    survey.surveyId,
+    verifiedSurveyStats(detail.respondents, survey.surveyId),
+  ]));
+  const uniqueParticipants = verifiedMatrix.filter((person) => !person.filters.noResponse).length;
+  const completedAll = verifiedMatrix.filter((person) => person.filters.completedAll).length;
+  const expectedAssignments = surveys.reduce((sum, survey) => sum + (surveyStats.get(survey.surveyId)?.expected ?? 0), 0);
+  const completedAssignments = surveys.reduce((sum, survey) => sum + (surveyStats.get(survey.surveyId)?.completed ?? 0), 0);
+  const incompleteAssignments = surveys.reduce((sum, survey) => sum + (surveyStats.get(survey.surveyId)?.incomplete ?? 0), 0);
+  const notRespondedAssignments = surveys.reduce((sum, survey) => sum + (surveyStats.get(survey.surveyId)?.notResponded ?? 0), 0);
+  const recordedSubmissions = surveys.reduce((sum, survey) => sum + (surveyStats.get(survey.surveyId)?.started ?? 0), 0);
   const completionRate = expectedAssignments > 0
     ? `${Math.round((completedAssignments / expectedAssignments) * 100)}%`
-    : 'No target list';
+    : 'No verified roster';
   const generatedAt = new Date().toLocaleString();
 
   return `<!doctype html>
@@ -326,17 +358,17 @@ export function buildBranchSurveyManagementReportHtml(
     </header>
 
     <section class="metrics pdf-block">
-      ${renderMetric('Tracked participant IDs', uniqueParticipants, 'Manual IDs remain separate until reviewed')}
+      ${renderMetric('Verified participants', uniqueParticipants, 'Students and staff only; manual entries excluded')}
       ${renderMetric('Completed all six', hasCompleteCoreCycle ? completedAll : 'Unavailable', hasCompleteCoreCycle ? 'Across the core survey set' : `Incomplete cycle; missing ${missingCoreCodes.join(', ')}`)}
-      ${renderMetric('Recorded submissions', recordedSubmissions, 'Respondent-survey records with saved activity')}
-      ${renderMetric('Expected assignments', expectedAssignments || '-', expectedAssignments ? 'Assigned respondent-survey pairs' : 'No target list')}
+      ${renderMetric('Recorded submissions', recordedSubmissions, 'Verified respondent-survey records with saved activity')}
+      ${renderMetric('Expected assignments', expectedAssignments || '-', expectedAssignments ? 'Verified student/staff respondent-survey pairs' : 'No verified roster')}
       ${renderMetric('Completed assignments', completedAssignments, `${incompleteAssignments} incomplete · ${notRespondedAssignments} not responded`)}
-      ${renderMetric('Completion rate', completionRate, 'Completed / expected assignments')}
+      ${renderMetric('Completion rate', completionRate, 'Verified completed / verified expected assignments')}
     </section>
 
     <div class="section-title pdf-block">Executive survey summary</div>
     <div class="section-note pdf-block">Core T1–T6 reporting set. Additional surveys are listed under data quality and are not folded into these totals.</div>
-    <table class="pdf-block"><thead><tr><th style="width:5%">Code</th><th style="width:29%">Survey</th><th style="width:7%">Expected</th><th style="width:7%">Completed</th><th style="width:7%">Incomplete</th><th style="width:9%">Not responded</th><th style="width:12%">Completion</th><th style="width:24%">Last activity</th></tr></thead><tbody>${surveys.map(renderSurveyProgress).join('')}</tbody></table>
+    <table class="pdf-block"><thead><tr><th style="width:5%">Code</th><th style="width:29%">Survey</th><th style="width:7%">Expected</th><th style="width:7%">Completed</th><th style="width:7%">Incomplete</th><th style="width:9%">Not responded</th><th style="width:12%">Completion</th><th style="width:24%">Last activity</th></tr></thead><tbody>${surveys.map((survey) => renderSurveyProgress(survey, surveyStats.get(survey.surveyId) ?? verifiedSurveyStats([], survey.surveyId))).join('')}</tbody></table>
 
     <div class="section-title pdf-block">Cross-survey respondent matrix</div>
     <div class="section-note pdf-block">One row per conservative identity. Registered students and staff use stable IDs. Manual IDs always remain separate; exact and near-name similarities are review-only candidates.</div>
