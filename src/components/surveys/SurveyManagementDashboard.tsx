@@ -200,6 +200,19 @@ function withinDateRange(value: string | null, dateFrom: string, dateTo: string)
   return true;
 }
 
+function resolveSelectedBranchId(
+  overview: SurveyManagementOverview,
+  currentBranchId: string,
+  userBranchId?: string | null,
+) {
+  const hasBranch = (branchId: string | null | undefined) => (
+    !!branchId && overview.branches.some((branch) => branch.branchId === branchId)
+  );
+  if (hasBranch(userBranchId)) return userBranchId ?? '';
+  if (hasBranch(currentBranchId)) return currentBranchId;
+  return overview.branches[0]?.branchId ?? '';
+}
+
 function OptionDistribution({
   title,
   options,
@@ -358,6 +371,11 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
   const [matrixPage, setMatrixPage] = useState(1);
   const [exportingPdf, setExportingPdf] = useState(false);
   const detailRequest = useRef(0);
+  const selectedBranchIdRef = useRef(selectedBranchId);
+
+  useEffect(() => {
+    selectedBranchIdRef.current = selectedBranchId;
+  }, [selectedBranchId]);
 
   const loadOverview = useCallback(async () => {
     setLoadingOverview(true);
@@ -365,18 +383,15 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
     const result = await getSurveyManagementOverview();
     if (result.success) {
       setOverview(result.data);
-      setSelectedBranchId((current) => {
-        if (user?.branchId && result.data.branches.some((branch) => branch.branchId === user.branchId)) {
-          return user.branchId;
-        }
-        if (current && result.data.branches.some((branch) => branch.branchId === current)) return current;
-        return result.data.branches[0]?.branchId ?? '';
-      });
+      const nextBranchId = resolveSelectedBranchId(result.data, selectedBranchIdRef.current, user?.branchId);
+      setSelectedBranchId(nextBranchId);
+      setLoadingOverview(false);
+      return { success: true, branchId: nextBranchId };
     } else {
       setOverviewError(result.error);
     }
     setLoadingOverview(false);
-    return result.success;
+    return { success: false, branchId: selectedBranchIdRef.current };
   }, [user?.branchId]);
 
   const loadDetail = useCallback(async (branchId: string) => {
@@ -511,8 +526,10 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
   }, [detail?.questions, questionSearch, questionSurveyFilter]);
 
   const handleRefresh = async () => {
-    const [overviewLoaded, detailLoaded] = await Promise.all([loadOverview(), loadDetail(selectedBranchId)]);
-    if (overviewLoaded && detailLoaded) toast.success('Survey analytics refreshed');
+    const overviewResult = await loadOverview();
+    const branchId = overviewResult.branchId || selectedBranchIdRef.current;
+    const detailLoaded = branchId ? await loadDetail(branchId) : false;
+    if (overviewResult.success && detailLoaded) toast.success('Survey analytics refreshed');
     else toast.error('Some survey analytics could not be refreshed');
   };
 

@@ -225,6 +225,46 @@ describe('SurveyManagementDashboard', () => {
     });
   });
 
+  it('refreshes branch detail for the branch selected by the latest overview', async () => {
+    const user = userEvent.setup();
+    serviceMocks.getSurveyManagementOverview
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          ...overview,
+          branches: [{ ...overview.branches[0], branchId: 'branch-b', branchName: 'Branch B' }],
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          ...overview,
+          branches: [{ ...overview.branches[0], branchId: 'branch-c', branchName: 'Branch C' }],
+        },
+      });
+    serviceMocks.getBranchSurveyDashboard
+      .mockResolvedValueOnce({
+        success: true,
+        data: { ...detail, branch: { id: 'branch-b', name: 'Branch B' } },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { ...detail, branch: { id: 'branch-c', name: 'Branch C' } },
+      });
+
+    render(<SurveyManagementDashboard branches={[]} />);
+
+    await waitFor(() => {
+      expect(serviceMocks.getBranchSurveyDashboard).toHaveBeenCalledWith('branch-b');
+    });
+
+    await user.click(screen.getByRole('button', { name: /refresh/i }));
+
+    await waitFor(() => {
+      expect(serviceMocks.getBranchSurveyDashboard).toHaveBeenLastCalledWith('branch-c');
+    });
+  });
+
   it('disables completed-all filtering when the six-survey cycle is incomplete', async () => {
     const user = userEvent.setup();
     render(<SurveyManagementDashboard branches={[]} />);
