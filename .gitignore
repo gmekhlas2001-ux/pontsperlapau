@@ -8,3 +8,5 @@ output/
 supabase/.temp/
 *.tsbuildinfo
 .vercel
+.codex-work/
+tmp/

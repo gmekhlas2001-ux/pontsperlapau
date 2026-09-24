@@ -1,0 +1,62 @@
+{
+  "login": {
+    "counts": {
+      "inapplicable": 54,
+      "incomplete": 1,
+      "passes": 35,
+      "violations": 0
+    },
+    "violations": [],
+    "incomplete": [
+      "color-contrast"
+    ]
+  },
+  "dashboard": {
+    "counts": {
+      "inapplicable": 56,
+      "incomplete": 1,
+      "passes": 33,
+      "violations": 0
+    },
+    "violations": [],
+    "incomplete": [
+      "color-contrast"
+    ]
+  },
+  "rtl": {
+    "counts": {
+      "inapplicable": 58,
+      "incomplete": 1,
+      "passes": 31,
+      "violations": 0
+    },
+    "violations": [],
+    "incomplete": [
+      "color-contrast"
+    ]
+  },
+  "library": {
+    "counts": {
+      "inapplicable": 46,
+      "incomplete": 1,
+      "passes": 43,
+      "violations": 0
+    },
+    "violations": [],
+    "incomplete": [
+      "color-contrast"
+    ]
+  },
+  "audit": {
+    "counts": {
+      "inapplicable": 47,
+      "incomplete": 1,
+      "passes": 42,
+      "violations": 0
+    },
+    "violations": [],
+    "incomplete": [
+      "color-contrast"
+    ]
+  }
+}
