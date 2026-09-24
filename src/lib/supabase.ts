@@ -57,7 +57,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false,
-    storage: noopStorage as any,
+    storage: noopStorage,
   },
   global: {
     // The anon key authenticates this public client to the Edge gateway. The
@@ -71,6 +71,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
       );
       const headers = new Headers(init?.headers ?? {});
+      const timeout = AbortSignal.timeout(30_000);
+      const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
       headers.set('Authorization', `Bearer ${supabaseAnonKey}`);
       headers.set('apikey', supabaseAnonKey);
 
@@ -88,7 +90,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         const proxyUrl = new URL('/functions/v1/data-read', supabaseUrl);
         proxyUrl.searchParams.set('path', dataPath);
 
-        const response = await fetch(proxyUrl, { ...init, headers });
+        const response = await fetch(proxyUrl, { ...init, headers, signal });
         // A stale request may finish after a newer login has already stored a
         // different token. Only invalidate the exact session used here.
         if (response.status === 401 && getSessionToken() === token) {
@@ -100,7 +102,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         return response;
       }
 
-      return fetch(input, { ...init, headers });
+      return fetch(input, { ...init, headers, signal });
     },
   },
 });

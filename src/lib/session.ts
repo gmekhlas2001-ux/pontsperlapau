@@ -16,18 +16,35 @@ const SESSION_ROLES = new Set<StoredSessionUser['role']>([
   'superadmin', 'admin', 'teacher', 'librarian', 'student', 'parent',
 ]);
 
+// Restricted/private browser storage can throw even while reading. Keep a
+// nonpersistent in-memory session as a last resort; it disappears on reload.
+let volatileSession: { token: string; user: StoredSessionUser } | null = null;
+function storageFor(kind: 'localStorage' | 'sessionStorage'): Storage | null {
+  try { return typeof window === 'undefined' ? null : window[kind]; } catch { return null; }
+}
+function read(storage: Storage | null, key: string): string | null {
+  try { return storage?.getItem(key) ?? null; } catch { return null; }
+}
+function write(storage: Storage | null, token: string, user: StoredSessionUser): boolean {
+  if (!storage) return false;
+  try {
+    storage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+    storage.setItem(SESSION_TOKEN_KEY, token);
+    return true;
+  } catch { return false; }
+}
 export function getSessionToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return window.sessionStorage.getItem(SESSION_TOKEN_KEY)
-    ?? window.localStorage.getItem(SESSION_TOKEN_KEY);
+  return volatileSession?.token ?? read(storageFor('sessionStorage'), SESSION_TOKEN_KEY)
+    ?? read(storageFor('localStorage'), SESSION_TOKEN_KEY);
 }
 
 export function getStoredSessionUser(): StoredSessionUser | null {
   if (typeof window === 'undefined') return null;
-  const storage = window.sessionStorage.getItem(SESSION_TOKEN_KEY)
-    ? window.sessionStorage
-    : window.localStorage;
-  const raw = storage.getItem(SESSION_USER_KEY);
+  if (volatileSession) return volatileSession.user;
+  const storage = read(storageFor('sessionStorage'), SESSION_TOKEN_KEY)
+    ? storageFor('sessionStorage') : storageFor('localStorage');
+  const raw = read(storage, SESSION_USER_KEY);
   if (!raw) return null;
 
   try {
@@ -50,22 +67,26 @@ export function getStoredSessionUser(): StoredSessionUser | null {
 
 export function storeSession(token: string, user: StoredSessionUser, persistent: boolean): void {
   clearSession();
-  const storage = persistent ? window.localStorage : window.sessionStorage;
-  storage.setItem(SESSION_TOKEN_KEY, token);
-  storage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+  if (persistent && write(storageFor('localStorage'), token, user)) return;
+  if (write(storageFor('sessionStorage'), token, user)) return;
+  volatileSession = { token, user };
 }
 
 export function storeSessionUser(user: StoredSessionUser): void {
-  const storage = window.sessionStorage.getItem(SESSION_TOKEN_KEY)
-    ? window.sessionStorage
-    : window.localStorage;
-  storage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+  if (volatileSession) { volatileSession.user = user; return; }
+  const storage = read(storageFor('sessionStorage'), SESSION_TOKEN_KEY)
+    ? storageFor('sessionStorage') : storageFor('localStorage');
+  try { storage?.setItem(SESSION_USER_KEY, JSON.stringify(user)); } catch {
+    const token = getSessionToken();
+    if (token) volatileSession = { token, user };
+  }
 }
 
 export function clearSession(): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(SESSION_TOKEN_KEY);
-  window.localStorage.removeItem(SESSION_USER_KEY);
-  window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
-  window.sessionStorage.removeItem(SESSION_USER_KEY);
+  volatileSession = null;
+  for (const storage of [storageFor('localStorage'), storageFor('sessionStorage')]) {
+    for (const key of [SESSION_TOKEN_KEY, SESSION_USER_KEY]) {
+      try { storage?.removeItem(key); } catch { /* Restricted browser storage. */ }
+    }
+  }
 }

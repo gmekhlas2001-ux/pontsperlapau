@@ -9,8 +9,10 @@
 
 import "jsr:@supabase/functions-js@2.110.0/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.110.0";
-import { authenticateRequest } from "../_shared/auth.ts";
+import { prepareSurveyCreation } from "../_shared/survey-create.ts";
+import { authenticateRequest, authenticationErrorResponse } from "../_shared/auth.ts";
 import { corsHeadersFor, errorResponse, jsonResponse } from "../_shared/cors.ts";
+import { canUseModule, operationModule } from "../_shared/module-access.ts";
 
 const STAFF_ROLES = ["superadmin", "admin", "teacher", "librarian"];
 const FINANCE_ROLES = ["superadmin", "admin", "teacher"];
@@ -35,8 +37,6 @@ const SURVEY_STATUSES = ["draft", "active", "closed"];
 const SURVEY_LANGUAGES = ["en", "es", "ca", "fa"];
 const SURVEY_CODES = ["T1", "T2", "T3", "T4", "T5", "T6"];
 const SENTIMENTS = ["positive", "negative", "neutral"];
-const SURVEY_RESPONDENT_TYPES = ["students", "staff", "students_staff"];
-const SURVEY_RESPONDENT_KINDS = ["student", "staff"];
 // "manual" respondents are people entered by hand for a single survey; they are
 // not validated against the students/staff tables.
 const SURVEY_RESPONDENT_KINDS_WITH_MANUAL = ["student", "staff", "manual"];
@@ -415,23 +415,24 @@ Deno.serve(async (req: Request) => {
     try {
       claims = await authenticateRequest(req);
     } catch (err) {
-      return errorResponse(req, 401, "Authentication required", err);
+      return authenticationErrorResponse(req, err);
     }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { autoRefreshToken: false, persistSession: false } },
+      { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: { "X-App-Actor": claims.sub } } },
     );
 
-    const { data: caller } = await supabase
+    const { data: caller, error: callerError } = await supabase
       .from("users")
       .select("id, email, first_name, last_name, profile_picture_url, role, status, branch_id")
       .eq("id", claims.sub)
       .eq("status", "active")
       .maybeSingle();
 
-    if (!caller) return errorResponse(req, 401, "Authentication required");
+    if (callerError) return errorResponse(req, 503, "Session verification is temporarily unavailable", callerError);
+  if (!caller) return errorResponse(req, 401, "Authentication required");
 
     let body: Body;
     try {
@@ -468,25 +469,17 @@ Deno.serve(async (req: Request) => {
     }
 
     if (op === "log-activity") {
-      const actionType = cleanString(body.actionType)?.toUpperCase();
-      const tableName = cleanString(body.tableName);
-      const description = cleanString(body.description);
-      if (
-        !actionType || !["INSERT", "UPDATE", "DELETE"].includes(actionType) ||
-        !tableName || !/^[a-z_]{1,63}$/.test(tableName) ||
-        !description || description.length > 500
-      ) {
-        return errorResponse(req, 400, "Missing activity fields");
+      return errorResponse(req, 410, "Activity is recorded automatically by the database");
+    }
+
+    const requiredModule = operationModule(op, body);
+    if (!requiredModule) return errorResponse(req, 400, "Unknown operation");
+    try {
+      if (!await canUseModule(supabase, caller, requiredModule.module, requiredModule.action)) {
+        return errorResponse(req, 403, "Module access is disabled");
       }
-      const { error } = await supabase.from("activity_logs").insert({
-        user_id: caller.id,
-        action_type: actionType,
-        table_name: tableName,
-        record_id: cleanString(body.recordId),
-        description,
-      });
-      if (error) return errorResponse(req, 500, "Failed to log activity", error);
-      return jsonResponse(req, { success: true });
+    } catch (error) {
+      return errorResponse(req, 503, "Module access is temporarily unavailable", error);
     }
 
     if (op === "upload-public-image") {
@@ -1140,167 +1133,15 @@ Deno.serve(async (req: Request) => {
       if (roleError) return roleError;
 
       if (op === "create-survey") {
-        if (!body.title || !isOneOf(body.status, SURVEY_STATUSES)) {
-          return errorResponse(req, 400, "Invalid survey payload");
+        let payload;
+        try {
+          payload = prepareSurveyCreation(body, caller);
+        } catch (error) {
+          return errorResponse(req, 400, error instanceof Error ? error.message : "Invalid survey payload");
         }
-        const surveyBranchId = caller.role === "superadmin"
-          ? cleanString(body.branchId)
-          : caller.branch_id;
-        if (!surveyBranchId) return errorResponse(req, 400, "Survey branch is required");
-        const branchError = assertBranch(req, caller, surveyBranchId);
-        if (branchError) return branchError;
-        const respondentType = isOneOf(body.respondentType, SURVEY_RESPONDENT_TYPES)
-          ? body.respondentType
-          : "students";
-        const surveyCode = cleanString(body.surveyCode);
-        if (surveyCode && !isOneOf(surveyCode, SURVEY_CODES)) {
-          return errorResponse(req, 400, "Invalid survey code");
-        }
-        const reportingCycle = cleanOptionalUuid(body.reportingCycleId);
-        if (reportingCycle.error) return errorResponse(req, 400, reportingCycle.error);
-        if (Boolean(surveyCode) !== Boolean(reportingCycle.value)) {
-          return errorResponse(req, 400, "Survey code and reporting cycle ID must be set together");
-        }
-        const surveyInsert: Record<string, unknown> = {
-          title: String(body.title),
-          description: cleanString(body.description),
-          period: cleanString(body.period),
-          survey_code: surveyCode,
-          reporting_cycle_id: reportingCycle.value,
-          branch_id: surveyBranchId,
-          respondent_type: respondentType,
-          language: isOneOf(body.language, SURVEY_LANGUAGES) ? body.language : "fa",
-          status: body.status,
-          created_by: caller.id,
-        };
-        const surveyDate = cleanString(body.surveyDate);
-        if (surveyDate) surveyInsert.survey_date = surveyDate;
-        const { data: survey, error: sErr } = await supabase.from("surveys").insert(surveyInsert).select().single();
-        if (sErr || !survey) return errorResponse(req, 400, "Failed to create survey", sErr);
-
-        const sections = Array.isArray(body.sections) ? body.sections : [];
-        const questions = Array.isArray(body.questions) ? body.questions : [];
-        if (
-          sections.length > 100 ||
-          questions.length === 0 ||
-          questions.length > 500 ||
-          questions.some((question: any) => !cleanString(question.text))
-        ) {
-          await supabase.from("surveys").delete().eq("id", survey.id);
-          return errorResponse(req, 400, "Survey questions are invalid");
-        }
-        const sectionIdMap: Record<number, string> = {};
-        if (sections.length > 0) {
-          const { data, error } = await supabase.from("survey_sections").insert(
-            sections.map((section: any, index: number) => ({
-              survey_id: survey.id,
-              title: String(section.title ?? ""),
-              description: cleanString(section.description),
-              order_index: index,
-            })),
-          ).select();
-          if (error) {
-            await supabase.from("surveys").delete().eq("id", survey.id);
-            return errorResponse(req, 400, "Failed to create survey sections", error);
-          }
-          (data ?? []).forEach((section: any, index: number) => { sectionIdMap[index] = section.id; });
-        }
-
-        const questionIdMap: Record<number, string> = {};
-        if (questions.length > 0) {
-          const { data, error } = await supabase.from("survey_questions").insert(
-            questions.map((question: any, index: number) => ({
-              survey_id: survey.id,
-              section_id: question.sectionIndex !== null && question.sectionIndex !== undefined
-                ? sectionIdMap[question.sectionIndex] ?? null
-                : null,
-              question_text: String(question.text ?? ""),
-              question_type: isOneOf(question.questionType, SURVEY_QUESTION_TYPES) ? question.questionType : "multiple_choice",
-              sentiment_enabled: Boolean(question.sentimentEnabled),
-              required: question.required !== false,
-              order_index: index,
-            })),
-          ).select("id");
-          if (error) {
-            await supabase.from("surveys").delete().eq("id", survey.id);
-            return errorResponse(req, 400, "Failed to create survey questions", error);
-          }
-          (data ?? []).forEach((question: any, index: number) => { questionIdMap[index] = question.id; });
-        }
-
-        const options = Array.isArray(body.options) ? body.options : [];
-        const perQuestionOptions = questions.flatMap((question: any, questionIndex: number) =>
-          Array.isArray(question.options)
-            ? question.options.map((option: any, optionIndex: number) => ({
-              survey_id: survey.id,
-              question_id: questionIdMap[questionIndex] ?? null,
-              label: String(option.label ?? ""),
-              sentiment: isOneOf(option.sentiment, SENTIMENTS) ? option.sentiment : "neutral",
-              order_index: optionIndex,
-            }))
-            : []
-        );
-        const optionRows = perQuestionOptions.length > 0
-          ? perQuestionOptions
-          : options.map((option: any, index: number) => ({
-            survey_id: survey.id,
-            question_id: null,
-            label: String(option.label ?? ""),
-            sentiment: isOneOf(option.sentiment, SENTIMENTS) ? option.sentiment : "neutral",
-            order_index: index,
-          }));
-        if (optionRows.length > 0) {
-          const { error } = await supabase.from("survey_response_options").insert(
-            optionRows,
-          );
-          if (error) {
-            await supabase.from("surveys").delete().eq("id", survey.id);
-            return errorResponse(req, 400, "Failed to create survey options", error);
-          }
-        }
-
-        const respondentIds = Array.isArray(body.respondentIds) ? body.respondentIds : [];
-        if (respondentIds.length > 0) {
-          const allowedKinds = respondentType === "students"
-            ? ["student"]
-            : respondentType === "staff"
-              ? ["staff"]
-              : SURVEY_RESPONDENT_KINDS;
-          const rows = respondentIds
-            .filter((respondent: any) => isOneOf(respondent.type, allowedKinds) && cleanString(respondent.id) && cleanString(respondent.name))
-            .map((respondent: any) => ({
-              survey_id: survey.id,
-              branch_id: surveyBranchId,
-              respondent_type: respondent.type,
-              respondent_id: cleanString(respondent.id),
-              respondent_name: cleanString(respondent.name),
-            }));
-          if (rows.length > 0) {
-            const studentIds = rows.filter((row) => row.respondent_type === "student").map((row) => row.respondent_id);
-            const staffIds = rows.filter((row) => row.respondent_type === "staff").map((row) => row.respondent_id);
-            if (studentIds.length > 0) {
-              const { data, error } = await supabase.from("students").select("id, branch_id").in("id", studentIds);
-              if (error || (data ?? []).some((student: any) => student.branch_id !== surveyBranchId) || (data ?? []).length !== studentIds.length) {
-                await supabase.from("surveys").delete().eq("id", survey.id);
-                return errorResponse(req, 403, "One or more selected students are outside the survey branch", error);
-              }
-            }
-            if (staffIds.length > 0) {
-              const { data, error } = await supabase.from("staff").select("id, branch_id").in("id", staffIds);
-              if (error || (data ?? []).some((member: any) => member.branch_id !== surveyBranchId) || (data ?? []).length !== staffIds.length) {
-                await supabase.from("surveys").delete().eq("id", survey.id);
-                return errorResponse(req, 403, "One or more selected staff are outside the survey branch", error);
-              }
-            }
-            const { error } = await supabase.from("survey_respondents").insert(rows);
-            if (error) {
-              await supabase.from("surveys").delete().eq("id", survey.id);
-              return errorResponse(req, 400, "Failed to save survey respondents", error);
-            }
-          }
-        }
-
-        return jsonResponse(req, { success: true, id: survey.id });
+        const { data: surveyId, error } = await supabase.rpc("create_survey_atomic", payload);
+        if (error) return errorResponse(req, error.code === "42501" ? 403 : 400, "Failed to create survey", error);
+        return jsonResponse(req, { success: true, id: surveyId });
       }
 
       if (op === "update-survey-meta") {

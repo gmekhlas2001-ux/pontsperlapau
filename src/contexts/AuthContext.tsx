@@ -26,8 +26,15 @@ interface AuthContextType {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<LoginResult>;
   logout: () => Promise<void>;
   hasPermission: (requiredRoles: UserRole[]) => boolean;
+  hasModuleAccess: (moduleId?: string, action?: ModuleAction) => boolean;
+  accessLoading: boolean;
   isLoading: boolean;
+  sessionError: boolean;
+  retrySession: () => void;
 }
+
+export type ModuleAction = 'view' | 'create' | 'edit' | 'delete' | 'export' | 'manage';
+type ModuleAccessMap = Record<string, Record<ModuleAction, boolean>>;
 
 interface LoginResult {
   success: boolean;
@@ -43,9 +50,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [sessionError, setSessionError] = useState(false);
+  const [access, setAccess] = useState<ModuleAccessMap | null>(null);
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const retrySession = useCallback(() => setRetryKey(key => key + 1), []);
+
   useEffect(() => {
+    let cancelled = false;
+    const token = getSessionToken();
+    setIsLoading(true);
+    setSessionError(false);
     const initAuth = async () => {
-      if (!getSessionToken()) {
+      if (!token) {
         clearSession();
         setIsLoading(false);
         return;
@@ -61,6 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         branchId?: string | null;
       } }>('app-actions', { operation: 'get-session' });
 
+      if (cancelled) return;
+      const currentToken = getSessionToken();
+      // The HTTP client clears a rejected token before returning its 401.
+      // Finish initialization in that case, but never overwrite a newer login.
+      if (currentToken !== token && !(result.status === 401 && !currentToken)) return;
       if (result.ok && result.data?.user) {
         const data = result.data.user;
         const refreshed: User = {
@@ -76,12 +98,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         storeSessionUser(refreshed);
       } else {
         setUser(null);
-        clearSession();
+        if (result.status === 401 || result.status === 403) clearSession();
+        else setSessionError(true);
       }
       setIsLoading(false);
     };
-    initAuth();
-  }, []);
+    void initAuth();
+    return () => { cancelled = true; };
+  }, [retryKey]);
+
+  useEffect(() => {
+    if (!user) {
+      setAccess(null);
+      setAccessLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setAccess(null);
+    setAccessLoading(true);
+    void callEdgeFunction<{ success: boolean; access: ModuleAccessMap }>('module-access', { operation: 'mine' })
+      .then((result) => {
+        if (cancelled) return;
+        if (result.ok && result.data?.success && result.data.access) {
+          setAccess(result.data.access);
+          setSessionError(false);
+        } else {
+          setAccess(null);
+          setSessionError(true);
+        }
+        setAccessLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [user?.id, retryKey]);
+
+  // The backend checks every request. Refresh the visible menu promptly after
+  // another admin changes a grant, including when the tab regains focus.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const refresh = async () => {
+      if (document.visibilityState === 'hidden') return;
+      const result = await callEdgeFunction<{ success: boolean; access: ModuleAccessMap }>('module-access', { operation: 'mine' });
+      if (cancelled) return;
+      if (result.ok && result.data?.access) setAccess(result.data.access);
+      else { setAccess(null); setSessionError(true); }
+    };
+    const timer = window.setInterval(() => { void refresh(); }, 15_000);
+    window.addEventListener('focus', refresh);
+    return () => { cancelled = true; window.clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, [user?.id]);
 
   const login = useCallback(async (email: string, password: string, rememberMe = false): Promise<LoginResult> => {
     try {
@@ -92,7 +157,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
-        body: JSON.stringify({ email: email.toLowerCase(), password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        signal: AbortSignal.timeout(30_000),
       });
 
       const result = await res.json();
@@ -111,7 +177,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         branchId: result.user.branchId ?? null,
       };
 
+      setSessionError(false);
+      setIsLoading(false);
       setUser(userData);
+      setAccess(null);
       storeSession(result.token, userData, rememberMe);
       return { success: true };
     } catch (error) {
@@ -125,6 +194,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await callEdgeFunction('app-actions', { operation: 'logout' });
     }
     setUser(null);
+    setAccess(null);
+    setSessionError(false);
+    setIsLoading(false);
     clearSession();
   }, []);
 
@@ -134,6 +206,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return requiredRoles.includes(user.role);
   }, [user]);
 
+  const hasModuleAccess = useCallback((moduleId?: string, action: ModuleAction = 'view'): boolean => {
+    if (!moduleId) return true;
+    return access?.[moduleId]?.[action] === true;
+  }, [access]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -142,7 +219,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         hasPermission,
+        hasModuleAccess,
+        accessLoading,
         isLoading,
+        sessionError,
+        retrySession,
       }}
     >
       {children}

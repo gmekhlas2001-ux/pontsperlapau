@@ -20,6 +20,7 @@ vi.mock('@/services/surveyManagementService', () => ({
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'admin-a', role: 'admin', branchId: 'branch-a' },
+    hasModuleAccess: () => true,
   }),
 }));
 

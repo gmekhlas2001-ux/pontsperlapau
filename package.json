@@ -12,7 +12,8 @@
     "i18n:check": "node scripts/check-i18n-coverage.mjs",
     "lint": "eslint .",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:database": "node scripts/check-database.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -77,6 +78,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

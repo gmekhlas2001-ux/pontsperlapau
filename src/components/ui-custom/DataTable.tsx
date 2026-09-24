@@ -68,7 +68,7 @@ export function DataTable<T>({
     return data.filter((item) =>
       searchKeys.some((key) => {
         const value = item[key];
-        return value && String(value).toLowerCase().includes(query);
+        return value != null && String(value).toLowerCase().includes(query);
       })
     );
   }, [data, searchQuery, searchKeys]);
@@ -90,12 +90,14 @@ export function DataTable<T>({
   }, [filteredData, sortConfig]);
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
+  const visiblePage = Math.min(currentPage, totalPages);
   const paginatedData = sortedData.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    (visiblePage - 1) * pageSize,
+    visiblePage * pageSize
   );
 
   const handleSort = (key: string) => {
+    setCurrentPage(1);
     setSortConfig((current) => {
       if (!current || current.key !== key) {
         return { key, direction: 'asc' };
@@ -107,8 +109,8 @@ export function DataTable<T>({
     });
   };
 
-  const startEntry = sortedData.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endEntry = Math.min(currentPage * pageSize, sortedData.length);
+  const startEntry = sortedData.length === 0 ? 0 : (visiblePage - 1) * pageSize + 1;
+  const endEntry = Math.min(visiblePage * pageSize, sortedData.length);
   const isFilteredEmpty = data.length > 0 && filteredData.length === 0;
   const visibleMobileColumns = mobileColumns?.length
     ? columns.filter((column) => mobileColumns.includes(column.key))
@@ -128,6 +130,7 @@ export function DataTable<T>({
             <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={t('common.search')}
+              aria-label={t('common.search')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -295,7 +298,7 @@ export function DataTable<T>({
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-16">
+            <SelectTrigger className="w-16" aria-label={t('common.entries')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -318,20 +321,20 @@ export function DataTable<T>({
             variant="outline"
             size="sm"
             aria-label={t('common.previous')}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(Math.max(1, visiblePage - 1))}
+            disabled={visiblePage === 1}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm">
-            {t('common.page')} {currentPage} {t('common.of')} {totalPages}
+            {t('common.page')} {visiblePage} {t('common.of')} {totalPages}
           </span>
           <Button
             variant="outline"
             size="sm"
             aria-label={t('common.next')}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(Math.min(totalPages, visiblePage + 1))}
+            disabled={visiblePage === totalPages}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>

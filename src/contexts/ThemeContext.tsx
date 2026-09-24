@@ -14,7 +14,7 @@ const forceLightTheme = () => {
   if (typeof window === 'undefined') return;
 
   window.document.documentElement.classList.remove('dark');
-  window.localStorage.setItem('theme', 'light');
+  try { window.localStorage.setItem('theme', 'light'); } catch { /* Storage may be disabled. */ }
 };
 
 const lightThemeContext: ThemeContextType = {

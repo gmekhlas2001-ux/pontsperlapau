@@ -374,7 +374,7 @@ function QuestionCard({
 }
 
 export function SurveyManagementDashboard({ branches }: SurveyManagementDashboardProps) {
-  const { user } = useAuth();
+  const { user, hasModuleAccess } = useAuth();
   const isSuperadmin = user?.role === 'superadmin';
   const [overview, setOverview] = useState<SurveyManagementOverview | null>(null);
   const [detail, setDetail] = useState<BranchSurveyDashboard | null>(null);
@@ -634,7 +634,7 @@ export function SurveyManagementDashboard({ branches }: SurveyManagementDashboar
           <Button className="min-h-11" variant="outline" onClick={() => void handleRefresh()} disabled={loadingOverview || loadingDetail}>
             <RefreshCw className={cn('mr-2 h-4 w-4', (loadingOverview || loadingDetail) && 'animate-spin')} /> Refresh
           </Button>
-          <Button className="min-h-11" onClick={() => void handlePdfExport()} disabled={!detail || loadingDetail || exportingPdf}>
+          <Button className="min-h-11" onClick={() => void handlePdfExport()} disabled={!hasModuleAccess('surveys', 'export') || !detail || loadingDetail || exportingPdf}>
             <Download className="mr-2 h-4 w-4" /> {exportingPdf ? 'Building report...' : 'Branch PDF'}
           </Button>
         </div>

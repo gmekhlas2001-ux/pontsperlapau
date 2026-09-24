@@ -42,7 +42,7 @@ function AppRoutes() {
           {moduleRoutes.map((route) => {
             const RouteComponent = route.component;
             const element = (
-              <ProtectedRoute requiredRoles={route.roles ?? []}>
+              <ProtectedRoute requiredRoles={route.roles ?? []} moduleId={route.moduleId}>
                 <RouteComponent />
               </ProtectedRoute>
             );

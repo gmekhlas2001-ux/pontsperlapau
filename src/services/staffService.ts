@@ -10,7 +10,6 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { logActivity } from '@/services/activityService';
 import { scopedBranchId } from '@/lib/scope';
 import { callEdgeFunction } from '@/lib/edge';
 
@@ -66,7 +65,6 @@ export async function createStaff(data: CreateStaffData) {
   });
 
   if (!res.ok) return { success: false, error: res.error || 'Failed to create staff member' };
-  logActivity({ action_type: 'INSERT', table_name: 'staff', description: `Added staff: ${data.firstName} ${data.lastName}` });
   const payload = res.data as any;
   return {
     success: true,
@@ -120,7 +118,6 @@ export async function updateStaff(staffId: string, userId: string, data: UpdateS
   });
 
   if (!res.ok) return { success: false, error: res.error || 'Failed to update staff member' };
-  logActivity({ action_type: 'UPDATE', table_name: 'staff', description: 'Updated staff member' });
   return { success: true };
 }
 
@@ -135,7 +132,6 @@ export async function updateUserCredentials(targetUserId: string, email?: string
 export async function deleteStaff(_staffId: string, userId: string) {
   const res = await callEdgeFunction('update-user', { targetUserId: userId, operation: 'delete' });
   if (!res.ok) return { success: false, error: res.error || 'Failed to delete staff member' };
-  logActivity({ action_type: 'DELETE', table_name: 'staff', description: 'Removed staff member' });
   return { success: true };
 }
 

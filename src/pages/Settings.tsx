@@ -9,7 +9,8 @@ import { GeneralSettings } from './settings/GeneralSettings';
 import { NotificationSettings } from './settings/NotificationSettings';
 import { SecuritySettings } from './settings/SecuritySettings';
 import { SystemSettings } from './settings/SystemSettings';
-import { Globe, Bell, Shield, Database, Settings2 } from 'lucide-react';
+import { ModuleAccessManager } from './settings/ModuleAccessManager';
+import { Globe, Bell, Shield, Database, Settings2, Blocks } from 'lucide-react';
 
 const ROLE_BADGE_COLORS: Record<string, string> = {
   superadmin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
@@ -72,6 +73,7 @@ export function Settings() {
     { value: 'notifications', label: t('settings.notifications'), icon: Bell },
     { value: 'security', label: t('settings.privacy'), icon: Shield },
     { value: 'system', label: t('settings.backup'), icon: Database },
+    { value: 'modules', label: t('moduleAccess.title'), icon: Blocks },
   ];
 
   return (
@@ -144,6 +146,10 @@ export function Settings() {
 
             <TabsContent value="system">
               <SystemSettings settings={settings} onSettingsChange={handleSettingsChange} />
+            </TabsContent>
+
+            <TabsContent value="modules">
+              <ModuleAccessManager />
             </TabsContent>
           </div>
         </Tabs>

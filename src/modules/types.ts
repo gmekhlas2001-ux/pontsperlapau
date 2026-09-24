@@ -4,6 +4,7 @@ import type { UserRole } from '@/contexts/AuthContext';
 
 export interface FeatureRoute {
   id: string;
+  moduleId?: string;
   path?: string;
   index?: boolean;
   component: ElementType;
@@ -12,6 +13,7 @@ export interface FeatureRoute {
 
 export interface FeatureNavItem {
   id: string;
+  moduleId?: string;
   path: string;
   labelKey: string;
   icon: LucideIcon;

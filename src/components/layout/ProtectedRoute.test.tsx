@@ -14,7 +14,7 @@ describe('ProtectedRoute', () => {
     vi.clearAllMocks();
   });
 
-  const renderRoute = (requiredRoles?: any[]) => {
+  const renderRoute = (requiredRoles?: any[], moduleId?: string) => {
     return render(
       <MemoryRouter initialEntries={['/protected']}>
         <Routes>
@@ -23,7 +23,7 @@ describe('ProtectedRoute', () => {
           <Route
             path="/protected"
             element={
-              <ProtectedRoute requiredRoles={requiredRoles}>
+              <ProtectedRoute requiredRoles={requiredRoles} moduleId={moduleId}>
                 <div>Protected Content</div>
               </ProtectedRoute>
             }
@@ -45,6 +45,15 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('Login Page')).toBeInTheDocument();
   });
 
+  it('blocks protected content while keeping a temporary verification failure retryable', () => {
+    mockUseAuth.mockReturnValue({ isLoading: false, isAuthenticated: false, sessionError: true, retrySession: vi.fn(), hasPermission: vi.fn() });
+    renderRoute();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+    expect(screen.queryByText('Login Page')).not.toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeInTheDocument();
+  });
+
   it('redirects to / when authenticated but lacks permission', () => {
     mockUseAuth.mockReturnValue({ isLoading: false, isAuthenticated: true, hasPermission: () => false });
     renderRoute(['admin']);
@@ -61,5 +70,12 @@ describe('ProtectedRoute', () => {
     mockUseAuth.mockReturnValue({ isLoading: false, isAuthenticated: true, hasPermission: vi.fn() });
     renderRoute();
     expect(screen.getByText('Protected Content')).toBeInTheDocument();
+  });
+
+  it('blocks a directly opened module route after access is revoked', () => {
+    mockUseAuth.mockReturnValue({ isLoading: false, accessLoading: false, isAuthenticated: true, hasPermission: () => true, hasModuleAccess: () => false });
+    renderRoute(['admin'], 'library');
+    expect(screen.getByText('Module access unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
   });
 });

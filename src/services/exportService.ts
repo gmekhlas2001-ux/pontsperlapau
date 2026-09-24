@@ -502,11 +502,6 @@ function buildAnswerDistributionHtml(
 }
 
 async function downloadSurveyReportPDF(filename: string, html: string) {
-  const downloadHtmlFallback = () => {
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    downloadBlob(blob, filename.replace(/\.pdf$/i, '.html'));
-  };
-
   const iframe = document.createElement('iframe');
   iframe.title = filename;
   iframe.setAttribute('aria-hidden', 'true');
@@ -618,7 +613,6 @@ async function downloadSurveyReportPDF(filename: string, html: string) {
     pdf.save(filename);
   } catch (error) {
     console.error('Failed to generate survey PDF', error);
-    downloadHtmlFallback();
     throw error;
   } finally {
     iframe.remove();

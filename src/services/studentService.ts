@@ -11,7 +11,6 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { logActivity } from '@/services/activityService';
 import { getCurrentScope, scopedBranchId } from '@/lib/scope';
 import { callEdgeFunction } from '@/lib/edge';
 
@@ -109,7 +108,6 @@ export async function createStudent(data: CreateStudentData) {
   });
 
   if (!res.ok) return { success: false, error: res.error || 'Failed to create student' };
-  logActivity({ action_type: 'INSERT', table_name: 'students', description: `Enrolled student: ${data.firstName} ${data.lastName}` });
   const payload = res.data as any;
   return {
     success: true,
@@ -153,7 +151,6 @@ export async function updateStudent(studentId: string, userId: string, data: Upd
   });
 
   if (!res.ok) return { success: false, error: res.error || 'Failed to update student' };
-  logActivity({ action_type: 'UPDATE', table_name: 'students', description: 'Updated student record' });
   return { success: true };
 }
 
@@ -161,7 +158,6 @@ export async function updateStudent(studentId: string, userId: string, data: Upd
 export async function deleteStudent(_studentId: string, userId: string) {
   const res = await callEdgeFunction('update-user', { targetUserId: userId, operation: 'delete' });
   if (!res.ok) return { success: false, error: res.error || 'Failed to delete student' };
-  logActivity({ action_type: 'DELETE', table_name: 'students', description: 'Removed student record' });
   return { success: true };
 }
 

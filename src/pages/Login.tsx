@@ -12,7 +12,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -96,7 +95,7 @@ export function Login() {
   };
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-background to-muted p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+    <main className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-background to-muted p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
       {/* Language Controls */}
       <div className="fixed right-2 top-[max(0.5rem,env(safe-area-inset-top))] z-20 flex items-center gap-2 rounded-full border border-border/70 bg-background/90 shadow-sm backdrop-blur sm:right-4 sm:top-[max(1rem,env(safe-area-inset-top))]">
         <DropdownMenu>
@@ -124,7 +123,7 @@ export function Login() {
           <div className="flex justify-center mb-4">
             <img src="/image.png" alt="Ponts per la Pau" className="h-20 w-auto object-contain" />
           </div>
-          <CardTitle className="text-2xl font-bold">{t('auth.loginTitle')}</CardTitle>
+          <h1 className="text-2xl font-bold">{t('auth.loginTitle')}</h1>
           <CardDescription>{t('auth.loginSubtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -134,6 +133,7 @@ export function Login() {
               <Input
                 id="email"
                 type="email"
+                autoComplete="username"
                 placeholder="email@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -145,6 +145,7 @@ export function Login() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -176,7 +177,7 @@ export function Login() {
               </Button>
             </div>
             {error && (
-              <div className="text-sm text-red-500 text-center">{error}</div>
+              <div role="alert" className="text-sm text-destructive text-center">{error}</div>
             )}
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
@@ -258,6 +259,6 @@ export function Login() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </main>
   );
 }

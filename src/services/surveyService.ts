@@ -12,7 +12,6 @@
 
 import { supabase } from '@/lib/supabase';
 import { callEdgeFunction } from '@/lib/edge';
-import { logActivity } from '@/services/activityService';
 import { scopedBranchId } from '@/lib/scope';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -663,7 +662,6 @@ export async function createSurvey(payload: CreateSurveyPayload): Promise<{ succ
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to create survey' };
 
-  logActivity({ action_type: 'INSERT', table_name: 'surveys', description: `Created survey: ${payload.title}` });
   return { success: true, id: res.data?.id };
 }
 
@@ -675,7 +673,6 @@ export async function updateSurveyMeta(surveyId: string, fields: { title?: strin
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to update survey' };
   invalidateSurveyFullCache(surveyId);
-  logActivity({ action_type: 'UPDATE', table_name: 'surveys', description: `Updated survey` });
   return { success: true };
 }
 
@@ -702,7 +699,6 @@ export async function updateSurveyStructure(
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to update survey questions' };
   invalidateSurveyFullCache(surveyId);
-  logActivity({ action_type: 'UPDATE', table_name: 'survey_questions', description: 'Updated survey questions' });
   return { success: true };
 }
 
@@ -713,7 +709,6 @@ export async function deleteSurvey(surveyId: string) {
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to delete survey' };
   invalidateSurveyFullCache(surveyId);
-  logActivity({ action_type: 'DELETE', table_name: 'surveys', description: `Deleted survey` });
   return { success: true };
 }
 
@@ -732,7 +727,6 @@ export async function saveBranchData(
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to save survey data' };
 
-  logActivity({ action_type: 'UPDATE', table_name: 'survey_branch_responses', description: `Submitted survey data for branch` });
   return { success: true };
 }
 
@@ -757,7 +751,6 @@ export async function addSurveyRespondent(
   if (!res.ok) return { success: false, error: res.error || 'Failed to add respondent' };
 
   invalidateSurveyFullCache(surveyId);
-  logActivity({ action_type: 'INSERT', table_name: 'survey_respondents', description: `Added survey respondent: ${name}` });
   return { success: true, respondent: res.data?.respondent };
 }
 
@@ -780,7 +773,6 @@ export async function updateSurveyRespondent(
   if (!res.ok) return { success: false, error: res.error || 'Failed to update respondent' };
 
   invalidateSurveyFullCache(surveyId);
-  logActivity({ action_type: 'UPDATE', table_name: 'survey_respondents', description: `Updated survey respondent: ${name}` });
   return { success: true, respondent: res.data?.respondent };
 }
 
@@ -799,7 +791,6 @@ export async function deleteSurveyRespondent(
   if (!res.ok) return { success: false, error: res.error || 'Failed to delete respondent' };
 
   invalidateSurveyFullCache(surveyId);
-  logActivity({ action_type: 'DELETE', table_name: 'survey_respondents', description: 'Deleted manual survey respondent' });
   return { success: true };
 }
 
@@ -818,6 +809,5 @@ export async function saveIndividualResponses(
   });
   if (!res.ok) return { success: false, error: res.error || 'Failed to save individual responses' };
 
-  logActivity({ action_type: 'UPDATE', table_name: 'survey_individual_responses', description: `Submitted individual survey responses` });
   return { success: true };
 }

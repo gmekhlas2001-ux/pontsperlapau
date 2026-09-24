@@ -1,4 +1,6 @@
 import { registerSW } from 'virtual:pwa-register'
+import { toast } from 'sonner';
+import i18n from '@/i18n';
 
 const UPDATE_CHECK_THROTTLE_MS = 60 * 1000;
 const PERIODIC_UPDATE_CHECK_MS = 60 * 60 * 1000;
@@ -82,9 +84,29 @@ export function registerAppServiceWorker() {
   if (registrationStarted || !('serviceWorker' in navigator)) return;
   registrationStarted = true;
 
-  registerSW({
+  let accepted = false;
+  const promptUpdate = (apply: () => void) => {
+    toast.info(i18n.t('common.updateReady'), {
+      id: 'app-update', duration: Infinity,
+      description: i18n.t('common.updateDescription'),
+      action: { label: i18n.t('common.updateAction'), onClick: apply },
+    });
+  };
+  const update = registerSW({
     immediate: true,
-    onNeedReload: reloadForUpdate,
+    onNeedRefresh() {
+      promptUpdate(() => {
+        accepted = true;
+        void update(true).catch(() => {
+          accepted = false;
+          toast.error(i18n.t('common.loadFailed'));
+        });
+      });
+    },
+    onNeedReload() {
+      if (accepted) reloadForUpdate();
+      else promptUpdate(reloadForUpdate);
+    },
     onRegisteredSW(swUrl, registration) {
       if (registration) monitorForUpdates(swUrl, registration);
     },

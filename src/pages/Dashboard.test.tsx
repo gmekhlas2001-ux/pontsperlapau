@@ -18,6 +18,7 @@ vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'test-user', user_metadata: { first_name: 'Test' } },
     hasPermission: vi.fn().mockReturnValue(true),
+    hasModuleAccess: vi.fn().mockReturnValue(true),
   }),
 }));
 

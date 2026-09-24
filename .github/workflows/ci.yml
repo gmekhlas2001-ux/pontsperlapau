@@ -23,6 +23,7 @@ jobs:
           deno-version: v2.x
       - run: npm ci
       - run: npm test
+      - run: npm run test:database
       - run: npm run lint
       - run: npm run i18n:check
       - name: Check Edge Functions

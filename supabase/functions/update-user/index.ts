@@ -15,7 +15,8 @@
 
 import "jsr:@supabase/functions-js@2.110.0/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.110.0";
-import { authenticateRequest } from "../_shared/auth.ts";
+import { authenticateRequest, authenticationErrorResponse } from "../_shared/auth.ts";
+import { modulePermissionError } from "../_shared/module-guard.ts";
 import { corsHeadersFor, errorResponse, jsonResponse } from "../_shared/cors.ts";
 
 const PROTECTED_ROLES = ["superadmin", "admin"];
@@ -78,23 +79,24 @@ Deno.serve(async (req: Request) => {
   try {
     claims = await authenticateRequest(req);
   } catch (err) {
-    return errorResponse(req, 401, "Authentication required", err);
+    return authenticationErrorResponse(req, err);
   }
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { autoRefreshToken: false, persistSession: false } },
+    { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: { "X-App-Actor": claims.sub } } },
   );
 
   // Re-load caller from DB so we always work with current branch_id/role.
-  const { data: callerUser } = await supabase
+  const { data: callerUser, error: callerError } = await supabase
     .from("users")
     .select("id, role, status, branch_id")
     .eq("id", claims.sub)
     .eq("status", "active")
     .maybeSingle();
 
+  if (callerError) return errorResponse(req, 503, "Session verification is temporarily unavailable", callerError);
   if (!callerUser) {
     return errorResponse(req, 401, "Authentication required");
   }
@@ -121,6 +123,10 @@ Deno.serve(async (req: Request) => {
   }
 
   const isSelf = targetUserId === callerUser.id;
+  const moduleError = await modulePermissionError(req, supabase, callerUser,
+    isSelf ? "profile" : targetUser.role === "student" ? "students" : targetUser.role === "parent" ? "parents" : "staff",
+    operation === "delete" ? "delete" : "edit");
+  if (moduleError) return moduleError;
   if (!isSelf && !PROTECTED_ROLES.includes(callerUser.role)) {
     return errorResponse(req, 403, "Insufficient permissions");
   }

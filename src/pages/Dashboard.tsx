@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { Navigate, useNavigate } from 'react-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatCard } from '@/components/ui-custom/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { fetchDashboardStats, fetchBranchStats, type DashboardStats, type BranchStat } from '@/services/dashboardService';
 import { fetchRecentActivities, type ActivityLog } from '@/services/activityService';
 import { hasMissingBranch } from '@/lib/scope';
+import { moduleNavItems } from '@/modules/registry';
 import { Users, UserCheck, UserX, GraduationCap, BookOpen, Library, Plus, Clock, CircleAlert as AlertCircle, MapPin, ClipboardCheck, CalendarDays, TrendingDown, AlertTriangle, CircleDollarSign, HandCoins, MessageSquare, School } from 'lucide-react';
 import i18n from '@/i18n';
 import {
@@ -48,17 +49,40 @@ const emptyStats: DashboardStats = {
 
 export function Dashboard() {
   const { t } = useTranslation();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, hasModuleAccess } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [branchStats, setBranchStats] = useState<BranchStat[]>([]);
   const [recentActivities, setRecentActivities] = useState<ActivityLog[]>([]);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [retryKey, setRetryKey] = useState(0);
+  const metricModules = user?.role === 'superadmin' || user?.role === 'admin'
+    ? ['staff', 'students', 'classes', 'library', 'fees', 'donors', 'messages', 'auditLog']
+    : user?.role === 'teacher' ? ['students', 'classes', 'library', 'fees', 'messages']
+    : user?.role === 'librarian' ? ['library', 'messages']
+    : user?.role === 'student' ? ['students', 'classes', 'library'] : [];
+  const fullMetricsAvailable = metricModules.every((moduleId) => hasModuleAccess(moduleId));
 
   useEffect(() => {
-    fetchDashboardStats().then(setStats);
-    fetchBranchStats().then(setBranchStats);
-    fetchRecentActivities(8).then(setRecentActivities);
-  }, []);
+    if (user?.role === 'parent') return;
+    if (!fullMetricsAvailable) return;
+    let active = true;
+    setLoadState('loading');
+    Promise.all([
+      fetchDashboardStats(),
+      fetchBranchStats(),
+      user?.role === 'admin' || user?.role === 'superadmin' ? fetchRecentActivities(8) : Promise.resolve([]),
+    ]).then(([nextStats, nextBranches, nextActivities]) => {
+      if (!active) return;
+      setStats(nextStats);
+      setBranchStats(nextBranches);
+      setRecentActivities(nextActivities);
+      setLoadState('ready');
+    }).catch(() => {
+      if (active) setLoadState('error');
+    });
+    return () => { active = false; };
+  }, [retryKey, user?.id, user?.role, fullMetricsAvailable]);
 
   const staffData = [
     { name: t('dashboard.activeStaff'), value: stats.activeStaff },
@@ -679,6 +703,38 @@ export function Dashboard() {
       </div>
     </>
   );
+
+  if (user?.role === 'parent') return <Navigate to="/parent-portal" replace />;
+  if (!fullMetricsAvailable) {
+    const available = moduleNavItems.filter((item) => user && item.roles.includes(user.role) && item.moduleId !== 'dashboard' && hasModuleAccess(item.moduleId));
+    return <section className="space-y-4 rounded-xl border bg-card p-6">
+      <h1 className="text-2xl font-semibold">{t('dashboard.title')}</h1>
+      <p className="text-muted-foreground">{t('moduleAccess.dashboardLimited')}</p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {available.map((item) => <Button key={item.id} variant="outline" className="justify-start" onClick={() => navigate(item.path)}>{t(item.labelKey)}</Button>)}
+      </div>
+    </section>;
+  }
+  if (loadState !== 'ready') {
+    return (
+      <section className="rounded-xl border bg-card p-6" aria-busy={loadState === 'loading'}>
+        <h1 className="text-2xl font-semibold">{t('dashboard.title')}</h1>
+        {loadState === 'loading' ? (
+          <div role="status" className="mt-4 space-y-4">
+            <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
+              {[0, 1, 2, 3].map(key => <div key={key} className="h-28 animate-pulse rounded-lg bg-muted" />)}
+            </div>
+          </div>
+        ) : (
+          <div role="alert" className="mt-4 space-y-3">
+            <p>{t('common.loadFailed')}</p>
+            <Button onClick={() => setRetryKey(key => key + 1)}>{t('common.retry')}</Button>
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <div className="space-y-6">

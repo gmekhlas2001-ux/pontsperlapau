@@ -33,6 +33,7 @@ vi.mock('@/contexts/AuthContext', () => ({
     user: { id: 'admin1', role: 'admin' },
     hasRole: () => true,
     hasPermission: () => true,
+    hasModuleAccess: () => true,
   }),
 }));
 

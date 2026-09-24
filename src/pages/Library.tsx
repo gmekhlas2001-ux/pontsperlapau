@@ -71,8 +71,11 @@ const EMPTY_FORM: CreateBookData = {
 
 export function Library() {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const canManage = ['superadmin', 'admin', 'librarian'].includes(user?.role ?? '');
+  const { user, hasModuleAccess } = useAuth();
+  const managerRole = ['superadmin', 'admin', 'librarian'].includes(user?.role ?? '');
+  const canCreate = managerRole && hasModuleAccess('library', 'create');
+  const canEdit = managerRole && hasModuleAccess('library', 'edit');
+  const canDelete = managerRole && hasModuleAccess('library', 'delete');
   const [books, setBooks] = useState<BookRow[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -224,7 +227,7 @@ export function Library() {
   const handleDeleteConfirm = async () => {
     if (!bookToDelete) return;
     setDeleting(true);
-    const result = await deleteBook(bookToDelete.id, bookToDelete.title);
+    const result = await deleteBook(bookToDelete.id);
     setDeleting(false);
     if (result.success) {
       toast.success(t('common.success'));
@@ -302,8 +305,9 @@ export function Library() {
               <BookOpen className="mr-2 h-4 w-4" />
               {t('common.view')}
             </DropdownMenuItem>
-            {canManage && (
+            {(canEdit || canDelete) && (
               <>
+                {canEdit && <>
                 <DropdownMenuItem onClick={() => handleEditOpen(book)}>
                   <Pencil className="mr-2 h-4 w-4" />
                   {t('common.edit')}
@@ -312,6 +316,8 @@ export function Library() {
                   <BookMarked className="mr-2 h-4 w-4" />
                   Update Borrowed Copies
                 </DropdownMenuItem>
+                </>}
+                {canDelete && (
                 <DropdownMenuItem
                   className="text-red-600"
                   onClick={() => { setBookToDelete(book); setIsDeleteDialogOpen(true); }}
@@ -319,6 +325,7 @@ export function Library() {
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t('common.delete')}
                 </DropdownMenuItem>
+                )}
               </>
             )}
           </DropdownMenuContent>
@@ -334,7 +341,7 @@ export function Library() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('library.management')}</h1>
           <p className="text-muted-foreground">{t('library.bookList')}</p>
         </div>
-        {canManage && (
+        {canCreate && (
           <Button onClick={() => { setAddForm(EMPTY_FORM); setIsAddDialogOpen(true); }}>
             <Plus className="mr-2 h-4 w-4" />
             {t('library.addBook')}
@@ -365,7 +372,7 @@ export function Library() {
       <Tabs defaultValue="books">
         <TabsList>
           <TabsTrigger value="books">{t('library.bookList')}</TabsTrigger>
-          {canManage && <TabsTrigger value="borrowed">{t('library.borrowedBooks')}</TabsTrigger>}
+          {canEdit && <TabsTrigger value="borrowed">{t('library.borrowedBooks')}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="books">

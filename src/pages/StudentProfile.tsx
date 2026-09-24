@@ -222,6 +222,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 function AcademicTab({ student }: { student: StudentProfileData }) {
+  const { hasModuleAccess } = useAuth();
   if (student.classes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -317,10 +318,10 @@ function AcademicTab({ student }: { student: StudentProfileData }) {
                 </div>
               )}
               <div className="flex gap-1">
-                <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground" onClick={() => handleExportReportCard(cls)}>
+                <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground" disabled={!hasModuleAccess('grades', 'export')} onClick={() => handleExportReportCard(cls)}>
                   <FileDown className="h-3 w-3" /> PDF
                 </Button>
-                <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground" onClick={() => handleExportExcel(cls)}>
+                <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground" disabled={!hasModuleAccess('grades', 'export')} onClick={() => handleExportExcel(cls)}>
                   <FileDown className="h-3 w-3" /> XLS
                 </Button>
               </div>
@@ -490,7 +491,7 @@ function PersonalTab({ student }: { student: StudentProfileData }) {
 export function StudentProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasModuleAccess } = useAuth();
   const [student, setStudent] = useState<StudentProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -597,7 +598,7 @@ export function StudentProfile() {
                 {student.classes.length} class{student.classes.length !== 1 ? 'es' : ''}
               </span>
             </div>
-            {canExportCertificates && (
+    {canExportCertificates && hasModuleAccess('students', 'export') && (
               <div className="flex gap-2 mt-3 flex-wrap">
                 <Button
                   size="sm"

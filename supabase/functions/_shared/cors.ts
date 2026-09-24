@@ -23,7 +23,7 @@ export function corsHeadersFor(req: Request): Record<string, string> {
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, HEAD, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-User-Id, X-Session-Token, Accept-Profile, Content-Profile, Prefer, Range, Range-Unit",
     "Access-Control-Expose-Headers": "Content-Range, Range-Unit, Preference-Applied",
     "Vary": "Origin",
@@ -37,7 +37,7 @@ export function jsonResponse(
 ): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeadersFor(req), "Content-Type": "application/json" },
+    headers: { ...corsHeadersFor(req), "Content-Type": "application/json", "Cache-Control": "private, no-store" },
   });
 }
 

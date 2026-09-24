@@ -244,7 +244,7 @@ function HistoryTab({ classId }: { classId: string }) {
 
 export function Attendance() {
   useTranslation();
-  const { user } = useAuth();
+  const { user, hasModuleAccess } = useAuth();
 
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [classesLoading, setClassesLoading] = useState(true);
@@ -376,10 +376,10 @@ export function Attendance() {
         <div className="flex flex-wrap items-center gap-2">
           {selectedClass && students.length > 0 && (
             <>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleExport('pdf')}>
+              <Button variant="outline" size="sm" className="gap-1.5" disabled={!hasModuleAccess('attendance', 'export')} onClick={() => handleExport('pdf')}>
                 <FileDown className="h-4 w-4" /> PDF
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleExport('excel')}>
+              <Button variant="outline" size="sm" className="gap-1.5" disabled={!hasModuleAccess('attendance', 'export')} onClick={() => handleExport('excel')}>
                 <FileDown className="h-4 w-4" /> Excel
               </Button>
             </>

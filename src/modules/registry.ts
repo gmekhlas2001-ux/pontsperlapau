@@ -43,8 +43,10 @@ export const featureModules = [
   settingsModule,
 ];
 
-export const moduleRoutes: FeatureRoute[] = featureModules.flatMap((module) => module.routes);
-export const moduleNavItems: FeatureNavItem[] = featureModules.flatMap((module) => module.nav ?? []);
+export const moduleRoutes: FeatureRoute[] = featureModules.flatMap((module) =>
+  module.routes.map((route) => ({ ...route, moduleId: module.id })));
+export const moduleNavItems: FeatureNavItem[] = featureModules.flatMap((module) =>
+  (module.nav ?? []).map((item) => ({ ...item, moduleId: module.id })));
 
 function normalizePath(pathname: string): string {
   if (pathname === '/') return '/';

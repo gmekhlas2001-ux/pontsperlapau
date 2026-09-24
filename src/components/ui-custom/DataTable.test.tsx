@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { DataTable } from './DataTable';
+import userEvent from '@testing-library/user-event';
 
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => true }));
 
@@ -13,6 +14,26 @@ interface PersonRow {
 }
 
 describe('DataTable responsive records', () => {
+  it('returns to the last available page when the dataset shrinks', async () => {
+    const user = userEvent.setup();
+    const rows = Array.from({ length: 11 }, (_, i) => ({ id: String(i), name: `Person ${i}` }));
+    const props = { keyExtractor: (row: typeof rows[number]) => row.id, searchable: false, columns: [{ key: 'name', header: 'Name', cell: (row: typeof rows[number]) => row.name }] };
+    const { rerender } = render(<DataTable {...props} data={rows} />);
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByText('Person 10')).toBeInTheDocument();
+    rerender(<DataTable {...props} data={rows.slice(0, 2)} />);
+    expect(screen.getByText('Person 0')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+  });
+
+  it('includes zero-valued fields in search results', async () => {
+    const user = userEvent.setup();
+    render(<DataTable data={[{ id: 'a', score: 0 }, { id: 'b', score: 5 }]} keyExtractor={row => row.id} searchKeys={['score']} columns={[{ key: 'score', header: 'Score', cell: row => row.score }]} />);
+    await user.type(screen.getByRole('textbox'), '0');
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(within(screen.getByRole('article')).getByText('0')).toBeInTheDocument();
+  });
+
   it('keeps the selected mobile details and action visible in a record card', () => {
     const rows: PersonRow[] = [{
       id: '1',

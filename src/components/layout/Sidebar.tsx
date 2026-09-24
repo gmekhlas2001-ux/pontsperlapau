@@ -19,11 +19,11 @@ interface SidebarProps {
 
 export function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }: SidebarProps) {
   const { t, i18n } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user, logout, hasModuleAccess } = useAuth();
   const location = useLocation();
 
   const filteredNavItems = moduleNavItems
-    .filter((item) => user && item.roles.includes(user.role))
+    .filter((item) => user && item.roles.includes(user.role) && hasModuleAccess(item.moduleId))
     .map((item) => ({ ...item, label: t(item.labelKey) }));
 
   const NavContent = ({ collapsed = isCollapsed }: { collapsed?: boolean }) => (
@@ -163,12 +163,12 @@ const MOBILE_NAV_PRIORITY: Record<string, string[]> = {
 
 export function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, hasModuleAccess } = useAuth();
   const location = useLocation();
 
   if (!user) return null;
 
-  const accessibleItems = moduleNavItems.filter((item) => item.roles.includes(user.role));
+  const accessibleItems = moduleNavItems.filter((item) => item.roles.includes(user.role) && hasModuleAccess(item.moduleId));
   const priorities = MOBILE_NAV_PRIORITY[user.role] ?? [];
   const primaryItems = priorities
     .map((id) => accessibleItems.find((item) => item.id === id))

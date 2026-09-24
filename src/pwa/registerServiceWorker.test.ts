@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
-const { registerSWMock } = vi.hoisted(() => ({
+const { registerSWMock, infoMock, updateMock } = vi.hoisted(() => ({
   registerSWMock: vi.fn(),
+  infoMock: vi.fn(),
+  updateMock: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('sonner', () => ({ toast: { info: infoMock, error: vi.fn() } }));
 
 vi.mock('virtual:pwa-register', () => ({
   registerSW: registerSWMock,
@@ -33,21 +36,30 @@ describe('service worker auto-reload guard', () => {
 });
 
 describe('service worker registration', () => {
-  it('registers immediately with automatic reload and update monitoring hooks', () => {
+  it('waits for the user to accept an update and monitors future releases', async () => {
     Object.defineProperty(navigator, 'serviceWorker', {
       configurable: true,
       value: {},
     });
 
+    registerSWMock.mockReturnValue(updateMock);
     registerAppServiceWorker();
 
     expect(registerSWMock).toHaveBeenCalledOnce();
     expect(registerSWMock).toHaveBeenCalledWith(expect.objectContaining({
       immediate: true,
+      onNeedRefresh: expect.any(Function),
       onNeedReload: expect.any(Function),
       onRegisteredSW: expect.any(Function),
       onRegisterError: expect.any(Function),
     }));
+
+    const options = registerSWMock.mock.calls[0][0];
+    options.onNeedRefresh();
+    expect(infoMock).toHaveBeenCalledOnce();
+    expect(updateMock).not.toHaveBeenCalled();
+    infoMock.mock.calls[0][1].action.onClick();
+    expect(updateMock).toHaveBeenCalledWith(true);
 
     Reflect.deleteProperty(navigator, 'serviceWorker');
   });

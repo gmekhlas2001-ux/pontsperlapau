@@ -10,9 +10,9 @@ export default defineConfig(() => ({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       // Registration is handled in src/pwa/registerServiceWorker.ts so the
-      // page can reload as soon as a newly activated worker takes control.
+      // user can finish and save their work before activating an update.
       injectRegister: null,
       includeAssets: ['image.png', 'app-icon.svg'],
       manifest: {
@@ -38,11 +38,7 @@ export default defineConfig(() => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: true,
-        // Existing installations currently have only a bare registration
-        // script. This bridge advances those already-open clients once so
-        // they can adopt the permanent page-side update flow.
-        importScripts: ['/pwa-update-bridge-v1.js'],
+        skipWaiting: false,
       },
     }),
   ],

@@ -209,4 +209,9 @@
   .interactive-card:hover {
     transform: none;
   }
+
+  .page-enter,
+  .item-enter {
+    animation: none;
+  }
 }

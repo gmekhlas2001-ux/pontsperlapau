@@ -4,7 +4,6 @@ vi.mock('@/lib/supabase', () => ({
   supabase: { from: vi.fn() },
 }));
 vi.mock('@/lib/edge', () => ({ callEdgeFunction: vi.fn() }));
-vi.mock('@/services/activityService', () => ({ logActivity: vi.fn() }));
 vi.mock('@/lib/scope', () => ({ scopedBranchId: vi.fn(() => null) }));
 
 import { supabase } from '@/lib/supabase';

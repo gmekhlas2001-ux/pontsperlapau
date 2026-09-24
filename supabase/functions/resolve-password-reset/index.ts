@@ -20,7 +20,8 @@
 
 import "jsr:@supabase/functions-js@2.110.0/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.110.0";
-import { authenticateRequest } from "../_shared/auth.ts";
+import { authenticateRequest, authenticationErrorResponse } from "../_shared/auth.ts";
+import { modulePermissionError } from "../_shared/module-guard.ts";
 import { corsHeadersFor, errorResponse, jsonResponse } from "../_shared/cors.ts";
 
 interface Body {
@@ -43,7 +44,7 @@ Deno.serve(async (req: Request) => {
     try {
       claims = await authenticateRequest(req);
     } catch (err) {
-      return errorResponse(req, 401, "Authentication required", err);
+      return authenticationErrorResponse(req, err);
     }
     let body: Body;
     try { body = await req.json(); } catch {
@@ -59,17 +60,20 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { autoRefreshToken: false, persistSession: false } },
+      { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: { "X-App-Actor": claims.sub } } },
     );
 
     // Re-load caller (token claims could be stale).
-    const { data: caller } = await supabase
+    const { data: caller, error: callerError } = await supabase
       .from("users")
       .select("id, role, status, branch_id")
       .eq("id", claims.sub)
       .eq("status", "active")
       .maybeSingle();
+    if (callerError) return errorResponse(req, 503, "Session verification is temporarily unavailable", callerError);
     if (!caller) return errorResponse(req, 401, "Authentication required");
+    const moduleError = await modulePermissionError(req, supabase, caller, "passwordResets", "edit");
+    if (moduleError) return moduleError;
     if (!PRIVILEGED.includes(caller.role)) {
       return errorResponse(req, 403, "Insufficient permissions");
     }

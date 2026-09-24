@@ -8,7 +8,6 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { logActivity } from '@/services/activityService';
 import { scopedBranchId } from '@/lib/scope';
 import { callEdgeFunction } from '@/lib/edge';
 import { fetchAllPages } from '@/lib/pagination';
@@ -123,7 +122,6 @@ export async function createBook(bookData: CreateBookData) {
     });
     if (!res.ok || !res.data?.data) throw new Error(res.error || 'Failed to create book');
     const data = res.data.data;
-    logActivity({ action_type: 'INSERT', table_name: 'books', record_id: data.id, description: `Added book: ${data.title}` });
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create book' };
@@ -139,21 +137,19 @@ export async function updateBook(bookId: string, updates: UpdateBookData) {
     });
     if (!res.ok || !res.data?.data) throw new Error(res.error || 'Failed to update book');
     const data = res.data.data;
-    logActivity({ action_type: 'UPDATE', table_name: 'books', record_id: bookId, description: `Updated book: ${data.title}` });
     return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update book' };
   }
 }
 
-export async function deleteBook(bookId: string, bookTitle?: string) {
+export async function deleteBook(bookId: string) {
   try {
     const res = await callEdgeFunction('app-actions', {
       operation: 'delete-book',
       bookId,
     });
     if (!res.ok) throw new Error(res.error || 'Failed to delete book');
-    logActivity({ action_type: 'DELETE', table_name: 'books', record_id: bookId, description: `Deleted book: ${bookTitle ?? bookId}` });
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to delete book' };

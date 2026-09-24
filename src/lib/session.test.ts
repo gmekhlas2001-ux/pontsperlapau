@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clearSession,
   getSessionToken,
@@ -57,11 +57,29 @@ Object.defineProperty(globalThis, 'window', {
 });
 
 beforeEach(() => {
+  clearSession();
   window.localStorage.clear();
   window.sessionStorage.clear();
 });
 
 describe('browser session storage', () => {
+  it('remains usable within the tab when the browser blocks all storage', () => {
+    const spies = [window.localStorage, window.sessionStorage].flatMap(storage => [
+      vi.spyOn(storage, 'getItem').mockImplementation(() => { throw new Error('Blocked'); }),
+      vi.spyOn(storage, 'setItem').mockImplementation(() => { throw new Error('Blocked'); }),
+      vi.spyOn(storage, 'removeItem').mockImplementation(() => { throw new Error('Blocked'); }),
+    ]);
+    try {
+      expect(getSessionToken()).toBeNull();
+      storeSession('temporary-token', user, true);
+      expect(getSessionToken()).toBe('temporary-token');
+      expect(getStoredSessionUser()).toEqual(user);
+      storeSessionUser({ ...user, firstName: 'Updated' });
+      expect(getStoredSessionUser()?.firstName).toBe('Updated');
+      clearSession();
+      expect(getSessionToken()).toBeNull();
+    } finally { spies.forEach(spy => spy.mockRestore()); }
+  });
   it('stores non-persistent sessions in sessionStorage', () => {
     storeSession('session-token', user, false);
 

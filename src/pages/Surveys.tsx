@@ -2541,6 +2541,8 @@ function DataEntryDialog({ open, onClose, onSaved, survey, branches, defaultBran
 // ─── Results Dialog ───────────────────────────────────────────────────────────
 
 function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () => void; survey: SurveyFull }) {
+  const { hasModuleAccess } = useAuth();
+  const canExport = hasModuleAccess('surveys', 'export');
   const [results, setResults] = useState<BranchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingIndividual, setLoadingIndividual] = useState(false);
@@ -3066,12 +3068,12 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       const { exportSurveyResultsPDF } = await loadSurveyExportService();
                       await exportSurveyResultsPDF(survey, results);
                     } catch {
-                      toast.error('PDF export failed. Downloaded an HTML fallback instead.');
+                      toast.error('PDF export failed.');
                     } finally {
                       setExportingGeneralPdf(false);
                     }
                   }}
-                  disabled={loading || exportingGeneralPdf}
+                  disabled={!canExport || loading || exportingGeneralPdf}
                 >
                   <FileText className="mr-2 h-4 w-4" />
                   {exportingGeneralPdf ? 'Exporting...' : 'General PDF'}
@@ -3089,7 +3091,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       setExportingGeneralExcel(false);
                     }
                   }}
-                  disabled={loading || exportingGeneralExcel}
+                  disabled={!canExport || loading || exportingGeneralExcel}
                 >
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   {exportingGeneralExcel ? 'Exporting...' : 'General Excel'}
@@ -3136,12 +3138,12 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       const { exportSurveyIndividualPDF } = await loadSurveyExportService();
                       await exportSurveyIndividualPDF(survey, results, selectedIndividualExportTarget);
                     } catch {
-                      toast.error('Individual PDF export failed. Downloaded an HTML fallback instead.');
+                      toast.error('Individual PDF export failed.');
                     } finally {
                       setExportingIndividualPdf(false);
                     }
                   }}
-                  disabled={loading || exportingIndividualPdf || !selectedIndividualExportTarget}
+                  disabled={!canExport || loading || exportingIndividualPdf || !selectedIndividualExportTarget}
                 >
                   <FileText className="mr-2 h-4 w-4" />
                   {exportingIndividualPdf ? 'Exporting...' : 'Person PDF'}
@@ -3163,7 +3165,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       setExportingIndividualExcel(false);
                     }
                   }}
-                  disabled={loading || exportingIndividualExcel || !selectedIndividualExportTarget}
+                  disabled={!canExport || loading || exportingIndividualExcel || !selectedIndividualExportTarget}
                 >
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   {exportingIndividualExcel ? 'Exporting...' : 'Person Excel'}
@@ -3185,7 +3187,7 @@ function ResultsDialog({ open, onClose, survey }: { open: boolean; onClose: () =
                       setExportingIndividualExcel(false);
                     }
                   }}
-                  disabled={loading || exportingIndividualExcel || selectedIndividualExportTargets.length === 0}
+                  disabled={!canExport || loading || exportingIndividualExcel || selectedIndividualExportTargets.length === 0}
                 >
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   {exportingIndividualExcel ? 'Exporting...' : `Selected Excel (${selectedIndividualExportTargets.length})`}

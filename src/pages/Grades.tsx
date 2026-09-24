@@ -264,6 +264,7 @@ function StudentGradeCard({
   classInfo: { name: string; teacherName?: string };
   onRefresh: () => void;
 }) {
+  const { hasModuleAccess } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<GradeEntry | null>(null);
@@ -421,6 +422,7 @@ function StudentGradeCard({
               size="sm"
               className="gap-1.5 text-muted-foreground"
               onClick={() => exportReportCardPDF(classInfo, student)}
+              disabled={!hasModuleAccess('grades', 'export')}
               title="Download report card PDF"
             >
               <FileDown className="h-3.5 w-3.5" /> Report Card
@@ -468,7 +470,7 @@ function StudentGradeCard({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function Grades() {
-  const { user } = useAuth();
+  const { user, hasModuleAccess } = useAuth();
 
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [classesLoading, setClassesLoading] = useState(true);
@@ -536,6 +538,7 @@ export function Grades() {
                   { name: selectedClass.name, teacherName: `${selectedClass.teacherFirstName} ${selectedClass.teacherLastName}` },
                   students,
                 )}
+                disabled={!hasModuleAccess('grades', 'export')}
               >
                 <FileDown className="h-4 w-4" />
                 PDF
@@ -548,6 +551,7 @@ export function Grades() {
                   { name: selectedClass.name },
                   students,
                 )}
+                disabled={!hasModuleAccess('grades', 'export')}
               >
                 <FileDown className="h-4 w-4" />
                 Excel

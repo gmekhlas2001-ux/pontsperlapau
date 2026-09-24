@@ -48,7 +48,7 @@ function forceLogout(rejectedToken?: string) {
  * @returns A normalized result object. Callers never need try/catch — network
  *          failures are surfaced as `{ ok: false, status: 0 }`.
  */
-export async function callEdgeFunction<T = any>(
+export async function callEdgeFunction<T = Record<string, unknown>>(
   name: string,
   body: unknown,
 ): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
@@ -73,6 +73,7 @@ export async function callEdgeFunction<T = any>(
         'X-Session-Token': token,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
     });
 
     // Gracefully handle non-JSON responses (e.g. gateway errors).
@@ -86,8 +87,8 @@ export async function callEdgeFunction<T = any>(
       return { ok: false, status: res.status, error: result?.error || 'Request failed' };
     }
     return { ok: true, status: res.status, data: result as T };
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Network-level failure (offline, DNS, CORS block, etc.).
-    return { ok: false, status: 0, error: err?.message ?? 'Network error' };
+    return { ok: false, status: 0, error: err instanceof Error ? err.message : 'Network error' };
   }
 }

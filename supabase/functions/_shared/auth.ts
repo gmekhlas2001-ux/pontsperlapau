@@ -14,6 +14,15 @@
  */
 
 import { createClient } from "jsr:@supabase/supabase-js@2.110.0";
+import { errorResponse } from "./cors.ts";
+
+export class AuthenticationUnavailable extends Error {}
+
+export function authenticationErrorResponse(req: Request, error: unknown): Response {
+  return error instanceof AuthenticationUnavailable
+    ? errorResponse(req, 503, "Session verification is temporarily unavailable. Please retry.", error)
+    : errorResponse(req, 401, "Authentication required", error);
+}
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -47,7 +56,7 @@ function b64urlDecode(s: string): Uint8Array<ArrayBuffer> {
 async function getKey(): Promise<CryptoKey> {
   const secret = Deno.env.get("SESSION_TOKEN_SECRET");
   if (!secret || secret.length < 32) {
-    throw new Error(
+    throw new AuthenticationUnavailable(
       "SESSION_TOKEN_SECRET is missing or too short (min 32 chars). " +
       "Set it in Supabase project secrets.",
     );
@@ -106,7 +115,7 @@ export async function verifySessionToken(token: string): Promise<TokenPayload> {
   const payload = JSON.parse(json) as TokenPayload;
 
   const now = Math.floor(Date.now() / 1000);
-  if (typeof payload.exp !== "number" || payload.exp < now) {
+  if (typeof payload.exp !== "number" || !Number.isFinite(payload.exp) || payload.exp <= now) {
     throw new Error("Session token expired");
   }
   if (!payload.sub || !payload.sid || !payload.role) {
@@ -126,7 +135,7 @@ export async function authenticateRequest(req: Request): Promise<TokenPayload> {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (!supabaseUrl || !serviceKey) throw new Error("Session validation is misconfigured");
+  if (!supabaseUrl || !serviceKey) throw new AuthenticationUnavailable("Session validation is misconfigured");
 
   const client = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -140,7 +149,7 @@ export async function authenticateRequest(req: Request): Promise<TokenPayload> {
 
   if (error) {
     console.error("[auth] session DB check failed:", error);
-    throw new Error("Session validation failed");
+    throw new AuthenticationUnavailable("Session validation failed");
   }
 
   const user = Array.isArray(session?.user) ? session?.user[0] : session?.user;
